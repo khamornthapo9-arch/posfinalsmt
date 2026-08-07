@@ -14,7 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      items: {
+        Row: {
+          created_at: string
+          id: string
+          min_stock_threshold: number
+          name: string
+          price: number
+          sku: string
+          stock_quantity: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          min_stock_threshold?: number
+          name: string
+          price: number
+          sku: string
+          stock_quantity?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          min_stock_threshold?: number
+          name?: string
+          price?: number
+          sku?: string
+          stock_quantity?: number
+        }
+        Relationships: []
+      }
+      sale_items: {
+        Row: {
+          id: string
+          item_id: string
+          quantity: number
+          sale_id: string
+          unit_price: number
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          quantity: number
+          sale_id: string
+          unit_price: number
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          quantity?: number
+          sale_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          created_at: string
+          id: string
+          is_offline_sync: boolean
+          payment_method: string
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_offline_sync?: boolean
+          payment_method?: string
+          total_amount: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_offline_sync?: boolean
+          payment_method?: string
+          total_amount?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
