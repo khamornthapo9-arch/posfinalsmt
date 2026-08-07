@@ -34,6 +34,19 @@ interface PosContextValue {
 const PosContext = createContext<PosContextValue | null>(null);
 
 export function PosProvider({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+        Starting register...
+      </div>
+    );
+  }
+  return <PosProviderInner>{children}</PosProviderInner>;
+}
+
+function PosProviderInner({ children }: { children: ReactNode }) {
   const [isOnline, setIsOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
