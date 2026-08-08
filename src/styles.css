@@ -143,10 +143,38 @@
   }
 }
 
-/* Print rules: only the receipt/label surface is printed. */
+/* ---------------------------------------------------------------
+ * Managed print engine
+ * Receipts print on 80mm thermal roll; labels on 2in x 1in stock.
+ * ------------------------------------------------------------- */
 @media print {
+  @page {
+    size: 80mm auto;
+    margin: 0mm;
+  }
+
+  @page label {
+    size: 2in 1in;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+    margin: 0;
+    padding: 0;
+  }
+
   body * {
     visibility: hidden;
+  }
+
+  .no-print,
+  nav,
+  aside,
+  header,
+  button {
+    display: none !important;
   }
 
   .print-area,
@@ -159,10 +187,53 @@
     top: 0;
     left: 0;
     margin: 0;
-    box-shadow: none;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  @page {
-    margin: 0.15in;
+  .print-area * {
+    color: #000000 !important;
+    background: transparent !important;
   }
+
+  /* 80mm thermal receipt */
+  .receipt-sheet {
+    width: 80mm;
+    max-width: 80mm;
+    padding: 4mm 3mm;
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .receipt-sheet .print-divider {
+    border: 0;
+    color: #000000;
+    font-size: 12px;
+    letter-spacing: 0;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  /* 2in x 1in adhesive label */
+  .label-sheet {
+    page: label;
+    width: 2in;
+    height: 1in;
+    padding: 0.06in;
+    overflow: hidden;
+  }
+}
+
+/* Dashed divider used on receipts (visible on screen and in print). */
+.print-divider::before {
+  content: "--------------------------------";
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
 }
