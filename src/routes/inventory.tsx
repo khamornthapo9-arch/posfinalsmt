@@ -335,9 +335,11 @@ function ProductModal({
 }
 
 function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }) {
+  const [mode, setMode] = useState<"qr" | "barcode">("qr");
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 print:static print:bg-transparent print:p-0">
-      <div className="w-full max-w-xs rounded-xl border border-border bg-card p-5 shadow-xl print:border-0 print:shadow-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-6 print:static print:block print:bg-transparent print:p-0">
+      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-xl print:border-0 print:p-0 print:shadow-none">
         <div className="mb-4 flex items-center justify-between print:hidden">
           <h2 className="text-sm font-semibold">Print label</h2>
           <button onClick={onClose} aria-label="Close" className="text-muted-foreground">
@@ -345,25 +347,63 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
           </button>
         </div>
 
-        <div className="print-area mx-auto flex h-[1in] w-[2in] items-center gap-2 rounded border border-border bg-white p-1.5 text-black">
-          <QRCodeCanvas value={item.sku} size={72} level="M" />
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-[10px] font-semibold">{item.name}</p>
-            <p className="text-[13px] font-bold tabular-nums">{money(item.price)}</p>
-            <p className="truncate text-[9px]">{item.sku}</p>
-          </div>
+        <div className="mb-4 grid grid-cols-2 gap-2 print:hidden">
+          {(["qr", "barcode"] as const).map((key) => (
+            <button
+              key={key}
+              onClick={() => setMode(key)}
+              className={cn(
+                "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border text-xs font-medium transition-all active:scale-95",
+                mode === key
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border hover:bg-accent",
+              )}
+            >
+              {key === "qr" ? <QrCode className="h-4 w-4" /> : <BarcodeIcon className="h-4 w-4" />}
+              {key === "qr" ? "QR code" : "Barcode"}
+            </button>
+          ))}
+        </div>
+
+        <div className="print-area label-sheet mx-auto flex h-[1in] w-[2in] flex-col items-center justify-center overflow-hidden rounded border border-border bg-white p-1 text-center text-black">
+          {mode === "qr" ? (
+            <div className="flex w-full items-center gap-1.5">
+              <QRCodeCanvas value={item.sku} size={62} level="M" />
+              <div className="min-w-0 flex-1 text-left leading-tight">
+                <p className="truncate text-[10px] font-semibold">{item.name}</p>
+                <p className="text-[13px] font-bold tabular-nums">{money(item.price)}</p>
+                <p className="truncate text-[9px]">{item.sku}</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="w-full truncate text-[9px] font-semibold leading-tight">{item.name}</p>
+              <Barcode
+                value={item.sku}
+                format="CODE128"
+                width={1}
+                height={30}
+                fontSize={9}
+                margin={0}
+                displayValue
+              />
+              <p className="text-[11px] font-bold tabular-nums leading-tight">
+                {money(item.price)}
+              </p>
+            </>
+          )}
         </div>
 
         <div className="mt-5 flex gap-2 print:hidden">
           <button
             onClick={() => window.print()}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95"
           >
             <Printer className="h-4 w-4" /> Print
           </button>
           <button
             onClick={onClose}
-            className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-accent"
+            className="min-h-11 flex-1 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent active:scale-95"
           >
             Close
           </button>

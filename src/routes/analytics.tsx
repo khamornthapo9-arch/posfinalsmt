@@ -156,7 +156,7 @@ function AnalyticsPage() {
 
   return (
     <PosShell title="Sales Analytics">
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex gap-1 rounded-lg border border-border p-1">
             {(["today", "week", "month", "custom"] as RangeKey[]).map((key) => (
@@ -164,7 +164,7 @@ function AnalyticsPage() {
                 key={key}
                 onClick={() => setRange(key)}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium capitalize",
+                  "min-h-9 rounded-md px-3 text-xs font-medium capitalize",
                   range === key ? "bg-primary text-primary-foreground" : "text-muted-foreground",
                 )}
               >
@@ -191,20 +191,20 @@ function AnalyticsPage() {
           )}
           <button
             onClick={exportCsv}
-            className="ml-auto inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+            className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
           >
             <Download className="h-4 w-4" /> Export CSV
           </button>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {cards.map((card) => (
             <div key={card.label} className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
                 <card.icon className="h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="mt-2 text-2xl font-semibold tabular-nums">{card.value}</p>
+              <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">{card.value}</p>
             </div>
           ))}
         </div>
@@ -212,9 +212,9 @@ function AnalyticsPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4">
             <h2 className="mb-4 text-sm font-semibold">Revenue trend</h2>
-            <div className="h-64">
+            <div className="h-60 lg:h-64">
               {trend.length === 0 ? (
-                <p className="pt-20 text-center text-sm text-muted-foreground">
+                <p className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
                   {loading ? "Loading..." : "No sales in this range yet."}
                 </p>
               ) : (
@@ -247,9 +247,9 @@ function AnalyticsPage() {
 
           <div className="rounded-xl border border-border bg-card p-4">
             <h2 className="mb-4 text-sm font-semibold">Top 5 products by units</h2>
-            <div className="h-64">
+            <div className="h-60 lg:h-64">
               {topProducts.length === 0 ? (
-                <p className="pt-20 text-center text-sm text-muted-foreground">
+                <p className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
                   {loading ? "Loading..." : "No product sales in this range yet."}
                 </p>
               ) : (
