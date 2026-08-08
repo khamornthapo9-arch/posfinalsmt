@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Pencil, Plus, Printer, QrCode, Search, Trash2, X } from "lucide-react";
+import { Barcode as BarcodeIcon, Pencil, Plus, Printer, QrCode, Search, Trash2, X } from "lucide-react";
+import Barcode from "react-barcode";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { usePos } from "@/lib/pos-store";
@@ -54,7 +55,7 @@ function InventoryPage() {
 
   return (
     <PosShell title="Inventory">
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-56 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -62,7 +63,7 @@ function InventoryPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search products"
-              className="h-10 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-base outline-none focus:ring-2 focus:ring-ring sm:text-sm"
             />
           </div>
           <div className="flex gap-1 rounded-lg border border-border p-1">
@@ -71,7 +72,7 @@ function InventoryPage() {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium capitalize",
+                  "min-h-9 rounded-md px-3 text-xs font-medium capitalize",
                   filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground",
                 )}
               >
@@ -81,13 +82,13 @@ function InventoryPage() {
           </div>
           <button
             onClick={() => setEditing("new")}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/90 active:scale-95"
           >
             <Plus className="h-4 w-4" /> Add product
           </button>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <div className="hidden overflow-x-auto rounded-xl border border-border bg-card md:block">
           <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -126,14 +127,14 @@ function InventoryPage() {
                         <button
                           onClick={() => setLabelItem(item)}
                           aria-label={`Generate QR for ${item.name}`}
-                          className="rounded-md border border-border p-1.5 hover:bg-accent"
+                          className="flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent"
                         >
                           <QrCode className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => setEditing(item)}
                           aria-label={`Edit ${item.name}`}
-                          className="rounded-md border border-border p-1.5 hover:bg-accent"
+                          className="flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -144,7 +145,7 @@ function InventoryPage() {
                             );
                           }}
                           aria-label={`Delete ${item.name}`}
-                          className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -162,6 +163,71 @@ function InventoryPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: compact structured cards */}
+        <div className="grid gap-3 md:hidden">
+          {filtered.map((item) => {
+            const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
+            return (
+              <div key={item.id} className="rounded-xl border border-border bg-card p-3">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{item.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{item.sku}</p>
+                  </div>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      status === "ok" && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+                      status === "low" && "bg-amber-500/15 text-amber-600 dark:text-amber-300",
+                      status === "out" && "bg-destructive/15 text-destructive",
+                    )}
+                  >
+                    {status === "ok" ? "In stock" : status === "low" ? "Low" : "Out"}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-sm tabular-nums">
+                    <span className="font-semibold">{money(item.price)}</span>
+                    <span className="text-muted-foreground"> · {item.stock_quantity} in stock</span>
+                  </p>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => setLabelItem(item)}
+                      aria-label={`Generate label for ${item.name}`}
+                      className="flex h-11 w-11 items-center justify-center rounded-lg border border-border active:scale-95"
+                    >
+                      <QrCode className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setEditing(item)}
+                      aria-label={`Edit ${item.name}`}
+                      className="flex h-11 w-11 items-center justify-center rounded-lg border border-border active:scale-95"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        void deleteItem(item.id).catch(() =>
+                          toast.error("Cannot delete a product with recorded sales"),
+                        );
+                      }}
+                      aria-label={`Delete ${item.name}`}
+                      className="flex h-11 w-11 items-center justify-center rounded-lg border border-border text-muted-foreground active:scale-95"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <p className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
+              No products found.
+            </p>
+          )}
         </div>
       </div>
 
@@ -223,14 +289,14 @@ function ProductModal({
         step={type === "number" ? "0.01" : undefined}
         value={form[key]}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-        className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+        className="h-11 w-full rounded-lg border border-input bg-background px-3 text-base outline-none focus:ring-2 focus:ring-ring sm:text-sm"
       />
     </label>
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-6">
+      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">{item ? "Edit product" : "New product"}</h2>
           <button onClick={onClose} aria-label="Close" className="text-muted-foreground">
@@ -240,7 +306,7 @@ function ProductModal({
         <div className="space-y-3">
           {field("name", "Name")}
           {field("sku", "SKU")}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {field("price", "Price", "number")}
             {field("stock_quantity", "Stock", "number")}
             {field("min_stock_threshold", "Low at", "number")}
@@ -259,7 +325,7 @@ function ProductModal({
               min_stock_threshold: Math.trunc(Number(form.min_stock_threshold) || 0),
             }).finally(() => setSaving(false));
           }}
-          className="mt-5 h-11 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-transform hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
         >
           {saving ? "Saving..." : "Save product"}
         </button>
@@ -269,9 +335,11 @@ function ProductModal({
 }
 
 function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }) {
+  const [mode, setMode] = useState<"qr" | "barcode">("qr");
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 print:static print:bg-transparent print:p-0">
-      <div className="w-full max-w-xs rounded-xl border border-border bg-card p-5 shadow-xl print:border-0 print:shadow-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-6 print:static print:block print:bg-transparent print:p-0">
+      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-xl print:border-0 print:p-0 print:shadow-none">
         <div className="mb-4 flex items-center justify-between print:hidden">
           <h2 className="text-sm font-semibold">Print label</h2>
           <button onClick={onClose} aria-label="Close" className="text-muted-foreground">
@@ -279,25 +347,63 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
           </button>
         </div>
 
-        <div className="print-area mx-auto flex h-[1in] w-[2in] items-center gap-2 rounded border border-border bg-white p-1.5 text-black">
-          <QRCodeCanvas value={item.sku} size={72} level="M" />
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-[10px] font-semibold">{item.name}</p>
-            <p className="text-[13px] font-bold tabular-nums">{money(item.price)}</p>
-            <p className="truncate text-[9px]">{item.sku}</p>
-          </div>
+        <div className="mb-4 grid grid-cols-2 gap-2 print:hidden">
+          {(["qr", "barcode"] as const).map((key) => (
+            <button
+              key={key}
+              onClick={() => setMode(key)}
+              className={cn(
+                "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border text-xs font-medium transition-all active:scale-95",
+                mode === key
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border hover:bg-accent",
+              )}
+            >
+              {key === "qr" ? <QrCode className="h-4 w-4" /> : <BarcodeIcon className="h-4 w-4" />}
+              {key === "qr" ? "QR code" : "Barcode"}
+            </button>
+          ))}
+        </div>
+
+        <div className="print-area label-sheet mx-auto flex h-[1in] w-[2in] flex-col items-center justify-center overflow-hidden rounded border border-border bg-white p-1 text-center text-black">
+          {mode === "qr" ? (
+            <div className="flex w-full items-center gap-1.5">
+              <QRCodeCanvas value={item.sku} size={62} level="M" />
+              <div className="min-w-0 flex-1 text-left leading-tight">
+                <p className="truncate text-[10px] font-semibold">{item.name}</p>
+                <p className="text-[13px] font-bold tabular-nums">{money(item.price)}</p>
+                <p className="truncate text-[9px]">{item.sku}</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="w-full truncate text-[9px] font-semibold leading-tight">{item.name}</p>
+              <Barcode
+                value={item.sku}
+                format="CODE128"
+                width={1}
+                height={30}
+                fontSize={9}
+                margin={0}
+                displayValue
+              />
+              <p className="text-[11px] font-bold tabular-nums leading-tight">
+                {money(item.price)}
+              </p>
+            </>
+          )}
         </div>
 
         <div className="mt-5 flex gap-2 print:hidden">
           <button
             onClick={() => window.print()}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95"
           >
             <Printer className="h-4 w-4" /> Print
           </button>
           <button
             onClick={onClose}
-            className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-accent"
+            className="min-h-11 flex-1 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent active:scale-95"
           >
             Close
           </button>
