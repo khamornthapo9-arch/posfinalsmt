@@ -17,6 +17,8 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
 }
 
+export const PENDING_STORE_NAME_KEY = "pos-pending-store-name";
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -35,8 +37,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .order("created_at")
       .limit(1)
       .maybeSingle();
-    setStore(data ?? null);
-    return data ?? null;
+    if (data) {
+      setStore(data);
+      return data;
+    }
+
+    // No store yet (e.g. first sign-in, possibly via magic link in a new tab):
+    // create it from the pending name captured on the sign-in form.
+    const pendingName =
+      (typeof window !== "undefined"
+        ? window.localStorage.getItem(PENDING_STORE_NAME_KEY)
+        : null) || "My Store";
+    const { data: created } = await supabase
+      .from("stores")
+      .insert({ name: pendingName, owner_id: activeSession.user.id })
+      .select("id, name")
+      .maybeSingle();
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(PENDING_STORE_NAME_KEY);
+    }
+    setStore(created ?? null);
+    return created ?? null;
   }, []);
 
   useEffect(() => {
