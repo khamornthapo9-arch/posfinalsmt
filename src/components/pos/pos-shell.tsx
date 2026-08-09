@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   BarChart3,
@@ -8,9 +8,21 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ScanLine,
+  Store,
+  LogOut,
+  User,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePos } from "@/lib/pos-store";
+import { useAuth } from "@/lib/auth-store";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -69,8 +81,56 @@ function LowStockBadge() {
   );
 }
 
+function StoreBadge() {
+  const { store } = useAuth();
+  if (!store) return null;
+  return (
+    <span className="inline-flex max-w-[9rem] items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-[11px] font-medium sm:max-w-[14rem] sm:px-3 sm:text-xs">
+      <Store className="h-3.5 w-3.5 shrink-0" />
+      <span className="truncate">{store.name}</span>
+    </span>
+  );
+}
+
+function AccountMenu() {
+  const { session, signOut } = useAuth();
+  const navigate = useNavigate();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Account menu"
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <User className="h-4 w-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+          {session?.user.email}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={() => {
+            void (async () => {
+              await signOut();
+              void navigate({ to: "/login", replace: true });
+            })();
+          }}
+        >
+          <LogOut className="mr-2 h-4 w-4" /> Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function PosShell({ title, children }: { title: string; children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const { session, store, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && (!session || !store)) void navigate({ to: "/login", replace: true });
+  }, [loading, session, store, navigate]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("pos-sidebar-collapsed");
@@ -83,6 +143,14 @@ export function PosShell({ title, children }: { title: string; children: ReactNo
       return !prev;
     });
   };
+
+  if (loading || !session || !store) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
@@ -145,8 +213,10 @@ export function PosShell({ title, children }: { title: string; children: ReactNo
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 sm:px-4">
             <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">{title}</h1>
             <div className="flex shrink-0 items-center gap-2">
+              <StoreBadge />
               <LowStockBadge />
               <StatusBadge compact />
+              <AccountMenu />
             </div>
           </div>
 
