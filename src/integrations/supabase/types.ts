@@ -23,6 +23,7 @@ export type Database = {
           price: number
           sku: string
           stock_quantity: number
+          store_id: string
         }
         Insert: {
           created_at?: string
@@ -32,6 +33,7 @@ export type Database = {
           price: number
           sku: string
           stock_quantity?: number
+          store_id: string
         }
         Update: {
           created_at?: string
@@ -41,8 +43,17 @@ export type Database = {
           price?: number
           sku?: string
           stock_quantity?: number
+          store_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "items_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sale_items: {
         Row: {
@@ -89,6 +100,7 @@ export type Database = {
           id: string
           is_offline_sync: boolean
           payment_method: string
+          store_id: string
           total_amount: number
         }
         Insert: {
@@ -96,6 +108,7 @@ export type Database = {
           id?: string
           is_offline_sync?: boolean
           payment_method?: string
+          store_id: string
           total_amount: number
         }
         Update: {
@@ -103,7 +116,37 @@ export type Database = {
           id?: string
           is_offline_sync?: boolean
           payment_method?: string
+          store_id?: string
           total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
         }
         Relationships: []
       }
@@ -112,7 +155,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      owns_store: { Args: { _store_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
