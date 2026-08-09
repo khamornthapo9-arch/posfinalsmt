@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth-store";
+import { useAuth, PENDING_STORE_NAME_KEY } from "@/lib/auth-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,7 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
   const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -56,19 +57,27 @@ function LoginPage() {
       toast.error("Enter a valid business email");
       return;
     }
-    setBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim().toLowerCase() });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    window.sessionStorage.setItem("pos-pending-store-name", storeName.trim());
+    // Persist the store name first so magic-link sign-in in a new tab still has it.
+    window.localStorage.setItem(PENDING_STORE_NAME_KEY, storeName.trim());
+
+    // Switch to the code screen immediately, regardless of the network call.
     setStep("code");
     setSeconds(60);
     setDigits(Array(6).fill(""));
-    toast.success("We sent a 6-digit code to your email");
+    setSending(true);
     window.setTimeout(() => inputs.current[0]?.focus(), 50);
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: { shouldCreateUser: true },
+    });
+    setSending(false);
+    if (error) {
+      toast.error(error.message);
+      setSeconds(0);
+      return;
+    }
+    toast.success("We sent a 6-digit code to your email");
   };
 
   const setDigit = (index: number, value: string) => {
@@ -97,17 +106,6 @@ function LoginPage() {
         type: "email",
       });
       if (error || !data.user) throw error ?? new Error("Verification failed");
-
-      const { data: existing } = await supabase.from("stores").select("id").limit(1).maybeSingle();
-      if (!existing) {
-        const name =
-          window.sessionStorage.getItem("pos-pending-store-name") || storeName.trim() || "My Store";
-        const { error: insertError } = await supabase
-          .from("stores")
-          .insert({ name, owner_id: data.user.id });
-        if (insertError) throw insertError;
-      }
-      window.sessionStorage.removeItem("pos-pending-store-name");
       await refreshStore();
       toast.success("Welcome back");
       void navigate({ to: "/", replace: true });
