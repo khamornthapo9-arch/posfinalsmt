@@ -166,8 +166,8 @@ function LoginPage() {
                 onKeyDown={(e) => e.key === "Enter" && void sendCode()}
               />
             </div>
-            <Button onClick={() => void sendCode()} disabled={busy} className="min-h-11 w-full">
-              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button onClick={() => void sendCode()} disabled={busy || sending} className="min-h-11 w-full">
+              {(busy || sending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Send 6-digit verification code
             </Button>
           </div>
@@ -196,9 +196,9 @@ function LoginPage() {
                 />
               ))}
             </div>
-            {busy && (
+            {(busy || sending) && (
               <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Verifying...
+                <Loader2 className="h-4 w-4 animate-spin" /> {sending ? "Sending code..." : "Verifying..."}
               </p>
             )}
             <div className="flex items-center justify-between text-sm">
@@ -211,7 +211,7 @@ function LoginPage() {
               </button>
               <button
                 type="button"
-                disabled={seconds > 0 || busy}
+                disabled={seconds > 0 || busy || sending}
                 onClick={() => void sendCode()}
                 className="font-medium text-primary disabled:text-muted-foreground"
               >
