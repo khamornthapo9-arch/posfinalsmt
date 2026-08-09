@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-store";
 import { posDb, type CachedItem, type PendingSale, type PendingSaleLine } from "@/lib/pos-db";
 
 export type SyncState = "online" | "offline" | "syncing";
@@ -47,6 +48,8 @@ export function PosProvider({ children }: { children: ReactNode }) {
 }
 
 function PosProviderInner({ children }: { children: ReactNode }) {
+  const { store } = useAuth();
+  const storeId = store?.id ?? null;
   const [isOnline, setIsOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -56,7 +59,15 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   const pendingCount = pending?.length ?? 0;
 
   const refreshCatalog = useCallback(async () => {
-    const { data, error } = await supabase.from("items").select("*").order("name");
+    if (!storeId) {
+      await posDb.cached_items.clear();
+      return;
+    }
+    const { data, error } = await supabase
+      .from("items")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("name");
     if (error || !data) return;
     const rows: CachedItem[] = data.map((row) => ({
       id: row.id,
@@ -71,9 +82,10 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       await posDb.cached_items.clear();
       await posDb.cached_items.bulkPut(rows);
     });
-  }, []);
+  }, [storeId]);
 
   const pushPendingSales = useCallback(async () => {
+    if (!storeId) return;
     const queued = await posDb.pending_sales.toArray();
     for (const sale of queued) {
       const { data: saleRow, error } = await supabase
@@ -83,6 +95,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           payment_method: sale.payment_method,
           is_offline_sync: true,
           created_at: sale.created_at,
+          store_id: storeId,
         })
         .select("id")
         .single();
@@ -98,10 +111,10 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       if (lineError) throw lineError;
       if (sale.localId != null) await posDb.pending_sales.delete(sale.localId);
     }
-  }, []);
+  }, [storeId]);
 
   const syncNow = useCallback(async () => {
-    if (syncing) return;
+    if (syncing || !storeId) return;
     setSyncing(true);
     try {
       const { error } = await supabase.from("items").select("id").limit(1);
@@ -114,10 +127,14 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     } finally {
       setSyncing(false);
     }
-  }, [pushPendingSales, refreshCatalog, syncing]);
+  }, [pushPendingSales, refreshCatalog, syncing, storeId]);
 
   useEffect(() => {
     let cancelled = false;
+    if (!storeId) {
+      setLoading(false);
+      return;
+    }
     void (async () => {
       await syncNow();
       if (!cancelled) setLoading(false);
@@ -134,7 +151,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       window.clearInterval(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [storeId]);
 
   const recordSale = useCallback<PosContextValue["recordSale"]>(
     async ({ lines, total, paymentMethod }) => {
@@ -153,7 +170,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         });
       };
 
-      if (navigator.onLine && isOnline) {
+      if (navigator.onLine && isOnline && storeId) {
         try {
           const { data: saleRow, error } = await supabase
             .from("sales")
@@ -162,6 +179,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
               payment_method: paymentMethod,
               is_offline_sync: false,
               created_at: createdAt,
+              store_id: storeId,
             })
             .select("id")
             .single();
@@ -192,12 +210,14 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       await applyLocalStock();
       return { offline: true };
     },
-    [isOnline, refreshCatalog],
+    [isOnline, refreshCatalog, storeId],
   );
 
   const saveItem = useCallback<PosContextValue["saveItem"]>(
     async (input) => {
+      if (!storeId) throw new Error("No active store");
       const payload = {
+        store_id: storeId,
         sku: input.sku,
         name: input.name,
         price: input.price,
@@ -213,7 +233,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       }
       await refreshCatalog();
     },
-    [refreshCatalog],
+    [refreshCatalog, storeId],
   );
 
   const deleteItem = useCallback(
