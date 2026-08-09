@@ -48,12 +48,21 @@ function LoginPage() {
   }, [seconds]);
 
   const sendCode = async () => {
-    if (!storeName.trim()) return toast.error("Enter your store name");
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return toast.error("Enter a valid business email");
+    if (!storeName.trim()) {
+      toast.error("Enter your store name");
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      toast.error("Enter a valid business email");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.auth.signInWithOtp({ email: email.trim().toLowerCase() });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     window.sessionStorage.setItem("pos-pending-store-name", storeName.trim());
     setStep("code");
     setSeconds(60);
