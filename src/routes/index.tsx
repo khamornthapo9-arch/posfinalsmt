@@ -62,7 +62,7 @@ interface KitchenTicket {
 }
 
 // Payment options in Myanmar
-const PAYMENTS = ["ငွေသား", "ကတ်", "QR ခုတ်"] as const;
+const PAYMENTS = ["ငွေသား", "kbzpay", "wavepay"] as const;
 const TABLE_COUNT = 12;
 
 function RegisterPage() {
