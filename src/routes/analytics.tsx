@@ -21,16 +21,16 @@ export const Route = createFileRoute("/analytics")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Sales Analytics — Counter Point of Sale" },
+      { title: "အရောင်း စာရင်းဇယား Analysis — Counter Point of Sale" },
       {
         name: "description",
         content:
-          "Track revenue, transactions, units sold and top products across any date range, with CSV export.",
+          "ရက်စွဲဖြင့် ဝင်ငွေ၊ အရောင်းပြေစာ အရေအတွက်၊ ရောင်းရသော ပစ္စည်းအရေအတွက်နှင့် ထိပ်တန်း ကုန်ပစ္စည်းများကို စစ်ဆေးရန်နှင့် CSV ထုတ်ယူရန်။",
       },
-      { property: "og:title", content: "Sales Analytics — Counter Point of Sale" },
+      { property: "og:title", content: "အရောင်း စာရင်းဇယား Analysis — Counter Point of Sale" },
       {
         property: "og:description",
-        content: "Revenue trends, top sellers and exportable transaction reports.",
+        content: "ဝင်ငွေ အခြေအနေ၊ အရောင်းရဆုံး ပစ္စည်းများနှင့် ထုတ်ယူနိုင်သော အရောင်းအဝယ် အစီရင်ခံစာများ။",
       },
     ],
   }),
@@ -110,7 +110,7 @@ function AnalyticsPage() {
     return [...buckets.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, revenue]) => ({
-        date: new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+        date: new Date(`${date}T00:00:00`).toLocaleDateString("my-MM", {
           month: "short",
           day: "numeric",
         }),
@@ -122,7 +122,7 @@ function AnalyticsPage() {
     const totals = new Map<string, number>();
     for (const sale of sales) {
       for (const line of sale.sale_items) {
-        const name = line.items?.name ?? "Unknown";
+        const name = line.items?.name ?? "မသိရှိသော ပစ္စည်း";
         totals.set(name, (totals.get(name) ?? 0) + line.quantity);
       }
     }
@@ -134,12 +134,12 @@ function AnalyticsPage() {
 
   const exportCsv = () => {
     const rows: (string | number)[][] = [
-      ["Sale ID", "Date", "Payment method", "Offline sync", "Units", "Total"],
+      ["အရောင်း အိုင်ဒီ", "ရက်စွဲ", "ငွေပေးချေမှု နည်းလမ်း", "အော့ဖ်လိုင်း စင့်ခ်လုပ်မှု", "အရေအတွက်", "စုစုပေါင်း"],
       ...sales.map((sale) => [
         sale.id,
-        new Date(sale.created_at).toLocaleString(),
+        new Date(sale.created_at).toLocaleString("my-MM"),
         sale.payment_method,
-        sale.is_offline_sync ? "yes" : "no",
+        sale.is_offline_sync ? "ဟုတ်ပါသည်" : "မဟုတ်ပါ",
         sale.sale_items.reduce((q, line) => q + line.quantity, 0),
         Number(sale.total_amount).toFixed(2),
       ]),
@@ -148,14 +148,14 @@ function AnalyticsPage() {
   };
 
   const cards = [
-    { label: "Total revenue", value: money(metrics.revenue), icon: DollarSign },
-    { label: "Transactions", value: String(metrics.transactions), icon: Receipt },
-    { label: "Units sold", value: String(metrics.units), icon: Package },
-    { label: "Average order", value: money(metrics.average), icon: TrendingUp },
+    { label: "စုစုပေါင်း ဝင်ငွေ", value: money(metrics.revenue), icon: DollarSign },
+    { label: "အရောင်းပြေစာ အရေအတွက်", value: String(metrics.transactions), icon: Receipt },
+    { label: "ရောင်းရသော ပစ္စည်းအရေအတွက်", value: String(metrics.units), icon: Package },
+    { label: "ပျမ်းမျှ ဝယ်ယူမှု ပမာဏ", value: money(metrics.average), icon: TrendingUp },
   ];
 
   return (
-    <PosShell title="Sales Analytics">
+    <PosShell title="အရောင်း စာရင်းဇယား Analysis">
       <div className="space-y-4 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex gap-1 rounded-lg border border-border p-1">
@@ -168,7 +168,13 @@ function AnalyticsPage() {
                   range === key ? "bg-primary text-primary-foreground" : "text-muted-foreground",
                 )}
               >
-                {key === "week" ? "This week" : key === "month" ? "This month" : key}
+                {key === "today"
+                  ? "ဒီနေ့"
+                  : key === "week"
+                  ? "ဒီတစ်ပတ်"
+                  : key === "month"
+                  ? "ဒီလ"
+                  : "ရှာရန်"}
               </button>
             ))}
           </div>
@@ -180,7 +186,7 @@ function AnalyticsPage() {
                 onChange={(e) => setFrom(e.target.value)}
                 className="h-9 rounded-lg border border-input bg-card px-2 text-sm"
               />
-              <span className="text-xs text-muted-foreground">to</span>
+              <span className="text-xs text-muted-foreground">မှ</span>
               <input
                 type="date"
                 value={to}
@@ -193,7 +199,7 @@ function AnalyticsPage() {
             onClick={exportCsv}
             className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
           >
-            <Download className="h-4 w-4" /> Export CSV
+            <Download className="h-4 w-4" /> CSV ထုတ်မည်
           </button>
         </div>
 
@@ -211,11 +217,11 @@ function AnalyticsPage() {
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-4 text-sm font-semibold">Revenue trend</h2>
+            <h2 className="mb-4 text-sm font-semibold">ဝင်ငွေ အခြေအနေ</h2>
             <div className="h-60 lg:h-64">
               {trend.length === 0 ? (
                 <p className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
-                  {loading ? "Loading..." : "No sales in this range yet."}
+                  {loading ? "ရယူနေသည်..." : "ဤရက်စွဲ အကွာအဝေးတွင် အရောင်းမှတ်တမ်း မရှိသေးပါ။"}
                 </p>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
@@ -246,11 +252,11 @@ function AnalyticsPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-4 text-sm font-semibold">Top 5 products by units</h2>
+            <h2 className="mb-4 text-sm font-semibold">အရောင်းရဆုံး ၅ မျိုး</h2>
             <div className="h-60 lg:h-64">
               {topProducts.length === 0 ? (
                 <p className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
-                  {loading ? "Loading..." : "No product sales in this range yet."}
+                  {loading ? "ရယူနေသည်..." : "ဤရက်စွဲ အကွာအဝေးတွင် ကုန်ပစ္စည်း အရောင်းမှတ်တမ်း မရှိသေးပါ။"}
                 </p>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
