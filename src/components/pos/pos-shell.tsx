@@ -17,8 +17,10 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePos } from "@/lib/pos-store";
 import { useAuth } from "@/lib/auth-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
-import appLogo from "@/assets/smt-pos-logo.jpg.asset.json";
 import { cn } from "@/lib/utils";
+
+// Static logo fallback pointing directly to public/smt-pos-logo.png
+const DEFAULT_LOGO = "/smt-pos-logo.png";
 
 const NAV = [
   { to: "/", label: "POS Register", icon: ScanLine },
@@ -73,10 +75,14 @@ function LowStockBadge() {
 function Brand({ collapsed = false }: { collapsed?: boolean }) {
   const logo = useStoreLogo();
   const { store } = useAuth();
+  
+  // Use uploaded store logo if configured, otherwise fallback to /smt-pos-logo.png
+  const logoSrc = logo || DEFAULT_LOGO;
+
   return (
     <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
       <img
-        src={logo ?? appLogo.url}
+        src={logoSrc}
         alt={store ? `${store.name} logo` : "SMT POS logo"}
         className="h-9 w-9 shrink-0 rounded-md bg-white object-contain p-0.5"
       />
@@ -295,3 +301,4 @@ export function PosShell({
     </div>
   );
 }
+
