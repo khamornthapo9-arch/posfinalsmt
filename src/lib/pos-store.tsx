@@ -7,6 +7,22 @@ import { posDb, type CachedItem, type PendingSale, type PendingSaleLine } from "
 
 export type SyncState = "online" | "offline" | "syncing";
 
+export interface OpenTabLine {
+  item_id: string;
+  sku: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface OpenTab {
+  id: string;
+  table_number: number;
+  total_amount: number;
+  notes: string | null;
+  lines: OpenTabLine[];
+}
+
 interface PosContextValue {
   items: CachedItem[];
   loading: boolean;
@@ -14,6 +30,20 @@ interface PosContextValue {
   syncState: SyncState;
   pendingCount: number;
   lowStockCount: number;
+  openTabs: OpenTab[];
+  refreshTabs: () => Promise<void>;
+  holdTab: (input: {
+    saleId?: string;
+    tableNumber: number;
+    lines: PendingSaleLine[];
+    total: number;
+    notes: string;
+  }) => Promise<void>;
+  closeTab: (input: {
+    saleId: string;
+    total: number;
+    paymentMethod: string;
+  }) => Promise<void>;
   refreshCatalog: () => Promise<void>;
   syncNow: () => Promise<void>;
   recordSale: (input: {
@@ -53,6 +83,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   const [isOnline, setIsOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
 
   const items = useLiveQuery(() => posDb.cached_items.orderBy("name").toArray(), [], []);
   const pending = useLiveQuery(() => posDb.pending_sales.toArray(), [], []);
