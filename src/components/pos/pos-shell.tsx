@@ -19,7 +19,6 @@ import { useAuth } from "@/lib/auth-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
 
-// Static logo fallback pointing directly to public folder
 const DEFAULT_LOGO = "/smt-pos-logo.png";
 
 const NAV = [
@@ -58,7 +57,7 @@ function LowStockBadge() {
   const { lowStockCount } = usePos();
   return (
     <Link
-      to={"/inventory" as string}
+      to="/inventory"
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium",
         lowStockCount > 0
@@ -103,7 +102,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
       {NAV.map((item) => (
         <Link
           key={item.to}
-          to={item.to as string}
+          to={item.to}
           title={item.label}
           onClick={onNavigate}
           activeOptions={{ exact: item.to === "/" }}
@@ -126,14 +125,15 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
 function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   const { session, signOut } = useAuth();
   const navigate = useNavigate();
-  const email = session?.user.email ?? "";
+  const email = session?.user?.email ?? "";
   const initial = email.charAt(0).toUpperCase() || "U";
 
-  const handleSignOut = () => {
-    void (async () => {
+  const handleSignOut = async () => {
+    try {
       await signOut();
+    } finally {
       void navigate({ to: "/login", replace: true });
-    })();
+    }
   };
 
   if (collapsed) {
@@ -177,8 +177,8 @@ export function PosShell({
   children,
 }: {
   title: string;
-  subtitle?: string | undefined;
-  actions?: ReactNode | undefined;
+  subtitle?: string;
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -187,7 +187,9 @@ export function PosShell({
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && (!session || !store)) void navigate({ to: "/login", replace: true });
+    if (!loading && (!session || !store)) {
+      void navigate({ to: "/login", replace: true });
+    }
   }, [loading, session, store, navigate]);
 
   useEffect(() => {
@@ -301,4 +303,3 @@ export function PosShell({
     </div>
   );
 }
-
