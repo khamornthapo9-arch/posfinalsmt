@@ -19,8 +19,10 @@ import { useAuth } from "@/lib/auth-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
 
-// Static logo fallback pointing directly to public/smt-pos-logo.png
+// Static logo fallbacks pointing directly to public folder
 const DEFAULT_LOGO = "/smt-pos-logo.png";
+const KBZ_PAY_LOGO = "/kbzpay.webp";
+const WAVE_PAY_LOGO = "/wavepay.webp";
 
 const NAV = [
   { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine },
@@ -28,6 +30,25 @@ const NAV = [
   { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3 },
   { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings },
 ] as const;
+
+function PaymentBadges() {
+  return (
+    <div className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-xs">
+      <img
+        src={KBZ_PAY_LOGO}
+        alt="KBZPay"
+        className="h-4 w-4 rounded-xs object-contain"
+        title="KBZPay Available"
+      />
+      <img
+        src={WAVE_PAY_LOGO}
+        alt="WavePay"
+        className="h-4 w-4 rounded-xs object-contain"
+        title="WavePay Available"
+      />
+    </div>
+  );
+}
 
 function StatusBadge() {
   const { syncState, pendingCount } = usePos();
@@ -75,8 +96,7 @@ function LowStockBadge() {
 function Brand({ collapsed = false }: { collapsed?: boolean }) {
   const logo = useStoreLogo();
   const { store } = useAuth();
-  
-  // Use uploaded store logo if configured, otherwise fallback to /smt-pos-logo.png
+
   const logoSrc = logo || DEFAULT_LOGO;
 
   return (
@@ -212,7 +232,7 @@ export function PosShell({
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
-      {/* Tablet & desktop: persistent collapsible sidebar */}
+      {/* Sidebar */}
       <aside
         className={cn(
           "no-print hidden shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-3 transition-[width] duration-200 md:flex",
@@ -242,7 +262,7 @@ export function PosShell({
         </div>
       </aside>
 
-      {/* Mobile drawer */}
+      {/* Mobile Drawer */}
       {drawerOpen && (
         <div className="no-print fixed inset-0 z-50 md:hidden">
           <button
@@ -270,6 +290,7 @@ export function PosShell({
         </div>
       )}
 
+      {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="no-print sticky top-0 z-30 border-b border-border bg-card md:static">
           <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
@@ -289,6 +310,7 @@ export function PosShell({
             <div className="flex shrink-0 items-center gap-2">
               {actions}
               <div className="hidden items-center gap-2 sm:flex">
+                <PaymentBadges />
                 <LowStockBadge />
                 <StatusBadge />
               </div>
@@ -301,4 +323,3 @@ export function PosShell({
     </div>
   );
 }
-
