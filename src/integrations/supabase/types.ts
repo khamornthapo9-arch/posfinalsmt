@@ -140,6 +140,7 @@ export type Database = {
       }
       stores: {
         Row: {
+          address: string | null
           business_type: string
           created_at: string
           currency_symbol: string
@@ -147,9 +148,11 @@ export type Database = {
           logo_url: string | null
           name: string
           owner_id: string
+          phone: string | null
           tax_rate: number
         }
         Insert: {
+          address?: string | null
           business_type?: string
           created_at?: string
           currency_symbol?: string
@@ -157,9 +160,11 @@ export type Database = {
           logo_url?: string | null
           name: string
           owner_id: string
+          phone?: string | null
           tax_rate?: number
         }
         Update: {
+          address?: string | null
           business_type?: string
           created_at?: string
           currency_symbol?: string
@@ -167,6 +172,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           owner_id?: string
+          phone?: string | null
           tax_rate?: number
         }
         Relationships: []
@@ -309,3 +315,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
