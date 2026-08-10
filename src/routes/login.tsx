@@ -132,7 +132,7 @@ function LoginPage() {
             <ScanLine className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">Counter POS</h1>
+            <h1 className="text-lg font-semibold tracking-tight">SMT POS</h1>
             <p className="text-sm text-muted-foreground">
               {step === "details" ? "Sign in or create your store" : "Enter your verification code"}
             </p>
@@ -142,7 +142,7 @@ function LoginPage() {
         {step === "details" ? (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="store">Store name</Label>
+              <Label htmlFor="store">ဆိုင်အမည် ထည့်ရန်</Label>
               <Input
                 id="store"
                 value={storeName}
@@ -153,7 +153,7 @@ function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Business email</Label>
+              <Label htmlFor="email">အီးမေးလ် ထည့်ရန်</Label>
               <Input
                 id="email"
                 type="email"
@@ -168,13 +168,13 @@ function LoginPage() {
             </div>
             <Button onClick={() => void sendCode()} disabled={busy || sending} className="min-h-11 w-full">
               {(busy || sending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Send 6-digit verification code
+              အတည်ပြုကုဒ်ပို့ရန်
             </Button>
           </div>
         ) : (
           <div className="space-y-5">
             <p className="text-sm text-muted-foreground">
-              We sent a code to <span className="font-medium text-foreground">{email}</span>
+              ဒီအီးမေးလ်ကို ကုဒ်ပို့ပြီးပါပြီ <span className="font-medium text-foreground">{email}</span>
             </p>
             <div className="flex justify-between gap-2">
               {digits.map((digit, i) => (
@@ -207,7 +207,7 @@ function LoginPage() {
                 onClick={() => setStep("details")}
                 className="text-muted-foreground underline-offset-4 hover:underline"
               >
-                Change email
+                အီးမေးလ် ချိန်းရန်
               </button>
               <button
                 type="button"
