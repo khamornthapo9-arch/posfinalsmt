@@ -258,24 +258,13 @@ function RegisterPage() {
     if (activeTable == null || cart.length === 0 || !validateStock()) return;
     setBusy(true);
     try {
-      let saleId = activeTab?.id;
-      if (!saleId) {
-        await holdTab({ tableNumber: activeTable, lines: cart.map(({ stock: _s, ...l }) => l), total, notes });
-        saleId = undefined;
-      } else {
-        await holdTab({
-          saleId,
-          tableNumber: activeTable,
-          lines: cart.map(({ stock: _s, ...l }) => l),
-          total,
-          notes,
-        });
-      }
-      // Re-resolve the sale id after the hold (a brand new tab was just created).
-      const { openTabs: _ignored } = { openTabs: null as never };
-      void _ignored;
-      const resolvedId = saleId ?? (await findTabId(activeTable));
-      if (!resolvedId) throw new Error("Tab not found");
+      const resolvedId = await holdTab({
+        saleId: activeTab?.id,
+        tableNumber: activeTable,
+        lines: cart.map(({ stock: _s, ...l }) => l),
+        total,
+        notes,
+      });
       await closeTab({ saleId: resolvedId, total, paymentMethod: payment });
       setReceipt({
         lines: cart,
@@ -295,9 +284,6 @@ function RegisterPage() {
       setBusy(false);
     }
   };
-
-  const findTabId = async (tableNumber: number) =>
-    openTabs.find((t) => t.table_number === tableNumber)?.id ?? null;
 
   // ---------- Restaurant floor plan ----------
   if (isRestaurant && activeTable == null) {

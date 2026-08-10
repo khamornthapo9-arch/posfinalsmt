@@ -38,7 +38,7 @@ interface PosContextValue {
     lines: PendingSaleLine[];
     total: number;
     notes: string;
-  }) => Promise<void>;
+  }) => Promise<string>;
   closeTab: (input: {
     saleId: string;
     total: number;
@@ -325,6 +325,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   const holdTab = useCallback<PosContextValue["holdTab"]>(
     async ({ saleId, tableNumber, lines, total, notes }) => {
       if (!storeId) throw new Error("No active store");
+      let createdId: string | null = null;
       if (saleId) {
         const existing = openTabs.find((tab) => tab.id === saleId);
         // Only newly added quantities are sent to the kitchen / deducted from stock.
@@ -365,6 +366,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           .select("id")
           .single();
         if (error || !saleRow) throw error ?? new Error("Could not open the tab");
+        createdId = saleRow.id;
         const { error: lineError } = await supabase.from("sale_items").insert(
           lines.map((line) => ({
             sale_id: saleRow.id,
@@ -377,6 +379,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       }
       await refreshTabs();
       await refreshCatalog();
+      return createdId ?? saleId!;
     },
     [openTabs, refreshCatalog, refreshTabs, storeId],
   );
