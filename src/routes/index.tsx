@@ -543,7 +543,7 @@ function RegisterPage() {
                 disabled={cart.length === 0 || busy}
                 className="h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {busy ? "လုပ်ဆောင်နေသည်…" : `အရောင်းအပြီးသတ်မည် · ${fmt(total)}`}
+                {busy ? "လုပ်ဆောင်နေသည်…" : `စာရင်းတွက်မည်· ${fmt(total)}`}
               </button>
             )}
           </div>
