@@ -19,6 +19,7 @@ import { usePos } from "@/lib/pos-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { stockStatus } from "@/lib/pos-utils";
 import type { CachedItem, PendingSaleLine } from "@/lib/pos-db";
+import type { StoreRecord } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -562,7 +563,7 @@ function RegisterPage() {
       {receipt && (
         <ReceiptModal
           receipt={receipt}
-          storeName={store?.name ?? "SMT POS"}
+          store={store}
           fmt={fmt}
           onClose={() => setReceipt(null)}
         />
@@ -574,12 +575,12 @@ function RegisterPage() {
 
 function ReceiptModal({
   receipt,
-  storeName,
+  store,
   fmt,
   onClose,
 }: {
   receipt: Receipt;
-  storeName: string;
+  store: StoreRecord | null;
   fmt: (n: number) => string;
   onClose: () => void;
 }) {
@@ -593,8 +594,14 @@ function ReceiptModal({
           </button>
         </div>
         <div className="text-center">
-          <p className="text-base font-semibold">{storeName}</p>
-          <p className="text-xs text-muted-foreground">{receipt.timestamp}</p>
+          <p className="text-base font-semibold">{store?.name ?? "SMT POS"}</p>
+          {store?.address && (
+            <p className="text-xs text-muted-foreground">{store.address}</p>
+          )}
+          {store?.phone && (
+            <p className="text-xs text-muted-foreground">Ph: {store.phone}</p>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">{receipt.timestamp}</p>
           {receipt.tableNumber != null && (
             <p className="text-xs font-medium">စားပွဲ {receipt.tableNumber}</p>
           )}
@@ -701,3 +708,4 @@ function KitchenTicketModal({
     </div>
   );
 }
+
