@@ -19,10 +19,8 @@ import { useAuth } from "@/lib/auth-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
 
-// Static logo fallbacks pointing directly to public folder
+// Static logo fallback pointing directly to public folder
 const DEFAULT_LOGO = "/smt-pos-logo.png";
-const KBZ_PAY_LOGO = "/kbzpay.webp";
-const WAVE_PAY_LOGO = "/wavepay.webp";
 
 const NAV = [
   { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine },
@@ -30,25 +28,6 @@ const NAV = [
   { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3 },
   { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings },
 ] as const;
-
-function PaymentBadges() {
-  return (
-    <div className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-xs">
-      <img
-        src={KBZ_PAY_LOGO}
-        alt="KBZPay"
-        className="h-4 w-4 rounded-xs object-contain"
-        title="KBZPay Available"
-      />
-      <img
-        src={WAVE_PAY_LOGO}
-        alt="WavePay"
-        className="h-4 w-4 rounded-xs object-contain"
-        title="WavePay Available"
-      />
-    </div>
-  );
-}
 
 function StatusBadge() {
   const { syncState, pendingCount } = usePos();
@@ -310,7 +289,6 @@ export function PosShell({
             <div className="flex shrink-0 items-center gap-2">
               {actions}
               <div className="hidden items-center gap-2 sm:flex">
-                <PaymentBadges />
                 <LowStockBadge />
                 <StatusBadge />
               </div>
@@ -323,3 +301,4 @@ export function PosShell({
     </div>
   );
 }
+
