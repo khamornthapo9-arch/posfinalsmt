@@ -80,27 +80,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Counter — Offline-First Point of Sale" },
+      { title: "SMT POS" },
       {
         name: "description",
         content:
           "A fast point of sale register with barcode scanning, inventory management and analytics that keeps selling offline.",
       },
-      { property: "og:title", content: "Counter — Offline-First Point of Sale" },
+      { property: "og:title", content: "SMT POS" },
       {
         property: "og:description",
         content: "Register, inventory and analytics in one offline-capable POS.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/smt-pos-logo.png", type: "image/png" },
     ],
   }),
   shellComponent: RootShell,
