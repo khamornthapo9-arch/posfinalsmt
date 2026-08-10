@@ -172,8 +172,8 @@ export function PosShell({
   children,
 }: {
   title: string;
-  subtitle?: string;
-  actions?: ReactNode;
+  subtitle?: string | undefined;
+  actions?: ReactNode | undefined;
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);

@@ -33,7 +33,7 @@ interface PosContextValue {
   openTabs: OpenTab[];
   refreshTabs: () => Promise<void>;
   holdTab: (input: {
-    saleId?: string;
+    saleId?: string | undefined;
     tableNumber: number;
     lines: PendingSaleLine[];
     total: number;
