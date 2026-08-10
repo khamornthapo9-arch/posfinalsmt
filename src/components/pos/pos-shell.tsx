@@ -49,7 +49,7 @@ function StatusBadge() {
   }
   return (
     <span className={cn(base, "border-emerald-200 bg-emerald-50 text-emerald-700")}>
-      <CircleDot className="h-3.5 w-3.5" /> Online
+      <CircleDot className="h-3.5 w-3.5" /> အွန်လိုင်း
     </span>
   );
 }
@@ -67,7 +67,7 @@ function LowStockBadge() {
       )}
     >
       <AlertTriangle className="h-3.5 w-3.5" />
-      {lowStockCount} low
+      {lowStockCount} လက်ကျန်နည်း
     </Link>
   );
 }
