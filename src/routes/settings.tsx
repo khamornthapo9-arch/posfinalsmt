@@ -26,16 +26,16 @@ export const Route = createFileRoute("/settings")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Store Settings — SMT POS" },
+      { title: "ဆိုင် ပြင်ဆင်ချက်များ — SMT POS" },
       {
         name: "description",
         content:
-          "Configure store branding, currency, sales tax, business mode, account email, subscription plan and support for your SMT POS store.",
+          "သင့် ဆိုင်အတွက် အသေးစိတ် ပြင်ဆင်မှုများနှင့် အကူအညီများရယူရန်။",
       },
-      { property: "og:title", content: "Store Settings — SMT POS" },
+      { property: "og:title", content: "ဆိုင် ပြင်ဆင်ချက်များ — SMT POS" },
       {
         property: "og:description",
-        content: "Branding, tax, business mode, account and subscription settings for SMT POS.",
+        content: "SMT POS မှာ သင့် အမှတ်တံဆိပ်၊ အခွန်၊ လုပ်ငန်းအမျိုးအစား၊ အကောင့်နှင့် စာရင်းသွင်းမှု ပြင်ဆင်ချက်ရန်။",
       },
     ],
   }),
@@ -46,24 +46,24 @@ const CURRENCIES = ["$", "€", "£", "¥", "₹", "K"];
 
 const PLANS = [
   {
-    name: "Free Starter",
+    name: "အခမဲ့ အသုံပြုနေသည်",
     price: "$0",
-    period: "forever",
-    features: ["1 store", "Up to 50 products", "Offline checkout", "Basic analytics"],
+    period: "အမြဲတမ်း",
+    features: ["ဆိုင် ၁ ဆိုင်", "ကုန်ပစ္စည်း ၅၀ အထိ", "အော့ဖ်လိုင်း ငွေချေစနစ်", "အခြေခံ စာရင်းဇယား Analysis"],
     current: true,
   },
   {
-    name: "Pro Cashier",
+    name: "Pro Casher",
     price: "$19",
-    period: "per month",
-    features: ["Unlimited products", "Restaurant mode", "Kitchen tickets", "CSV exports"],
+    period: "တစ်လ",
+    features: ["အကန့်အသတ်မရှိ ကုန်ပစ္စည်းများ", "စားသောက်ဆိုင် မုဒ်", "မီးဖိုချောင် တိုကင်များ", "CSV ထုတ်ယူမှုများ"],
     current: false,
   },
   {
-    name: "Multi-Store Enterprise",
+    name: "လက်ခွဲဆိုင်များ",
     price: "$79",
-    period: "per month",
-    features: ["Unlimited stores", "Staff accounts", "Priority support", "Custom reports"],
+    period: "တစ်လလျှင်",
+    features: ["အကန့်အသတ်မရှိ ဆိုင်ခွဲများ", "ဝန်ထမ်း အကောင့်များ", "၂၄/၇ အကူအညီ", " အသေးစိတ် စာရင်း"],
     current: false,
   },
 ];
@@ -122,7 +122,7 @@ function SettingsPage() {
 
   const saveProfile = async () => {
     if (!name.trim()) {
-      toast.error("Store name is required");
+      toast.error("ဆိုင်အမည် ထည့်သွင်းရန် လိုအပ်သည်");
       return;
     }
     setSavingProfile(true);
@@ -132,9 +132,9 @@ function SettingsPage() {
         currency_symbol: symbol.trim() || "$",
         tax_rate: Number(tax) || 0,
       });
-      toast.success("Store profile saved");
+      toast.success("ဆိုင်အချက်အလက်များကို သိမ်းဆည်းပြီးပါပြီ");
     } catch {
-      toast.error("Could not save store profile");
+      toast.error("ဆိုင်အချက်အလက်များကို သိမ်းဆည်း၍ မရပါ");
     } finally {
       setSavingProfile(false);
     }
@@ -152,9 +152,9 @@ function SettingsPage() {
       });
       if (error) throw error;
       await updateStore({ logo_url: path });
-      toast.success("Logo updated");
+      toast.success("လိုဂိုကို အပ်ဒိတ်လုပ်ပြီးပါပြီ");
     } catch {
-      toast.error("Could not upload the logo");
+      toast.error("လိုဂိုကို တင်၍ မရပါ");
     } finally {
       setUploading(false);
     }
@@ -166,9 +166,9 @@ function SettingsPage() {
     try {
       const { error } = await supabase.auth.updateUser({ email: email.trim() });
       if (error) throw error;
-      toast.success("Confirmation email sent to the new address");
+      toast.success("အီးမေးလ်လိပ်စာသစ်သို့ အတည်ပြုချက် အီးမေးလ် ပို့ပြီးပါပြီ");
     } catch {
-      toast.error("Could not update the email address");
+      toast.error("အီးမေးလ်လိပ်စာကို ပြောင်းလဲ၍ မရပါ");
     } finally {
       setSavingEmail(false);
     }
@@ -188,24 +188,24 @@ function SettingsPage() {
     await refreshCatalog();
     await refreshTabs();
     toast.success(
-      nextMode === "RESTAURANT" ? "Switched to Restaurant mode" : "Switched to Retail mode",
+      nextMode === "RESTAURANT" ? "စားသောက်ဆိုင် မုဒ်သို့ ပြောင်းလဲပြီးပါပြီ" : "အရောင်းဆိုင် မုဒ်သို့ ပြောင်းလဲပြီးပါပြီ",
     );
   };
 
   const isRestaurant = store?.business_type === "RESTAURANT";
 
   return (
-    <PosShell title="Store Settings" subtitle="Branding, tax, business mode and account">
+    <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ" subtitle="အမှတ်တံဆိပ်၊ အခွန်၊ လုပ်ငန်းမုဒ်နှင့် အကောင့်">
       <div className="mx-auto max-w-3xl space-y-4 p-4">
         <Section
-          title="Store profile & branding"
-          description="Shown on your receipts, labels and sidebar."
+          title="ဆိုင် အချက်အလက်နှင့် အမှတ်တံဆိပ်"
+          description="သင်၏ အရောင်းပြေစာ၊ တံဆိပ်နှင့် ဘေးဘောင်တို့တွင် ပြသပါမည်။"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
             <div className="flex flex-col items-center gap-2">
               <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
                 {logoUrl ? (
-                  <img src={logoUrl} alt="Store logo" className="h-full w-full object-contain" />
+                  <img src={logoUrl} alt="ဆိုင် လိုဂို" className="h-full w-full object-contain" />
                 ) : (
                   <Store className="h-7 w-7 text-muted-foreground" />
                 )}
@@ -231,14 +231,14 @@ function SettingsPage() {
                 ) : (
                   <Upload className="h-3.5 w-3.5" />
                 )}
-                Upload logo
+                လိုဂို တင်မည်
               </button>
             </div>
 
             <div className="grid flex-1 gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="store-name">
-                  Store name
+                  ဆိုင်အမည်
                 </label>
                 <input
                   id="store-name"
@@ -249,7 +249,7 @@ function SettingsPage() {
               </div>
               <div>
                 <label className={labelClass} htmlFor="currency">
-                  Currency symbol
+                  ငွေကြေး သင်္ကေတ
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -277,7 +277,7 @@ function SettingsPage() {
               </div>
               <div>
                 <label className={labelClass} htmlFor="tax">
-                  Default sales tax (%)
+                  မူလ အရောင်းအခွန် (%)
                 </label>
                 <input
                   id="tax"
@@ -295,7 +295,7 @@ function SettingsPage() {
                   disabled={savingProfile}
                   className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {savingProfile && <Loader2 className="h-4 w-4 animate-spin" />} Save changes
+                  {savingProfile && <Loader2 className="h-4 w-4 animate-spin" />} ပြောင်းလဲမှုများကို သိမ်းမည်
                 </button>
               </div>
             </div>
@@ -303,17 +303,17 @@ function SettingsPage() {
         </Section>
 
         <Section
-          title="Business mode"
-          description="Retail rings up items directly. Restaurant adds a table floor plan and kitchen tickets."
+          title="လုပ်ငန်း အမျိုးအစား"
+          description="အရောင်းဆိုင် မုဒ်သည် ပစ္စည်းများကို တိုက်ရိုက် ရောင်းချသည်။ စားသောက်ဆိုင် မုဒ်သည် စားပွဲနေရာချထားမှုနှင့် မီးဖိုချောင် တိုကင်စနစ် ပါဝင်သည်။"
         >
           <div className="grid gap-3 sm:grid-cols-2">
             {[
-              { key: "RETAIL", label: "Retail Store Mode", icon: Store, copy: "Fast counter checkout" },
+              { key: "RETAIL", label: "အရောင်းဆိုင် မုဒ်", icon: Store, copy: "မြန်ဆန်သော ကောင်တာ ငွေချေစနစ်" },
               {
                 key: "RESTAURANT",
-                label: "Restaurant / Cafe Mode",
+                label: "စားသောက်ဆိုင် / ကဖေး မုဒ်",
                 icon: UtensilsCrossed,
-                copy: "Tables, open tabs, kitchen tickets",
+                copy: "စားပွဲများ၊ မပြီးသေးသော ဘေလ်များ၊ မီးဖိုချောင် တိုကင်များ",
               },
             ].map((mode) => {
               const active = (store?.business_type ?? "RETAIL") === mode.key;
@@ -339,11 +339,11 @@ function SettingsPage() {
             })}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Currently running in {isRestaurant ? "Restaurant / Cafe" : "Retail Store"} mode.
+            လက်ရှိတွင် {isRestaurant ? "စားသောက်ဆိုင် / ကဖေး" : "အရောင်းဆိုင်"} မုဒ်ဖြင့် အသုံးပြုနေပါသည်။
           </p>
         </Section>
 
-        <Section title="Account" description="Sign-in email for this store owner.">
+        <Section title="အကောင့်" description="ဤဆိုင်ပိုင်ရှင်၏ ဝင်ရောက်ရန် အီးမေးလ်။">
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -359,21 +359,21 @@ function SettingsPage() {
               disabled={savingEmail || email === session?.user.email}
               className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium hover:bg-accent disabled:opacity-50"
             >
-              {savingEmail && <Loader2 className="h-4 w-4 animate-spin" />} Update email
+              {savingEmail && <Loader2 className="h-4 w-4 animate-spin" />} အီးမေးလ် ပြောင်းမည်
             </button>
           </div>
         </Section>
 
-        <Section title="Subscription" description="You are on the Free Starter plan.">
+        <Section title="စာရင်းသွင်းမှု ပလန်" description="သင်သည် အခမဲ့ စတင်သူ ပလန်ကို အသုံးပြုနေပါသည်။">
           <button
             onClick={() => setPlansOpen(true)}
             className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            <CreditCard className="h-4 w-4" /> View plans
+            <CreditCard className="h-4 w-4" /> ပလန်များ ကြည့်မည်
           </button>
         </Section>
 
-        <Section title="Support" description="Need help? Contact SMT POS Support.">
+        <Section title="အကူအညီ" description="အကူအညီ လိုအပ်ပါသလား? SMT POS အကူအညီပေးရေးသို့ ဆက်သွယ်ပါ။">
           <div className="flex flex-wrap gap-2">
             <a
               href="mailto:support@smtpos.app"
@@ -392,7 +392,7 @@ function SettingsPage() {
           </div>
         </Section>
 
-        <Section title="Session" description="Signs out and clears the local offline cache.">
+        <Section title="အကောင့်အသုံးပြုမှု" description="အကောင့်မှ ထွက်ပြီး သိမ်းဆည်းထားသော အော့ဖ်လိုင်း ဒေတာများကို ရှင်းလင်းပါမည်။">
           <button
             onClick={() => {
               void (async () => {
@@ -402,7 +402,7 @@ function SettingsPage() {
             }}
             className="inline-flex h-10 items-center gap-2 rounded-md bg-destructive px-4 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
           >
-            <LogOut className="h-4 w-4" /> Sign out
+            <LogOut className="h-4 w-4" /> ထွက်မည်
           </button>
         </Section>
       </div>
@@ -427,7 +427,7 @@ function PlansModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
       <div className="max-h-full w-full max-w-3xl overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold">Subscription plans</h2>
+          <h2 className="text-sm font-semibold">စာရင်းသွင်းမှု ပလန်များ</h2>
           <button onClick={onClose} aria-label="Close plans" className="text-muted-foreground">
             <X className="h-4 w-4" />
           </button>
@@ -453,7 +453,7 @@ function PlansModal({ onClose }: { onClose: () => void }) {
               </ul>
               <button
                 disabled={plan.current}
-                onClick={() => toast.info("Billing is coming soon — contact support to upgrade.")}
+                onClick={() => toast.info("ငွေပေးချေမှုစနစ် မကြာမီ လာပါမည် — အဆင့်မြှင့်တင်ရန် အကူအညီပေးရေးသို့ ဆက်သွယ်ပါ။")}
                 className={cn(
                   "mt-4 h-10 rounded-md text-sm font-medium",
                   plan.current
@@ -461,7 +461,7 @@ function PlansModal({ onClose }: { onClose: () => void }) {
                     : "bg-primary text-primary-foreground hover:bg-primary/90",
                 )}
               >
-                {plan.current ? "Current plan" : "Upgrade plan"}
+                {plan.current ? "လက်ရှိ ပလန်" : "ပလန် အဆင့်မြှင့်မည်"}
               </button>
             </div>
           ))}
@@ -487,13 +487,12 @@ function ModeSwitchModal({
       <div className="w-full max-w-lg rounded-lg border border-destructive/40 bg-card shadow-lg">
         <div className="border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-destructive">
-            Switch to {target === "RESTAURANT" ? "Restaurant / Cafe" : "Retail Store"} mode
+            {target === "RESTAURANT" ? "စားသောက်ဆိုင် / ကဖေး" : "အရောင်းဆိုင်"} မုဒ်သို့ ပြောင်းလဲမည်
           </h2>
         </div>
         <div className="space-y-3 p-4">
           <p className="rounded-md bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-            Warning: Switching business modes resets current store inventory and sales tables to
-            prevent schema conflict. Type CONFIRM to wipe data and switch.
+            သတိပေးချက်- လုပ်ငန်းမုဒ် ပြောင်းလဲခြင်းသည် က်ရှိ ဆိုင်၏ ကုန်ပစ္စည်းနှင့် အရောင်းစာရင်းများကို ပြန်လည် စာရင်းဖျက်ပါမည်။ ဒေတာများကို ဖျက်ပြီး မုဒ်ပြောင်းရန် CONFIRM ဟု ရိုက်ထည့်ပါ။
           </p>
           <input
             value={text}
@@ -506,7 +505,7 @@ function ModeSwitchModal({
               onClick={onClose}
               className="h-10 rounded-md border border-border px-4 text-sm font-medium hover:bg-accent"
             >
-              Cancel
+              မလုပ်တော့ပါ
             </button>
             <button
               disabled={text !== "CONFIRM" || busy}
@@ -516,7 +515,7 @@ function ModeSwitchModal({
               }}
               className="inline-flex h-10 items-center gap-2 rounded-md bg-destructive px-4 text-sm font-medium text-destructive-foreground disabled:opacity-50"
             >
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Wipe data & switch
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />} ဒေတာများဖျက်၍ ပြောင်းမည်
             </button>
           </div>
         </div>
