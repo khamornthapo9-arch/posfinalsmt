@@ -58,7 +58,7 @@ function LowStockBadge() {
   const { lowStockCount } = usePos();
   return (
     <Link
-      to="/inventory"
+      to={"/inventory" as string}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium",
         lowStockCount > 0
@@ -104,7 +104,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
       {NAV.map((item) => (
         <Link
           key={item.to}
-          to={item.to}
+          to={item.to as string}
           title={item.label}
           onClick={onNavigate}
           activeOptions={{ exact: item.to === "/" }}
