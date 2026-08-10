@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, type LinkProps } from "@tanstack/react-router";
 import {
   AlertTriangle,
   BarChart3,
@@ -12,6 +12,7 @@ import {
   ScanLine,
   Settings,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePos } from "@/lib/pos-store";
@@ -21,12 +22,18 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_LOGO = "/smt-pos-logo.png";
 
-const NAV = [
+interface NavItem {
+  to: LinkProps["to"];
+  label: string;
+  icon: LucideIcon;
+}
+
+const NAV: NavItem[] = [
   { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine },
   { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes },
   { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3 },
   { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings },
-] as const;
+];
 
 function StatusBadge() {
   const { syncState, pendingCount } = usePos();
@@ -101,7 +108,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
     <nav className="flex flex-col gap-0.5">
       {NAV.map((item) => (
         <Link
-          key={item.to}
+          key={item.label}
           to={item.to}
           title={item.label}
           onClick={onNavigate}
