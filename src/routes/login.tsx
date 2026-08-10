@@ -11,14 +11,14 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Sign in — Counter POS" },
+      { title: "အကောင့်ဝင်ရန် — SMT POS" },
       {
         name: "description",
         content:
-          "Sign in to your Counter point of sale account with a 6-digit email verification code.",
+          "အီးမေးလ် အတည်ပြုကုဒ်ဖြင့် ဝင်ရောက်ပါ။",
       },
-      { property: "og:title", content: "Sign in — Counter POS" },
-      { property: "og:description", content: "Secure email code sign-in for your store register." },
+      { property: "og:title", content: "အကောင့်ဝင်ရန် — SMT POS" },
+      { property: "og:description", content: "သင့်ဆိုင်အတွက် အီးမေးလ်အတည်ပြုကုဒ်ဖြင့် အကောင့်ဝင်ရန်။" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -50,11 +50,11 @@ function LoginPage() {
 
   const sendCode = async () => {
     if (!storeName.trim()) {
-      toast.error("Enter your store name");
+      toast.error("ဆိုင်အမည် ထည့်သွင်းပေးပါ။");
       return;
     }
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-      toast.error("Enter a valid business email");
+      toast.error("မှန်ကန်သော အီးမေးလ်လိပ်စာ ထည့်သွင်းပေးပါ။");
       return;
     }
     // Persist the store name first so magic-link sign-in in a new tab still has it.
@@ -77,7 +77,7 @@ function LoginPage() {
       setSeconds(0);
       return;
     }
-    toast.success("We sent a 6-digit code to your email");
+    toast.success("သင့်အီးမေးလ်သို့ အတည်ပြုလင့် ပို့ပေးလိုက်ပါပြီ။");
   };
 
   const setDigit = (index: number, value: string) => {
@@ -105,12 +105,12 @@ function LoginPage() {
         token: code,
         type: "email",
       });
-      if (error || !data.user) throw error ?? new Error("Verification failed");
+      if (error || !data.user) throw error ?? new Error("အတည်ပြုခြင်း မအောင်မြင်ပါ");
       await refreshStore();
-      toast.success("Welcome back");
+      toast.success("ပြန်လည်ကြိုဆိုပါသည်");
       void navigate({ to: "/", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Invalid code");
+      toast.error(err instanceof Error ? err.message : "အတည်ပြုကုဒ် မမှန်ကန်ပါ။");
       setDigits(Array(6).fill(""));
       inputs.current[0]?.focus();
     } finally {
@@ -134,7 +134,7 @@ function LoginPage() {
           <div>
             <h1 className="text-lg font-semibold tracking-tight">SMT POS</h1>
             <p className="text-sm text-muted-foreground">
-              {step === "details" ? "Sign in or create your store" : "Enter your verification code"}
+              {step === "details" ? "အကောင့်ဝင်ရန် သို့မဟုတ် ဆိုင်အသစ်စတင်ရန်" : "အတည်ပြုကုဒ် ရိုက်ထည့်ပါ"}
             </p>
           </div>
         </div>
@@ -142,18 +142,18 @@ function LoginPage() {
         {step === "details" ? (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="store">ဆိုင်အမည် ထည့်ရန်</Label>
+              <Label htmlFor="store">ဆိုင်အမည်</Label>
               <Input
                 id="store"
                 value={storeName}
                 onChange={(e) => setStoreName(e.target.value)}
-                placeholder="Corner Market"
+                placeholder="ဥပမာ - မြို့မ စတိုး"
                 maxLength={80}
                 className="min-h-11"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">အီးမေးလ် ထည့်ရန်</Label>
+              <Label htmlFor="email">အီးမေးလ်</Label>
               <Input
                 id="email"
                 type="email"
@@ -168,13 +168,13 @@ function LoginPage() {
             </div>
             <Button onClick={() => void sendCode()} disabled={busy || sending} className="min-h-11 w-full">
               {(busy || sending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              အတည်ပြုကုဒ်ပို့ရန်
+              အတည်ပြုကုဒ် ပို့ရန်
             </Button>
           </div>
         ) : (
           <div className="space-y-5">
             <p className="text-sm text-muted-foreground">
-              ဒီအီးမေးလ်ကို ကုဒ်ပို့ပြီးပါပြီ <span className="font-medium text-foreground">{email}</span>
+              ဤအီးမေးလ်သို့ အတည်ပြုကုဒ် ပို့ပေးလိုက်ပါပြီ <span className="font-medium text-foreground">{email}</span>
             </p>
             <div className="flex justify-between gap-2">
               {digits.map((digit, i) => (
@@ -191,14 +191,14 @@ function LoginPage() {
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   maxLength={6}
-                  aria-label={`Digit ${i + 1}`}
+                  aria-label={`ဂဏန်း ${i + 1}`}
                   className="h-14 w-full rounded-lg border border-input bg-background text-center text-xl font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-ring"
                 />
               ))}
             </div>
             {(busy || sending) && (
               <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> {sending ? "Sending code..." : "Verifying..."}
+                <Loader2 className="h-4 w-4 animate-spin" /> {sending ? "ကုဒ် ပို့နေသည်..." : "အတည်ပြုနေသည်..."}
               </p>
             )}
             <div className="flex items-center justify-between text-sm">
@@ -207,7 +207,7 @@ function LoginPage() {
                 onClick={() => setStep("details")}
                 className="text-muted-foreground underline-offset-4 hover:underline"
               >
-                အီးမေးလ် ချိန်းရန်
+                အီးမေးလ် ပြောင်းရန်
               </button>
               <button
                 type="button"
@@ -215,7 +215,7 @@ function LoginPage() {
                 onClick={() => void sendCode()}
                 className="font-medium text-primary disabled:text-muted-foreground"
               >
-                {seconds > 0 ? `Resend in ${seconds}s` : "Resend code"}
+                {seconds > 0 ? `${seconds} စက္ကန့်အတွင်း ပြန်ပို့မည်` : "ကုဒ် ပြန်ပို့ရန်"}
               </button>
             </div>
           </div>
