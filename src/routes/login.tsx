@@ -125,7 +125,6 @@ function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
         <div className="mb-6 flex items-center gap-3">
-          {/* Fixed Logo Box */}
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background p-1 shadow-xs">
             <img
               src="/smt-pos-logo.png"
