@@ -61,7 +61,8 @@ interface KitchenTicket {
   timestamp: string;
 }
 
-const PAYMENTS = ["Cash", "Card", "QR Code"] as const;
+// Payment options in Myanmar
+const PAYMENTS = ["ငွေသား", "ကတ်", "QR ခုတ်"] as const;
 const TABLE_COUNT = 12;
 
 function RegisterPage() {
@@ -70,7 +71,7 @@ function RegisterPage() {
 
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
-  const [payment, setPayment] = useState<string>("Cash");
+  const [payment, setPayment] = useState<string>("ငွေသား");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [ticket, setTicket] = useState<KitchenTicket | null>(null);
@@ -115,16 +116,15 @@ function RegisterPage() {
         (item) => item.sku.toLowerCase() === code.toLowerCase().trim(),
       );
       if (!match) {
-        toast.error(`No product found for "${code}"`);
+        toast.error(`"${code}" အတွက် ပစ္စည်း မတွေ့ပါ`);
         return;
       }
       addToCart(match);
-      toast.success(`Added ${match.name}`);
+      toast.success(`${match.name} ထည့်ပြီးပါပြီ`);
     },
     [addToCart],
   );
 
-  // USB / hardware barcode scanner: rapid keystrokes terminated by Enter.
   useEffect(() => {
     let buffer = "";
     let lastKey = 0;
@@ -194,7 +194,7 @@ function RegisterPage() {
       const saved = activeTab?.lines.find((l) => l.item_id === line.item_id)?.quantity ?? 0;
       const needed = line.quantity - saved;
       if (needed > 0 && (!current || current.stock_quantity < needed)) {
-        toast.error(`Not enough stock for ${line.name}`);
+        toast.error(`${line.name} အတွက် ပစ္စည်း လက်ကျန် မလုံလောက်ပါ`);
         return false;
       }
     }
@@ -220,9 +220,9 @@ function RegisterPage() {
         offline,
       });
       setCart([]);
-      toast.success(offline ? "Sale queued offline" : "Sale completed");
+      toast.success(offline ? "အရောင်းကို အော့ဖ်လိုင်း မှတ်ထားသည်" : "ရောင်းချမှု အောင်မြင်သည်");
     } catch {
-      toast.error("Could not complete the sale");
+      toast.error("အရောင်းစာရင်း မသိမ်းဆည်းနိုင်ပါ");
     } finally {
       setBusy(false);
     }
@@ -245,10 +245,10 @@ function RegisterPage() {
         notes,
         timestamp: new Date().toLocaleString(),
       });
-      toast.success(`Table ${activeTable} tab held`);
+      toast.success(`စားပွဲ ${activeTable} စာရင်း ခေတ္တသိမ်းထားသည်`);
       leaveTable();
     } catch {
-      toast.error("Could not hold the tab");
+      toast.error("စာရင်း မသိမ်းဆည်းနိုင်ပါ");
     } finally {
       setBusy(false);
     }
@@ -276,10 +276,10 @@ function RegisterPage() {
         offline: false,
         tableNumber: activeTable,
       });
-      toast.success(`Table ${activeTable} closed`);
+      toast.success(`စားပွဲ ${activeTable} စာရင်း ပိတ်ပြီးပါပြီ`);
       leaveTable();
     } catch {
-      toast.error("Could not close the table");
+      toast.error("စားပွဲ မပိတ်နိုင်ပါ");
     } finally {
       setBusy(false);
     }
@@ -288,7 +288,7 @@ function RegisterPage() {
   // ---------- Restaurant floor plan ----------
   if (isRestaurant && activeTable == null) {
     return (
-      <PosShell title="Table Floor Plan" subtitle={`${openTabs.length} open tab(s)`}>
+      <PosShell title="စားပွဲများ မြေပုံ" subtitle={`ဖွင့်ထားသော စားပွဲ ${openTabs.length} ခု`}>
         <div className="p-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {Array.from({ length: TABLE_COUNT }, (_, i) => i + 1).map((num) => {
@@ -305,7 +305,7 @@ function RegisterPage() {
                       : "border-emerald-200 bg-emerald-50/60 hover:border-emerald-300",
                   )}
                 >
-                  <span className="text-sm font-semibold">Table {num}</span>
+                  <span className="text-sm font-semibold">စားပွဲ {num}</span>
                   <span
                     className={cn(
                       "inline-flex w-fit items-center rounded-md px-2 py-0.5 text-xs font-medium",
@@ -314,7 +314,7 @@ function RegisterPage() {
                         : "bg-emerald-100 text-emerald-700",
                     )}
                   >
-                    {occupied ? "Occupied" : "Available"}
+                    {occupied ? "လူရှိသည်" : "အားသည်"}
                   </span>
                   <span className="text-lg font-semibold tabular-nums">
                     {occupied ? fmt(tab!.total_amount) : "—"}
@@ -330,15 +330,15 @@ function RegisterPage() {
 
   return (
     <PosShell
-      title={isRestaurant ? `Table ${activeTable}` : "POS Register"}
-      subtitle={isRestaurant ? (activeTab ? "Open tab" : "New order") : store?.name}
+      title={isRestaurant ? `စားပွဲ ${activeTable}` : "POS စာရင်းကိုင်"}
+      subtitle={isRestaurant ? (activeTab ? "ဖွင့်ထားသော စာရင်း" : "အော်ဒါအသစ်") : store?.name}
       actions={
         isRestaurant ? (
           <button
             onClick={leaveTable}
             className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Floor plan
+            <ArrowLeft className="h-3.5 w-3.5" /> စားပွဲများ မြေပုံ
           </button>
         ) : null
       }
@@ -351,7 +351,7 @@ function RegisterPage() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name or SKU, or scan a barcode"
+                placeholder="အမည် (သို့) SKU ဖြင့် ရှာပါ၊ သို့မဟုတ် ဘားကုဒ် ဖတ်ပါ"
                 className="h-11 w-full rounded-md border border-input bg-card pl-9 pr-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -359,7 +359,7 @@ function RegisterPage() {
               onClick={() => setScannerOpen(true)}
               className="inline-flex h-11 shrink-0 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
             >
-              <Camera className="h-4 w-4" /> Scan
+              <Camera className="h-4 w-4" /> စကင်န်ဖတ်ရန်
             </button>
           </div>
 
@@ -385,7 +385,7 @@ function RegisterPage() {
                         status === "out" && "bg-destructive/10 text-destructive",
                       )}
                     >
-                      {status === "out" ? "Out" : `${item.stock_quantity} left`}
+                      {status === "out" ? "ကုန်နေသည်" : `${item.stock_quantity} ကျန်`}
                     </span>
                   </div>
                 </button>
@@ -397,17 +397,17 @@ function RegisterPage() {
                   <>
                     <Boxes className="h-8 w-8 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">
-                      No products in inventory yet. Add your first item in Inventory.
+                      ကုန်ပစ္စည်း စာရင်းမရှိသေးပါ။ ပစ္စည်းအသစ် ထည့်သွင်းပါ။
                     </p>
                     <Link
                       to="/inventory"
                       className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                     >
-                      Go to Inventory
+                      ကုန်ပစ္စည်းစာရင်းသို့ သွားရန်
                     </Link>
                   </>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No products match your search.</p>
+                  <p className="text-sm text-muted-foreground">ရှာဖွေမှုနှင့် ကိုက်ညီသော ပစ္စည်းမရှိပါ။</p>
                 )}
               </div>
             )}
@@ -417,16 +417,16 @@ function RegisterPage() {
         <section className="flex h-fit flex-col rounded-lg border border-border bg-card shadow-sm lg:sticky lg:top-4">
           <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
             <h2 className="text-sm font-semibold">
-              {isRestaurant ? `Table ${activeTable} order` : "Current sale"}
+              {isRestaurant ? `စားပွဲ ${activeTable} အော်ဒါ` : "လက်ရှိ ရောင်းချမှု"}
             </h2>
             <span className="text-xs text-muted-foreground">
-              {cart.length} {cart.length === 1 ? "line" : "lines"}
+              {cart.length} မျိုး
             </span>
           </div>
           <div className="max-h-[46vh] overflow-y-auto">
             {cart.length === 0 ? (
               <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-                Cart is empty. Tap a product or scan to begin.
+                ဈေးဝယ်ခြင်းတောင်း လွတ်နေပါသည်။ ပစ္စည်းတစ်ခုကို နှိပ်ပါ သို့မဟုတ် စကင်န်ဖတ်ပါ။
               </p>
             ) : (
               cart.map((line) => (
@@ -437,13 +437,13 @@ function RegisterPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{line.name}</p>
                     <p className="text-xs tabular-nums text-muted-foreground">
-                      {fmt(line.unit_price)} each
+                      {fmt(line.unit_price)} တစ်ခု
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => changeQty(line.item_id, -1)}
-                      aria-label="Decrease quantity"
+                      aria-label="အရေအတွက် လျှော့ရန်"
                       className="flex h-11 w-11 items-center justify-center rounded-md border border-border hover:bg-accent sm:h-9 sm:w-9"
                     >
                       <Minus className="h-4 w-4" />
@@ -451,7 +451,7 @@ function RegisterPage() {
                     <span className="w-7 text-center text-sm tabular-nums">{line.quantity}</span>
                     <button
                       onClick={() => changeQty(line.item_id, 1)}
-                      aria-label="Increase quantity"
+                      aria-label="အရေအတွက် တိုးရန်"
                       className="flex h-11 w-11 items-center justify-center rounded-md border border-border hover:bg-accent sm:h-9 sm:w-9"
                     >
                       <Plus className="h-4 w-4" />
@@ -462,7 +462,7 @@ function RegisterPage() {
                   </span>
                   <button
                     onClick={() => setCart((prev) => prev.filter((l) => l.item_id !== line.item_id))}
-                    aria-label={`Remove ${line.name}`}
+                    aria-label={`${line.name} ကို ဖျက်ရန်`}
                     className="flex h-11 w-9 items-center justify-center text-muted-foreground hover:text-destructive sm:h-9"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -475,13 +475,13 @@ function RegisterPage() {
           {isRestaurant && (
             <div className="border-t border-border px-4 py-3">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                Kitchen notes
+                မီးဖိုချောင် မှတ်ချက်
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
-                placeholder="No onions, extra spicy…"
+                placeholder="ကြက်သွန်မပါ၊ အစပ်ကဲ…"
                 className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -489,15 +489,15 @@ function RegisterPage() {
 
           <div className="space-y-1.5 border-t border-border px-4 py-3 text-sm">
             <div className="flex justify-between text-muted-foreground">
-              <span>Subtotal</span>
+              <span>စုစုပေါင်း</span>
               <span className="tabular-nums">{fmt(subtotal)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>Tax ({taxPercent}%)</span>
+              <span>အခွန် ({taxPercent}%)</span>
               <span className="tabular-nums">{fmt(tax)}</span>
             </div>
             <div className="flex justify-between text-base font-semibold">
-              <span>Total</span>
+              <span>ကျသင့်ငွေ</span>
               <span className="tabular-nums">{fmt(total)}</span>
             </div>
           </div>
@@ -527,14 +527,14 @@ function RegisterPage() {
                   disabled={cart.length === 0 || busy}
                   className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-background text-sm font-semibold hover:bg-accent disabled:opacity-50"
                 >
-                  <ChefHat className="h-4 w-4" /> Hold tab / Send to kitchen
+                  <ChefHat className="h-4 w-4" /> ခေတ္တသိမ်း / မီးဖိုချောင်သို့ပို့ရန်
                 </button>
                 <button
                   onClick={() => void payAndClose()}
                   disabled={cart.length === 0 || busy}
                   className="h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {busy ? "Processing…" : `Pay & close table · ${fmt(total)}`}
+                  {busy ? "လုပ်ဆောင်နေသည်…" : `ငွေရှင်းပြီး စားပွဲပိတ်မည် · ${fmt(total)}`}
                 </button>
               </>
             ) : (
@@ -543,7 +543,7 @@ function RegisterPage() {
                 disabled={cart.length === 0 || busy}
                 className="h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {busy ? "Processing…" : `Complete sale · ${fmt(total)}`}
+                {busy ? "လုပ်ဆောင်နေသည်…" : `အရောင်းအပြီးသတ်မည် · ${fmt(total)}`}
               </button>
             )}
           </div>
@@ -587,8 +587,8 @@ function ReceiptModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
       <div className="print-area receipt-sheet w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-lg">
         <div className="mb-3 flex items-center justify-between print:hidden">
-          <h2 className="text-sm font-semibold">Receipt</h2>
-          <button onClick={onClose} aria-label="Close receipt" className="text-muted-foreground">
+          <h2 className="text-sm font-semibold">ပြေစာ</h2>
+          <button onClick={onClose} aria-label="ပြေစာ ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -596,10 +596,10 @@ function ReceiptModal({
           <p className="text-base font-semibold">{storeName}</p>
           <p className="text-xs text-muted-foreground">{receipt.timestamp}</p>
           {receipt.tableNumber != null && (
-            <p className="text-xs font-medium">Table {receipt.tableNumber}</p>
+            <p className="text-xs font-medium">စားပွဲ {receipt.tableNumber}</p>
           )}
           {receipt.offline && (
-            <p className="mt-1 text-xs font-medium text-amber-600">Offline sale — pending sync</p>
+            <p className="mt-1 text-xs font-medium text-amber-600">အော့ဖ်လိုင်း အရောင်း — ချိတ်ဆက်ရန် စောင့်ဆိုင်းနေသည်</p>
           )}
         </div>
         <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
@@ -616,31 +616,31 @@ function ReceiptModal({
         <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
         <div className="text-sm">
           <div className="flex justify-between text-muted-foreground">
-            <span>Subtotal</span>
+            <span>စုစုပေါင်း</span>
             <span className="tabular-nums">{fmt(receipt.subtotal)}</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Tax</span>
+            <span>အခွန်</span>
             <span className="tabular-nums">{fmt(receipt.tax)}</span>
           </div>
           <div className="mt-1 flex justify-between font-semibold">
-            <span>Total</span>
+            <span>ကျသင့်ငွေ</span>
             <span className="tabular-nums">{fmt(receipt.total)}</span>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Paid by {receipt.paymentMethod}</p>
+          <p className="mt-2 text-xs text-muted-foreground">ပေးချေသည့် နည်းလမ်း: {receipt.paymentMethod}</p>
         </div>
         <div className="mt-4 flex gap-2 print:hidden">
           <button
             onClick={() => window.print()}
             className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            <Printer className="h-4 w-4" /> Print
+            <Printer className="h-4 w-4" /> ပရင့်ထုတ်ရန်
           </button>
           <button
             onClick={onClose}
             className="h-10 flex-1 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
           >
-            Done
+            ပြီးပြီ
           </button>
         </div>
       </div>
@@ -659,13 +659,13 @@ function KitchenTicketModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
       <div className="print-area kitchen-ticket w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-lg">
         <div className="mb-3 flex items-center justify-between print:hidden">
-          <h2 className="text-sm font-semibold">Kitchen order ticket</h2>
-          <button onClick={onClose} aria-label="Close ticket" className="text-muted-foreground">
+          <h2 className="text-sm font-semibold">မီးဖိုချောင် အော်ဒါလတ်မှတ်</h2>
+          <button onClick={onClose} aria-label="လက်မှတ် ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="text-center">
-          <p className="text-lg font-semibold">TABLE {ticket.tableNumber}</p>
+          <p className="text-lg font-semibold">စားပွဲ {ticket.tableNumber}</p>
           <p className="text-xs text-muted-foreground">{ticket.timestamp}</p>
         </div>
         <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
@@ -680,7 +680,7 @@ function KitchenTicketModal({
         {ticket.notes.trim() && (
           <>
             <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
-            <p className="text-sm">Notes: {ticket.notes}</p>
+            <p className="text-sm">မှတ်ချက်: {ticket.notes}</p>
           </>
         )}
         <div className="mt-4 flex gap-2 print:hidden">
@@ -688,13 +688,13 @@ function KitchenTicketModal({
             onClick={() => window.print()}
             className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            <Printer className="h-4 w-4" /> Print ticket
+            <Printer className="h-4 w-4" /> ပရင့်ထုတ်ရန်
           </button>
           <button
             onClick={onClose}
             className="h-10 flex-1 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
           >
-            Done
+            ပြီးပြီ
           </button>
         </div>
       </div>
