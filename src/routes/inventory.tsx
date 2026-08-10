@@ -14,16 +14,16 @@ export const Route = createFileRoute("/inventory")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Inventory & Labels — Counter Point of Sale" },
+      { title: "ကုန်ပစ္စည်းစာရင်းနှင့် လေဘယ်များ — Counter Point of Sale" },
       {
         name: "description",
         content:
-          "Manage products, stock levels and low-stock thresholds, and print 2x1 inch QR shelf labels.",
+          "ကုန်ပစ္စည်းများ၊ လက်ကျန်ပမာဏနှင့် အနည်းဆုံးလက်ကျန်သတ်မှတ်ချက်များကို စီမံခန့်ခွဲပြီး ၂x၁ လက်မ QR လေဘယ်များကို ရိုက်နှိပ်ပါ။",
       },
-      { property: "og:title", content: "Inventory & Labels — Counter Point of Sale" },
+      { property: "og:title", content: "ကုန်ပစ္စည်းစာရင်းနှင့် လေဘယ်များ — Counter Point of Sale" },
       {
         property: "og:description",
-        content: "Product catalog management with QR label generation and printing.",
+        content: "QR လေဘယ်ထုတ်လုပ်ခြင်းနှင့် ပရင်ထုတ်ခြင်းဆိုင်ရာ ကုန်ပစ္စည်း ကတ်တလောက် စီမံခန့်ခွဲမှု။",
       },
     ],
   }),
@@ -54,7 +54,7 @@ function InventoryPage() {
   }, [items, query, filter]);
 
   return (
-    <PosShell title="Inventory">
+    <PosShell title="ကုန်ပစ္စည်းစာရင်း">
       <div className="space-y-4 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-56 flex-1">
@@ -62,7 +62,7 @@ function InventoryPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search products"
+              placeholder="ကုန်ပစ္စည်းရှာဖွေရန်"
               className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-base outline-none focus:ring-2 focus:ring-ring sm:text-sm"
             />
           </div>
@@ -76,7 +76,7 @@ function InventoryPage() {
                   filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground",
                 )}
               >
-                {f === "all" ? "All" : f === "low" ? "Low stock" : "Out of stock"}
+                {f === "all" ? "အားလုံး" : f === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
               </button>
             ))}
           </div>
@@ -84,7 +84,7 @@ function InventoryPage() {
             onClick={() => setEditing("new")}
             className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/90 active:scale-95"
           >
-            <Plus className="h-4 w-4" /> Add product
+            <Plus className="h-4 w-4" /> ကုန်ပစ္စည်းသစ်ထည့်မည်
           </button>
         </div>
 
@@ -92,12 +92,12 @@ function InventoryPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-4 py-3">Product</th>
-                <th className="px-4 py-3">SKU</th>
-                <th className="px-4 py-3 text-right">Price</th>
-                <th className="px-4 py-3 text-right">Stock</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">ကုန်ပစ္စည်း</th>
+                <th className="px-4 py-3">အမျိုးအစား</th>
+                <th className="px-4 py-3 text-right">စျေးနှုန်း</th>
+                <th className="px-4 py-3 text-right">အရေအတွက်</th>
+                <th className="px-4 py-3">အခြေအနေ</th>
+                <th className="px-4 py-3 text-right">လုပ်ဆောင်ချက်များ</th>
               </tr>
             </thead>
             <tbody>
@@ -119,21 +119,21 @@ function InventoryPage() {
                           status === "out" && "bg-destructive/15 text-destructive",
                         )}
                       >
-                        {status === "ok" ? "In stock" : status === "low" ? "Low" : "Out"}
+                        {status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
                         <button
                           onClick={() => setLabelItem(item)}
-                          aria-label={`Generate QR for ${item.name}`}
+                          aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
                           className="flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent"
                         >
                           <QrCode className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => setEditing(item)}
-                          aria-label={`Edit ${item.name}`}
+                          aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
                           className="flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent"
                         >
                           <Pencil className="h-4 w-4" />
@@ -141,10 +141,10 @@ function InventoryPage() {
                         <button
                           onClick={() => {
                             void deleteItem(item.id).catch(() =>
-                              toast.error("Cannot delete a product with recorded sales"),
+                              toast.error("ရောင်းချထားသော မှတ်တမ်းရှိသည့် ကုန်ပစ္စည်းကို ဖျက်၍မရပါ"),
                             );
                           }}
-                          aria-label={`Delete ${item.name}`}
+                          aria-label={`${item.name} ကိုဖျက်ရန်`}
                           className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -157,7 +157,7 @@ function InventoryPage() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                    No products found.
+                    ကုန်ပစ္စည်း ရှာမတွေ့ပါ။
                   </td>
                 </tr>
               )}
@@ -184,25 +184,25 @@ function InventoryPage() {
                       status === "out" && "bg-destructive/15 text-destructive",
                     )}
                   >
-                    {status === "ok" ? "In stock" : status === "low" ? "Low" : "Out"}
+                    {status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
                   </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <p className="text-sm tabular-nums">
                     <span className="font-semibold">{money(item.price)}</span>
-                    <span className="text-muted-foreground"> · {item.stock_quantity} in stock</span>
+                    <span className="text-muted-foreground"> · လက်ကျန် {item.stock_quantity} ခု</span>
                   </p>
                   <div className="flex gap-1.5">
                     <button
                       onClick={() => setLabelItem(item)}
-                      aria-label={`Generate label for ${item.name}`}
+                      aria-label={`${item.name} အတွက် လေဘယ်ထုတ်ရန်`}
                       className="flex h-11 w-11 items-center justify-center rounded-lg border border-border active:scale-95"
                     >
                       <QrCode className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => setEditing(item)}
-                      aria-label={`Edit ${item.name}`}
+                      aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
                       className="flex h-11 w-11 items-center justify-center rounded-lg border border-border active:scale-95"
                     >
                       <Pencil className="h-4 w-4" />
@@ -210,10 +210,10 @@ function InventoryPage() {
                     <button
                       onClick={() => {
                         void deleteItem(item.id).catch(() =>
-                          toast.error("Cannot delete a product with recorded sales"),
+                          toast.error("မှတ်တမ်းရှိသည့် ကုန်ပစ္စည်းကို ဖျက်၍မရပါ(ပြုပြင်ပါ)"),
                         );
                       }}
-                      aria-label={`Delete ${item.name}`}
+                      aria-label={`${item.name} ကိုဖျက်ရန်`}
                       className="flex h-11 w-11 items-center justify-center rounded-lg border border-border text-muted-foreground active:scale-95"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -225,7 +225,7 @@ function InventoryPage() {
           })}
           {filtered.length === 0 && (
             <p className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
-              No products found.
+              ကုန်ပစ္စည်း ရှာမတွေ့ပါ။
             </p>
           )}
         </div>
@@ -238,10 +238,10 @@ function InventoryPage() {
           onSave={async (values) => {
             try {
               await saveItem(values);
-              toast.success("Product saved");
+              toast.success("ကုန်ပစ္စည်း သိမ်းဆည်းပြီးပါပြီ");
               setEditing(null);
             } catch {
-              toast.error("Could not save — is the SKU already used?");
+              toast.error("သိမ်းဆည်း၍ မရပါ — SKU နံပါတ် အသုံးပြုပြီးသား ဖြစ်နိုင်ပါသည်");
             }
           }}
         />
@@ -298,18 +298,18 @@ function ProductModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-6">
       <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">{item ? "Edit product" : "New product"}</h2>
-          <button onClick={onClose} aria-label="Close" className="text-muted-foreground">
+          <h2 className="text-sm font-semibold">{item ? "ကုန်ပစ္စည်း ပြင်ဆင်ရန်" : "ကုန်ပစ္စည်း အသစ်"}</h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="space-y-3">
-          {field("name", "Name")}
-          {field("sku", "SKU")}
+          {field("name", "အမည်")}
+          {field("sku", "SKU နံပါတ်")}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {field("price", "Price", "number")}
-            {field("stock_quantity", "Stock", "number")}
-            {field("min_stock_threshold", "Low at", "number")}
+            {field("price", "စျေးနှုန်း", "number")}
+            {field("stock_quantity", "လက်ကျန်", "number")}
+            {field("min_stock_threshold", "သတိပေး ရေတွက်မှု", "number")}
           </div>
         </div>
         <button
@@ -327,7 +327,7 @@ function ProductModal({
           }}
           className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-transform hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
         >
-          {saving ? "Saving..." : "Save product"}
+          {saving ? "သိမ်းဆည်းနေသည်..." : "ကုန်ပစ္စည်း သိမ်းဆည်းမည်"}
         </button>
       </div>
     </div>
@@ -341,8 +341,8 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-6 print:static print:block print:bg-transparent print:p-0">
       <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-xl print:border-0 print:p-0 print:shadow-none">
         <div className="mb-4 flex items-center justify-between print:hidden">
-          <h2 className="text-sm font-semibold">Print label</h2>
-          <button onClick={onClose} aria-label="Close" className="text-muted-foreground">
+          <h2 className="text-sm font-semibold">လေဘယ် ထုတ်ယူရန်</h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -360,7 +360,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
               )}
             >
               {key === "qr" ? <QrCode className="h-4 w-4" /> : <BarcodeIcon className="h-4 w-4" />}
-              {key === "qr" ? "QR code" : "Barcode"}
+              {key === "qr" ? "QR ကုဒ်" : "ဘာကုဒ်"}
             </button>
           ))}
         </div>
@@ -399,13 +399,13 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
             onClick={() => window.print()}
             className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95"
           >
-            <Printer className="h-4 w-4" /> Print
+            <Printer className="h-4 w-4" /> ပရင်ထုတ်မည်
           </button>
           <button
             onClick={onClose}
             className="min-h-11 flex-1 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent active:scale-95"
           >
-            Close
+            ပိတ်မည်
           </button>
         </div>
       </div>
