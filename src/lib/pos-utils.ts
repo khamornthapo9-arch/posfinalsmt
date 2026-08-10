@@ -1,9 +1,10 @@
 export const TAX_RATE = 0.05;
 
-export const money = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-    Number.isFinite(n) ? n : 0,
-  );
+export const money = (n: number, symbol = "$") => {
+  const value = Number.isFinite(n) ? n : 0;
+  const sign = value < 0 ? "-" : "";
+  return `${sign}${symbol}${Math.abs(value).toFixed(2)}`;
+};
 
 export type StockStatus = "out" | "low" | "ok";
 

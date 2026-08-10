@@ -7,6 +7,22 @@ import { posDb, type CachedItem, type PendingSale, type PendingSaleLine } from "
 
 export type SyncState = "online" | "offline" | "syncing";
 
+export interface OpenTabLine {
+  item_id: string;
+  sku: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface OpenTab {
+  id: string;
+  table_number: number;
+  total_amount: number;
+  notes: string | null;
+  lines: OpenTabLine[];
+}
+
 interface PosContextValue {
   items: CachedItem[];
   loading: boolean;
@@ -14,6 +30,20 @@ interface PosContextValue {
   syncState: SyncState;
   pendingCount: number;
   lowStockCount: number;
+  openTabs: OpenTab[];
+  refreshTabs: () => Promise<void>;
+  holdTab: (input: {
+    saleId?: string | undefined;
+    tableNumber: number;
+    lines: PendingSaleLine[];
+    total: number;
+    notes: string;
+  }) => Promise<string>;
+  closeTab: (input: {
+    saleId: string;
+    total: number;
+    paymentMethod: string;
+  }) => Promise<void>;
   refreshCatalog: () => Promise<void>;
   syncNow: () => Promise<void>;
   recordSale: (input: {
@@ -53,6 +83,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   const [isOnline, setIsOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
 
   const items = useLiveQuery(() => posDb.cached_items.orderBy("name").toArray(), [], []);
   const pending = useLiveQuery(() => posDb.pending_sales.toArray(), [], []);
@@ -245,6 +276,127 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     [refreshCatalog],
   );
 
+  const refreshTabs = useCallback(async () => {
+    if (!storeId) {
+      setOpenTabs([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("sales")
+      .select(
+        "id, total_amount, table_number, notes, sale_items(item_id, quantity, unit_price, items(name, sku))",
+      )
+      .eq("store_id", storeId)
+      .eq("status", "OPEN");
+    if (error || !data) return;
+    const tabs: OpenTab[] = data
+      .filter((row) => row.table_number != null)
+      .map((row) => {
+        const merged = new Map<string, OpenTabLine>();
+        for (const line of row.sale_items ?? []) {
+          const existing = merged.get(line.item_id);
+          if (existing) {
+            existing.quantity += line.quantity;
+          } else {
+            merged.set(line.item_id, {
+              item_id: line.item_id,
+              name: line.items?.name ?? "Item",
+              sku: line.items?.sku ?? "",
+              quantity: line.quantity,
+              unit_price: Number(line.unit_price),
+            });
+          }
+        }
+        return {
+          id: row.id,
+          table_number: row.table_number as number,
+          total_amount: Number(row.total_amount),
+          notes: row.notes,
+          lines: [...merged.values()],
+        };
+      });
+    setOpenTabs(tabs);
+  }, [storeId]);
+
+  useEffect(() => {
+    void refreshTabs();
+  }, [refreshTabs]);
+
+  const holdTab = useCallback<PosContextValue["holdTab"]>(
+    async ({ saleId, tableNumber, lines, total, notes }) => {
+      if (!storeId) throw new Error("No active store");
+      let createdId: string | null = null;
+      if (saleId) {
+        const existing = openTabs.find((tab) => tab.id === saleId);
+        // Only newly added quantities are sent to the kitchen / deducted from stock.
+        const deltas = lines
+          .map((line) => {
+            const saved = existing?.lines.find((l) => l.item_id === line.item_id);
+            return { ...line, quantity: line.quantity - (saved?.quantity ?? 0) };
+          })
+          .filter((line) => line.quantity > 0);
+        if (deltas.length > 0) {
+          const { error } = await supabase.from("sale_items").insert(
+            deltas.map((line) => ({
+              sale_id: saleId,
+              item_id: line.item_id,
+              quantity: line.quantity,
+              unit_price: line.unit_price,
+            })),
+          );
+          if (error) throw error;
+        }
+        const { error: updateError } = await supabase
+          .from("sales")
+          .update({ total_amount: total, notes })
+          .eq("id", saleId);
+        if (updateError) throw updateError;
+      } else {
+        const { data: saleRow, error } = await supabase
+          .from("sales")
+          .insert({
+            store_id: storeId,
+            total_amount: total,
+            payment_method: "Unpaid",
+            status: "OPEN",
+            table_number: tableNumber,
+            notes,
+            is_offline_sync: false,
+          })
+          .select("id")
+          .single();
+        if (error || !saleRow) throw error ?? new Error("Could not open the tab");
+        createdId = saleRow.id;
+        const { error: lineError } = await supabase.from("sale_items").insert(
+          lines.map((line) => ({
+            sale_id: saleRow.id,
+            item_id: line.item_id,
+            quantity: line.quantity,
+            unit_price: line.unit_price,
+          })),
+        );
+        if (lineError) throw lineError;
+      }
+      await refreshTabs();
+      await refreshCatalog();
+      return createdId ?? saleId!;
+    },
+    [openTabs, refreshCatalog, refreshTabs, storeId],
+  );
+
+  const closeTab = useCallback<PosContextValue["closeTab"]>(
+    async ({ saleId, total, paymentMethod }) => {
+      const { error } = await supabase
+        .from("sales")
+        .update({ status: "COMPLETED", payment_method: paymentMethod, total_amount: total })
+        .eq("id", saleId);
+      if (error) throw error;
+      await refreshTabs();
+      await refreshCatalog();
+    },
+    [refreshCatalog, refreshTabs],
+  );
+
   const list = items ?? [];
   const lowStockCount = list.filter((i) => i.stock_quantity <= i.min_stock_threshold).length;
   const syncState: SyncState = syncing ? "syncing" : isOnline ? "online" : "offline";
@@ -257,6 +409,10 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       syncState,
       pendingCount,
       lowStockCount,
+      openTabs,
+      refreshTabs,
+      holdTab,
+      closeTab,
       refreshCatalog,
       syncNow,
       recordSale,
@@ -270,6 +426,10 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       syncState,
       pendingCount,
       lowStockCount,
+      openTabs,
+      refreshTabs,
+      holdTab,
+      closeTab,
       refreshCatalog,
       syncNow,
       recordSale,

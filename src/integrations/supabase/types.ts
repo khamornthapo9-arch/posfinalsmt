@@ -99,24 +99,33 @@ export type Database = {
           created_at: string
           id: string
           is_offline_sync: boolean
+          notes: string | null
           payment_method: string
+          status: string
           store_id: string
+          table_number: number | null
           total_amount: number
         }
         Insert: {
           created_at?: string
           id?: string
           is_offline_sync?: boolean
+          notes?: string | null
           payment_method?: string
+          status?: string
           store_id: string
+          table_number?: number | null
           total_amount: number
         }
         Update: {
           created_at?: string
           id?: string
           is_offline_sync?: boolean
+          notes?: string | null
           payment_method?: string
+          status?: string
           store_id?: string
+          table_number?: number | null
           total_amount?: number
         }
         Relationships: [
@@ -131,22 +140,34 @@ export type Database = {
       }
       stores: {
         Row: {
+          business_type: string
           created_at: string
+          currency_symbol: string
           id: string
+          logo_url: string | null
           name: string
           owner_id: string
+          tax_rate: number
         }
         Insert: {
+          business_type?: string
           created_at?: string
+          currency_symbol?: string
           id?: string
+          logo_url?: string | null
           name: string
           owner_id: string
+          tax_rate?: number
         }
         Update: {
+          business_type?: string
           created_at?: string
+          currency_symbol?: string
           id?: string
+          logo_url?: string | null
           name?: string
           owner_id?: string
+          tax_rate?: number
         }
         Relationships: []
       }
