@@ -36,14 +36,14 @@ function StatusBadge() {
   if (syncState === "syncing") {
     return (
       <span className={cn(base, "border-sky-200 bg-sky-50 text-sky-700")}>
-        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Syncing
+        <Loader2 className="h-3.5 w-3.5 animate-spin" /> ဖတ်နေသည်
       </span>
     );
   }
   if (syncState === "offline") {
     return (
       <span className={cn(base, "border-amber-200 bg-amber-50 text-amber-700")}>
-        <CircleDot className="h-3.5 w-3.5" /> Offline ({pendingCount})
+        <CircleDot className="h-3.5 w-3.5" /> အင်တာနက်မရှိပါ ({pendingCount})
       </span>
     );
   }
@@ -157,7 +157,7 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-medium text-sidebar-accent-foreground">{email}</p>
-          <p className="text-[11px] text-sidebar-foreground/60">Store owner</p>
+          <p className="text-[11px] text-sidebar-foreground/60">ဆိုင်ပိုင်ရှင်</p>
         </div>
         <button
           onClick={handleSignOut}
