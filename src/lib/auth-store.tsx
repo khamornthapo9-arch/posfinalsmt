@@ -7,6 +7,10 @@ import { posDb } from "@/lib/pos-db";
 export interface StoreRecord {
   id: string;
   name: string;
+  logo_url: string | null;
+  currency_symbol: string;
+  tax_rate: number;
+  business_type: string;
 }
 
 interface AuthContextValue {
@@ -14,10 +18,13 @@ interface AuthContextValue {
   store: StoreRecord | null;
   loading: boolean;
   refreshStore: () => Promise<StoreRecord | null>;
+  updateStore: (patch: Partial<Omit<StoreRecord, "id">>) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 export const PENDING_STORE_NAME_KEY = "pos-pending-store-name";
+
+const STORE_COLUMNS = "id, name, logo_url, currency_symbol, tax_rate, business_type";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -33,13 +40,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const { data } = await supabase
       .from("stores")
-      .select("id, name")
+      .select(STORE_COLUMNS)
       .order("created_at")
       .limit(1)
       .maybeSingle();
     if (data) {
-      setStore(data);
-      return data;
+      setStore(data as StoreRecord);
+      return data as StoreRecord;
     }
 
     // No store yet (e.g. first sign-in, possibly via magic link in a new tab):
@@ -51,13 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: created } = await supabase
       .from("stores")
       .insert({ name: pendingName, owner_id: activeSession.user.id })
-      .select("id, name")
+      .select(STORE_COLUMNS)
       .maybeSingle();
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(PENDING_STORE_NAME_KEY);
     }
-    setStore(created ?? null);
-    return created ?? null;
+    setStore((created as StoreRecord) ?? null);
+    return (created as StoreRecord) ?? null;
   }, []);
 
   useEffect(() => {
@@ -79,6 +86,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return loadStore(data.session);
   }, [loadStore]);
 
+  const updateStore = useCallback(
+    async (patch: Partial<Omit<StoreRecord, "id">>) => {
+      const current = store;
+      if (!current) throw new Error("No active store");
+      const { data, error } = await supabase
+        .from("stores")
+        .update(patch)
+        .eq("id", current.id)
+        .select(STORE_COLUMNS)
+        .maybeSingle();
+      if (error) throw error;
+      if (data) setStore(data as StoreRecord);
+    },
+    [store],
+  );
+
   const signOut = useCallback(async () => {
     await posDb.transaction("rw", posDb.cached_items, posDb.pending_sales, async () => {
       await posDb.cached_items.clear();
@@ -90,8 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ session, store, loading, refreshStore, signOut }),
-    [session, store, loading, refreshStore, signOut],
+    () => ({ session, store, loading, refreshStore, updateStore, signOut }),
+    [session, store, loading, refreshStore, updateStore, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
