@@ -23,10 +23,10 @@ import { cn } from "@/lib/utils";
 const DEFAULT_LOGO = "/smt-pos-logo.png";
 
 const NAV = [
-  { to: "/", label: "POS Register", icon: ScanLine },
-  { to: "/inventory", label: "Inventory", icon: Boxes },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine },
+  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes },
+  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3 },
+  { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings },
 ] as const;
 
 function StatusBadge() {
