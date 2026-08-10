@@ -62,8 +62,13 @@ interface KitchenTicket {
   timestamp: string;
 }
 
-// Payment options in Myanmar
-const PAYMENTS = ["ငွေသား", "kbzpay", "wavepay"] as const;
+// Payment method configuration including logos
+const PAYMENT_METHODS = [
+  { id: "ငွေသား", label: "ငွေသား", logo: null },
+  { id: "kbzpay", label: "KBZPay", logo: "/kbzpay.png" },
+  { id: "wavepay", label: "WavePay", logo: "/wavepay.png" },
+] as const;
+
 const TABLE_COUNT = 12;
 
 function RegisterPage() {
@@ -286,7 +291,6 @@ function RegisterPage() {
     }
   };
 
-  // ---------- Restaurant floor plan ----------
   if (isRestaurant && activeTable == null) {
     return (
       <PosShell title="စားပွဲများ မြေပုံ" subtitle={`ဖွင့်ထားသော စားပွဲ ${openTabs.length} ခု`}>
@@ -503,19 +507,28 @@ function RegisterPage() {
             </div>
           </div>
 
+          {/* Payment Method Selector with Logos */}
           <div className="grid grid-cols-3 gap-2 px-4">
-            {PAYMENTS.map((method) => (
+            {PAYMENT_METHODS.map((pm) => (
               <button
-                key={method}
-                onClick={() => setPayment(method)}
+                key={pm.id}
+                onClick={() => setPayment(pm.id)}
                 className={cn(
-                  "min-h-11 rounded-md border px-2 text-xs font-medium transition-colors",
-                  payment === method
+                  "flex h-12 flex-col items-center justify-center gap-1 rounded-md border px-2 text-xs font-medium transition-colors",
+                  payment === pm.id
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border hover:bg-accent",
+                    : "border-border hover:bg-accent text-foreground",
                 )}
               >
-                {method}
+                {pm.logo ? (
+                  <img
+                    src={pm.logo}
+                    alt={pm.label}
+                    className="h-5 w-auto object-contain"
+                  />
+                ) : (
+                  <span>{pm.label}</span>
+                )}
               </button>
             ))}
           </div>
@@ -708,4 +721,3 @@ function KitchenTicketModal({
     </div>
   );
 }
-
