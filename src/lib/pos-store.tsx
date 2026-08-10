@@ -1,325 +1,448 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  AlertTriangle,
-  BarChart3,
-  Boxes,
-  CircleDot,
-  Loader2,
-  LogOut,
-  Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ScanLine,
-  Settings,
-  X,
-} from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { usePos } from "@/lib/pos-store";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
-import { useStoreLogo } from "@/lib/use-store-logo";
-import { cn } from "@/lib/utils";
+import { posDb, type CachedItem, type PendingSale, type PendingSaleLine } from "@/lib/pos-db";
 
-// Static logo fallbacks pointing directly to public folder
-const DEFAULT_LOGO = "/smt-pos-logo.png";
-const KBZ_PAY_LOGO = "/kbzpay.webp";
-const WAVE_PAY_LOGO = "/wavepay.webp";
+export type SyncState = "online" | "offline" | "syncing";
 
-const NAV = [
-  { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine },
-  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes },
-  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3 },
-  { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings },
-] as const;
-
-function PaymentBadges() {
-  return (
-    <div className="flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-xs">
-      <img
-        src={KBZ_PAY_LOGO}
-        alt="KBZPay"
-        className="h-4 w-4 rounded-xs object-contain"
-        title="KBZPay Available"
-      />
-      <img
-        src={WAVE_PAY_LOGO}
-        alt="WavePay"
-        className="h-4 w-4 rounded-xs object-contain"
-        title="WavePay Available"
-      />
-    </div>
-  );
+export interface OpenTabLine {
+  item_id: string;
+  sku: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
 }
 
-function StatusBadge() {
-  const { syncState, pendingCount } = usePos();
-  const base =
-    "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium";
-  if (syncState === "syncing") {
+export interface OpenTab {
+  id: string;
+  table_number: number;
+  total_amount: number;
+  notes: string | null;
+  lines: OpenTabLine[];
+}
+
+interface PosContextValue {
+  items: CachedItem[];
+  loading: boolean;
+  isOnline: boolean;
+  syncState: SyncState;
+  pendingCount: number;
+  lowStockCount: number;
+  openTabs: OpenTab[];
+  refreshTabs: () => Promise<void>;
+  holdTab: (input: {
+    saleId?: string | undefined;
+    tableNumber: number;
+    lines: PendingSaleLine[];
+    total: number;
+    notes: string;
+  }) => Promise<string>;
+  closeTab: (input: {
+    saleId: string;
+    total: number;
+    paymentMethod: string;
+  }) => Promise<void>;
+  refreshCatalog: () => Promise<void>;
+  syncNow: () => Promise<void>;
+  recordSale: (input: {
+    lines: PendingSaleLine[];
+    total: number;
+    paymentMethod: string;
+  }) => Promise<{ offline: boolean }>;
+  saveItem: (input: {
+    id?: string;
+    sku: string;
+    name: string;
+    price: number;
+    stock_quantity: number;
+    min_stock_threshold: number;
+  }) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
+}
+
+const PosContext = createContext<PosContextValue | null>(null);
+
+export function PosProvider({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) {
     return (
-      <span className={cn(base, "border-sky-200 bg-sky-50 text-sky-700")}>
-        <Loader2 className="h-3.5 w-3.5 animate-spin" /> ဖတ်နေသည်
-      </span>
+      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+        Starting register...
+      </div>
     );
   }
-  if (syncState === "offline") {
-    return (
-      <span className={cn(base, "border-amber-200 bg-amber-50 text-amber-700")}>
-        <CircleDot className="h-3.5 w-3.5" /> အင်တာနက်မရှိပါ ({pendingCount})
-      </span>
-    );
-  }
-  return (
-    <span className={cn(base, "border-emerald-200 bg-emerald-50 text-emerald-700")}>
-      <CircleDot className="h-3.5 w-3.5" /> အွန်လိုင်း
-    </span>
-  );
+  return <PosProviderInner>{children}</PosProviderInner>;
 }
 
-function LowStockBadge() {
-  const { lowStockCount } = usePos();
-  return (
-    <Link
-      to={"/inventory" as string}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium",
-        lowStockCount > 0
-          ? "border-destructive/30 bg-destructive/5 text-destructive"
-          : "border-border bg-card text-muted-foreground",
-      )}
-    >
-      <AlertTriangle className="h-3.5 w-3.5" />
-      {lowStockCount} လက်ကျန်နည်း
-    </Link>
-  );
-}
-
-function Brand({ collapsed = false }: { collapsed?: boolean }) {
-  const logo = useStoreLogo();
+function PosProviderInner({ children }: { children: ReactNode }) {
   const { store } = useAuth();
+  const storeId = store?.id ?? null;
+  const [isOnline, setIsOnline] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
 
-  const logoSrc = logo || DEFAULT_LOGO;
+  const items = useLiveQuery(() => posDb.cached_items.orderBy("name").toArray(), [], []);
+  const pending = useLiveQuery(() => posDb.pending_sales.toArray(), [], []);
+  const pendingCount = pending?.length ?? 0;
 
-  return (
-    <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
-      <img
-        src={logoSrc}
-        alt={store ? `${store.name} logo` : "SMT POS logo"}
-        className="h-9 w-9 shrink-0 rounded-md bg-white object-contain p-0.5"
-      />
-      {!collapsed && (
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold tracking-tight text-sidebar-accent-foreground">
-            SMT POS
-          </p>
-          <p className="truncate text-xs text-sidebar-foreground/60">{store?.name ?? "Store"}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
-  return (
-    <nav className="flex flex-col gap-0.5">
-      {NAV.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to as string}
-          title={item.label}
-          onClick={onNavigate}
-          activeOptions={{ exact: item.to === "/" }}
-          activeProps={{
-            className: "bg-sidebar-accent text-sidebar-accent-foreground",
-          }}
-          className={cn(
-            "flex min-h-10 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
-            collapsed && "justify-center px-0",
-          )}
-        >
-          <item.icon className="h-[18px] w-[18px] shrink-0" />
-          {!collapsed && <span className="truncate">{item.label}</span>}
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
-function UserCard({ collapsed = false }: { collapsed?: boolean }) {
-  const { session, signOut } = useAuth();
-  const navigate = useNavigate();
-  const email = session?.user.email ?? "";
-  const initial = email.charAt(0).toUpperCase() || "U";
-
-  const handleSignOut = () => {
-    void (async () => {
-      await signOut();
-      void navigate({ to: "/login", replace: true });
-    })();
-  };
-
-  if (collapsed) {
-    return (
-      <button
-        onClick={handleSignOut}
-        aria-label="Sign out"
-        className="mx-auto flex h-9 w-9 items-center justify-center rounded-md bg-sidebar-accent text-sm font-semibold text-sidebar-accent-foreground"
-      >
-        {initial}
-      </button>
-    );
-  }
-
-  return (
-    <div className="rounded-md border border-sidebar-border bg-sidebar-accent/40 px-3 py-2.5">
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
-          {initial}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-medium text-sidebar-accent-foreground">{email}</p>
-          <p className="text-[11px] text-sidebar-foreground/60">ဆိုင်ပိုင်ရှင်</p>
-        </div>
-        <button
-          onClick={handleSignOut}
-          aria-label="Sign out"
-          className="text-sidebar-foreground/60 transition-colors hover:text-destructive"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export function PosShell({
-  title,
-  subtitle,
-  actions,
-  children,
-}: {
-  title: string;
-  subtitle?: string | undefined;
-  actions?: ReactNode | undefined;
-  children: ReactNode;
-}) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const { session, store, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && (!session || !store)) void navigate({ to: "/login", replace: true });
-  }, [loading, session, store, navigate]);
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem("pos-sidebar-collapsed");
-    if (stored === "1") setCollapsed(true);
-  }, []);
-
-  const toggle = () =>
-    setCollapsed((prev) => {
-      window.localStorage.setItem("pos-sidebar-collapsed", prev ? "0" : "1");
-      return !prev;
+  const refreshCatalog = useCallback(async () => {
+    if (!storeId) {
+      await posDb.cached_items.clear();
+      return;
+    }
+    const { data, error } = await supabase
+      .from("items")
+      .select("*")
+      .eq("store_id", storeId)
+      .order("name");
+    if (error || !data) return;
+    const rows: CachedItem[] = data.map((row) => ({
+      id: row.id,
+      sku: row.sku,
+      name: row.name,
+      price: Number(row.price),
+      stock_quantity: row.stock_quantity,
+      min_stock_threshold: row.min_stock_threshold,
+      created_at: row.created_at,
+    }));
+    await posDb.transaction("rw", posDb.cached_items, async () => {
+      await posDb.cached_items.clear();
+      await posDb.cached_items.bulkPut(rows);
     });
+  }, [storeId]);
 
-  if (loading || !session || !store) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const pushPendingSales = useCallback(async () => {
+    if (!storeId) return;
+    const queued = await posDb.pending_sales.toArray();
+    for (const sale of queued) {
+      const { data: saleRow, error } = await supabase
+        .from("sales")
+        .insert({
+          total_amount: sale.total_amount,
+          payment_method: sale.payment_method,
+          is_offline_sync: true,
+          created_at: sale.created_at,
+          store_id: storeId,
+        })
+        .select("id")
+        .single();
+      if (error || !saleRow) throw error ?? new Error("Sale sync failed");
+      const { error: lineError } = await supabase.from("sale_items").insert(
+        sale.lines.map((line) => ({
+          sale_id: saleRow.id,
+          item_id: line.item_id,
+          quantity: line.quantity,
+          unit_price: line.unit_price,
+        })),
+      );
+      if (lineError) throw lineError;
+      if (sale.localId != null) await posDb.pending_sales.delete(sale.localId);
+    }
+  }, [storeId]);
 
-  return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "no-print hidden shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-3 transition-[width] duration-200 md:flex",
-          collapsed ? "w-[68px]" : "w-60",
-        )}
-      >
-        <div className="px-1 py-2">
-          <Brand collapsed={collapsed} />
-        </div>
-        <div className="my-3 h-px bg-sidebar-border" />
-        <NavList collapsed={collapsed} />
-        <div className="mt-auto space-y-2">
-          <UserCard collapsed={collapsed} />
-          <button
-            onClick={toggle}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex min-h-9 w-full items-center justify-center gap-2 rounded-md px-3 text-xs font-medium text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
-            ) : (
-              <>
-                <PanelLeftClose className="h-4 w-4" /> Collapse
-              </>
-            )}
-          </button>
-        </div>
-      </aside>
+  const syncNow = useCallback(async () => {
+    if (syncing || !storeId) return;
+    setSyncing(true);
+    try {
+      const { error } = await supabase.from("items").select("id").limit(1);
+      if (error) throw error;
+      setIsOnline(true);
+      await pushPendingSales();
+      await refreshCatalog();
+    } catch {
+      setIsOnline(false);
+    } finally {
+      setSyncing(false);
+    }
+  }, [pushPendingSales, refreshCatalog, syncing, storeId]);
 
-      {/* Mobile Drawer */}
-      {drawerOpen && (
-        <div className="no-print fixed inset-0 z-50 md:hidden">
-          <button
-            aria-label="Close menu"
-            onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-slate-900/60"
-          />
-          <div className="absolute inset-y-0 left-0 flex w-[264px] flex-col border-r border-sidebar-border bg-sidebar p-3">
-            <div className="flex items-center justify-between px-1 py-2">
-              <Brand />
-              <button
-                onClick={() => setDrawerOpen(false)}
-                aria-label="Close menu"
-                className="text-sidebar-foreground/70"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="my-3 h-px bg-sidebar-border" />
-            <NavList onNavigate={() => setDrawerOpen(false)} />
-            <div className="mt-auto">
-              <UserCard />
-            </div>
-          </div>
-        </div>
-      )}
+  useEffect(() => {
+    let cancelled = false;
+    if (!storeId) {
+      setLoading(false);
+      return;
+    }
+    void (async () => {
+      await syncNow();
+      if (!cancelled) setLoading(false);
+    })();
+    const handleOnline = () => void syncNow();
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    const timer = window.setInterval(() => void syncNow(), 30_000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      window.clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId]);
 
-      {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print sticky top-0 z-30 border-b border-border bg-card md:static">
-          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
-            <button
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Open menu"
-              className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground md:hidden"
-            >
-              <Menu className="h-4 w-4" />
-            </button>
-            <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold tracking-tight">{title}</h1>
-              {subtitle && (
-                <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-              )}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {actions}
-              <PaymentBadges />
-              <div className="hidden items-center gap-2 sm:flex">
-                <LowStockBadge />
-                <StatusBadge />
-              </div>
-            </div>
-          </div>
-        </header>
+  const recordSale = useCallback<PosContextValue["recordSale"]>(
+    async ({ lines, total, paymentMethod }) => {
+      const createdAt = new Date().toISOString();
+      const applyLocalStock = async () => {
+        await posDb.transaction("rw", posDb.cached_items, async () => {
+          for (const line of lines) {
+            const cached = await posDb.cached_items.get(line.item_id);
+            if (cached) {
+              await posDb.cached_items.put({
+                ...cached,
+                stock_quantity: Math.max(cached.stock_quantity - line.quantity, 0),
+              });
+            }
+          }
+        });
+      };
 
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
-    </div>
+      if (navigator.onLine && isOnline && storeId) {
+        try {
+          const { data: saleRow, error } = await supabase
+            .from("sales")
+            .insert({
+              total_amount: total,
+              payment_method: paymentMethod,
+              is_offline_sync: false,
+              created_at: createdAt,
+              store_id: storeId,
+            })
+            .select("id")
+            .single();
+          if (error || !saleRow) throw error ?? new Error("Sale failed");
+          const { error: lineError } = await supabase.from("sale_items").insert(
+            lines.map((line) => ({
+              sale_id: saleRow.id,
+              item_id: line.item_id,
+              quantity: line.quantity,
+              unit_price: line.unit_price,
+            })),
+          );
+          if (lineError) throw lineError;
+          await refreshCatalog();
+          return { offline: false };
+        } catch {
+          setIsOnline(false);
+        }
+      }
+
+      const offlineSale: PendingSale = {
+        total_amount: total,
+        payment_method: paymentMethod,
+        created_at: createdAt,
+        lines,
+      };
+      await posDb.pending_sales.add(offlineSale);
+      await applyLocalStock();
+      return { offline: true };
+    },
+    [isOnline, refreshCatalog, storeId],
   );
+
+  const saveItem = useCallback<PosContextValue["saveItem"]>(
+    async (input) => {
+      if (!storeId) throw new Error("No active store");
+      const payload = {
+        store_id: storeId,
+        sku: input.sku,
+        name: input.name,
+        price: input.price,
+        stock_quantity: input.stock_quantity,
+        min_stock_threshold: input.min_stock_threshold,
+      };
+      if (input.id) {
+        const { error } = await supabase.from("items").update(payload).eq("id", input.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("items").insert(payload);
+        if (error) throw error;
+      }
+      await refreshCatalog();
+    },
+    [refreshCatalog, storeId],
+  );
+
+  const deleteItem = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.from("items").delete().eq("id", id);
+      if (error) throw error;
+      await refreshCatalog();
+    },
+    [refreshCatalog],
+  );
+
+  const refreshTabs = useCallback(async () => {
+    if (!storeId) {
+      setOpenTabs([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("sales")
+      .select(
+        "id, total_amount, table_number, notes, sale_items(item_id, quantity, unit_price, items(name, sku))",
+      )
+      .eq("store_id", storeId)
+      .eq("status", "OPEN");
+    if (error || !data) return;
+    const tabs: OpenTab[] = data
+      .filter((row) => row.table_number != null)
+      .map((row) => {
+        const merged = new Map<string, OpenTabLine>();
+        for (const line of row.sale_items ?? []) {
+          const existing = merged.get(line.item_id);
+          if (existing) {
+            existing.quantity += line.quantity;
+          } else {
+            merged.set(line.item_id, {
+              item_id: line.item_id,
+              name: line.items?.name ?? "Item",
+              sku: line.items?.sku ?? "",
+              quantity: line.quantity,
+              unit_price: Number(line.unit_price),
+            });
+          }
+        }
+        return {
+          id: row.id,
+          table_number: row.table_number as number,
+          total_amount: Number(row.total_amount),
+          notes: row.notes,
+          lines: [...merged.values()],
+        };
+      });
+    setOpenTabs(tabs);
+  }, [storeId]);
+
+  useEffect(() => {
+    void refreshTabs();
+  }, [refreshTabs]);
+
+  const holdTab = useCallback<PosContextValue["holdTab"]>(
+    async ({ saleId, tableNumber, lines, total, notes }) => {
+      if (!storeId) throw new Error("No active store");
+      let createdId: string | null = null;
+      if (saleId) {
+        const existing = openTabs.find((tab) => tab.id === saleId);
+        // Only newly added quantities are sent to the kitchen / deducted from stock.
+        const deltas = lines
+          .map((line) => {
+            const saved = existing?.lines.find((l) => l.item_id === line.item_id);
+            return { ...line, quantity: line.quantity - (saved?.quantity ?? 0) };
+          })
+          .filter((line) => line.quantity > 0);
+        if (deltas.length > 0) {
+          const { error } = await supabase.from("sale_items").insert(
+            deltas.map((line) => ({
+              sale_id: saleId,
+              item_id: line.item_id,
+              quantity: line.quantity,
+              unit_price: line.unit_price,
+            })),
+          );
+          if (error) throw error;
+        }
+        const { error: updateError } = await supabase
+          .from("sales")
+          .update({ total_amount: total, notes })
+          .eq("id", saleId);
+        if (updateError) throw updateError;
+      } else {
+        const { data: saleRow, error } = await supabase
+          .from("sales")
+          .insert({
+            store_id: storeId,
+            total_amount: total,
+            payment_method: "Unpaid",
+            status: "OPEN",
+            table_number: tableNumber,
+            notes,
+            is_offline_sync: false,
+          })
+          .select("id")
+          .single();
+        if (error || !saleRow) throw error ?? new Error("Could not open the tab");
+        createdId = saleRow.id;
+        const { error: lineError } = await supabase.from("sale_items").insert(
+          lines.map((line) => ({
+            sale_id: saleRow.id,
+            item_id: line.item_id,
+            quantity: line.quantity,
+            unit_price: line.unit_price,
+          })),
+        );
+        if (lineError) throw lineError;
+      }
+      await refreshTabs();
+      await refreshCatalog();
+      return createdId ?? saleId!;
+    },
+    [openTabs, refreshCatalog, refreshTabs, storeId],
+  );
+
+  const closeTab = useCallback<PosContextValue["closeTab"]>(
+    async ({ saleId, total, paymentMethod }) => {
+      const { error } = await supabase
+        .from("sales")
+        .update({ status: "COMPLETED", payment_method: paymentMethod, total_amount: total })
+        .eq("id", saleId);
+      if (error) throw error;
+      await refreshTabs();
+      await refreshCatalog();
+    },
+    [refreshCatalog, refreshTabs],
+  );
+
+  const list = items ?? [];
+  const lowStockCount = list.filter((i) => i.stock_quantity <= i.min_stock_threshold).length;
+  const syncState: SyncState = syncing ? "syncing" : isOnline ? "online" : "offline";
+
+  const value = useMemo<PosContextValue>(
+    () => ({
+      items: list,
+      loading,
+      isOnline,
+      syncState,
+      pendingCount,
+      lowStockCount,
+      openTabs,
+      refreshTabs,
+      holdTab,
+      closeTab,
+      refreshCatalog,
+      syncNow,
+      recordSale,
+      saveItem,
+      deleteItem,
+    }),
+    [
+      list,
+      loading,
+      isOnline,
+      syncState,
+      pendingCount,
+      lowStockCount,
+      openTabs,
+      refreshTabs,
+      holdTab,
+      closeTab,
+      refreshCatalog,
+      syncNow,
+      recordSale,
+      saveItem,
+      deleteItem,
+    ],
+  );
+
+  return <PosContext.Provider value={value}>{children}</PosContext.Provider>;
+}
+
+export function usePos() {
+  const ctx = useContext(PosContext);
+  if (!ctx) throw new Error("usePos must be used inside PosProvider");
+  return ctx;
 }

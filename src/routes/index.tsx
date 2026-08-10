@@ -19,7 +19,6 @@ import { usePos } from "@/lib/pos-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { stockStatus } from "@/lib/pos-utils";
 import type { CachedItem, PendingSaleLine } from "@/lib/pos-db";
-import type { StoreRecord } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -62,13 +61,8 @@ interface KitchenTicket {
   timestamp: string;
 }
 
-// Payment method configuration including logos
-const PAYMENT_METHODS = [
-  { id: "ငွေသား", label: "ငွေသား", logo: null },
-  { id: "kbzpay", label: "KBZPay", logo: "/kbzpay.png" },
-  { id: "wavepay", label: "WavePay", logo: "/wavepay.png" },
-] as const;
-
+// Payment options in Myanmar
+const PAYMENTS = ["ငွေသား", "kbzpay", "wavepay"] as const;
 const TABLE_COUNT = 12;
 
 function RegisterPage() {
@@ -291,6 +285,7 @@ function RegisterPage() {
     }
   };
 
+  // ---------- Restaurant floor plan ----------
   if (isRestaurant && activeTable == null) {
     return (
       <PosShell title="စားပွဲများ မြေပုံ" subtitle={`ဖွင့်ထားသော စားပွဲ ${openTabs.length} ခု`}>
@@ -507,28 +502,19 @@ function RegisterPage() {
             </div>
           </div>
 
-          {/* Payment Method Selector with Logos */}
           <div className="grid grid-cols-3 gap-2 px-4">
-            {PAYMENT_METHODS.map((pm) => (
+            {PAYMENTS.map((method) => (
               <button
-                key={pm.id}
-                onClick={() => setPayment(pm.id)}
+                key={method}
+                onClick={() => setPayment(method)}
                 className={cn(
-                  "flex h-12 flex-col items-center justify-center gap-1 rounded-md border px-2 text-xs font-medium transition-colors",
-                  payment === pm.id
+                  "min-h-11 rounded-md border px-2 text-xs font-medium transition-colors",
+                  payment === method
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border hover:bg-accent text-foreground",
+                    : "border-border hover:bg-accent",
                 )}
               >
-                {pm.logo ? (
-                  <img
-                    src={pm.logo}
-                    alt={pm.label}
-                    className="h-5 w-auto object-contain"
-                  />
-                ) : (
-                  <span>{pm.label}</span>
-                )}
+                {method}
               </button>
             ))}
           </div>
@@ -576,7 +562,7 @@ function RegisterPage() {
       {receipt && (
         <ReceiptModal
           receipt={receipt}
-          store={store}
+          storeName={store?.name ?? "SMT POS"}
           fmt={fmt}
           onClose={() => setReceipt(null)}
         />
@@ -588,12 +574,12 @@ function RegisterPage() {
 
 function ReceiptModal({
   receipt,
-  store,
+  storeName,
   fmt,
   onClose,
 }: {
   receipt: Receipt;
-  store: StoreRecord | null;
+  storeName: string;
   fmt: (n: number) => string;
   onClose: () => void;
 }) {
@@ -607,14 +593,8 @@ function ReceiptModal({
           </button>
         </div>
         <div className="text-center">
-          <p className="text-base font-semibold">{store?.name ?? "SMT POS"}</p>
-          {store?.address && (
-            <p className="text-xs text-muted-foreground">{store.address}</p>
-          )}
-          {store?.phone && (
-            <p className="text-xs text-muted-foreground">Ph: {store.phone}</p>
-          )}
-          <p className="mt-1 text-xs text-muted-foreground">{receipt.timestamp}</p>
+          <p className="text-base font-semibold">{storeName}</p>
+          <p className="text-xs text-muted-foreground">{receipt.timestamp}</p>
           {receipt.tableNumber != null && (
             <p className="text-xs font-medium">စားပွဲ {receipt.tableNumber}</p>
           )}

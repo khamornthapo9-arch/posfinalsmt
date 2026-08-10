@@ -1,4 +1,4 @@
-import { Link, useNavigate, type LinkProps } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   BarChart3,
@@ -12,7 +12,6 @@ import {
   ScanLine,
   Settings,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePos } from "@/lib/pos-store";
@@ -20,20 +19,36 @@ import { useAuth } from "@/lib/auth-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
 
+// Static logo fallbacks pointing directly to public folder
 const DEFAULT_LOGO = "/smt-pos-logo.png";
+const KBZ_PAY_LOGO = "/kbzpay.webp";
+const WAVE_PAY_LOGO = "/wavepay.webp";
 
-interface NavItem {
-  to: LinkProps["to"];
-  label: string;
-  icon: LucideIcon;
-}
-
-const NAV: NavItem[] = [
+const NAV = [
   { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine },
   { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes },
   { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3 },
   { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings },
-];
+] as const;
+
+function PaymentBadges() {
+  return (
+    <div className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-xs">
+      <img
+        src={KBZ_PAY_LOGO}
+        alt="KBZPay"
+        className="h-4 w-4 rounded-xs object-contain"
+        title="KBZPay Available"
+      />
+      <img
+        src={WAVE_PAY_LOGO}
+        alt="WavePay"
+        className="h-4 w-4 rounded-xs object-contain"
+        title="WavePay Available"
+      />
+    </div>
+  );
+}
 
 function StatusBadge() {
   const { syncState, pendingCount } = usePos();
@@ -64,7 +79,7 @@ function LowStockBadge() {
   const { lowStockCount } = usePos();
   return (
     <Link
-      to="/inventory"
+      to={"/inventory" as string}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium",
         lowStockCount > 0
@@ -108,8 +123,8 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
     <nav className="flex flex-col gap-0.5">
       {NAV.map((item) => (
         <Link
-          key={item.label}
-          to={item.to}
+          key={item.to}
+          to={item.to as string}
           title={item.label}
           onClick={onNavigate}
           activeOptions={{ exact: item.to === "/" }}
@@ -132,15 +147,14 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
 function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   const { session, signOut } = useAuth();
   const navigate = useNavigate();
-  const email = session?.user?.email ?? "";
+  const email = session?.user.email ?? "";
   const initial = email.charAt(0).toUpperCase() || "U";
 
-  const handleSignOut = async () => {
-    try {
+  const handleSignOut = () => {
+    void (async () => {
       await signOut();
-    } finally {
       void navigate({ to: "/login", replace: true });
-    }
+    })();
   };
 
   if (collapsed) {
@@ -184,8 +198,8 @@ export function PosShell({
   children,
 }: {
   title: string;
-  subtitle?: string;
-  actions?: ReactNode;
+  subtitle?: string | undefined;
+  actions?: ReactNode | undefined;
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -194,9 +208,7 @@ export function PosShell({
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && (!session || !store)) {
-      void navigate({ to: "/login", replace: true });
-    }
+    if (!loading && (!session || !store)) void navigate({ to: "/login", replace: true });
   }, [loading, session, store, navigate]);
 
   useEffect(() => {
@@ -298,6 +310,7 @@ export function PosShell({
             <div className="flex shrink-0 items-center gap-2">
               {actions}
               <div className="hidden items-center gap-2 sm:flex">
+                <PaymentBadges />
                 <LowStockBadge />
                 <StatusBadge />
               </div>

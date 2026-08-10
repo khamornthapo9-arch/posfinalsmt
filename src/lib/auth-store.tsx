@@ -7,8 +7,6 @@ import { posDb } from "@/lib/pos-db";
 export interface StoreRecord {
   id: string;
   name: string;
-  address: string | null;
-  phone: string | null;
   logo_url: string | null;
   currency_symbol: string;
   tax_rate: number;
@@ -26,7 +24,7 @@ interface AuthContextValue {
 
 export const PENDING_STORE_NAME_KEY = "pos-pending-store-name";
 
-const STORE_COLUMNS = "id, name, address, phone, logo_url, currency_symbol, tax_rate, business_type";
+const STORE_COLUMNS = "id, name, logo_url, currency_symbol, tax_rate, business_type";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -47,8 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .limit(1)
       .maybeSingle();
     if (data) {
-      setStore(data as unknown as StoreRecord);
-      return data as unknown as StoreRecord;
+      setStore(data as StoreRecord);
+      return data as StoreRecord;
     }
 
     // No store yet (e.g. first sign-in, possibly via magic link in a new tab):
@@ -65,8 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(PENDING_STORE_NAME_KEY);
     }
-    setStore((created as unknown as StoreRecord) ?? null);
-    return (created as unknown as StoreRecord) ?? null;
+    setStore((created as StoreRecord) ?? null);
+    return (created as StoreRecord) ?? null;
   }, []);
 
   useEffect(() => {
@@ -99,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select(STORE_COLUMNS)
         .maybeSingle();
       if (error) throw error;
-      if (data) setStore(data as unknown as StoreRecord);
+      if (data) setStore(data as StoreRecord);
     },
     [store],
   );
@@ -127,4 +125,3 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
 }
-
