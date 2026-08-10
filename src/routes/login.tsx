@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Loader2, ScanLine } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, PENDING_STORE_NAME_KEY } from "@/lib/auth-store";
@@ -128,8 +128,12 @@ function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <ScanLine className="h-5 w-5" />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary p-2 text-primary-foreground shadow-sm">
+            <img
+              src="/smt-pos-logo.png"
+              alt="SMT POS Logo"
+              className="h-full w-full object-contain"
+            />
           </div>
           <div>
             <h1 className="text-lg font-semibold tracking-tight">SMT POS</h1>
@@ -224,3 +228,4 @@ function LoginPage() {
     </main>
   );
 }
+
