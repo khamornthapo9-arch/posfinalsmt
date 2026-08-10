@@ -100,6 +100,8 @@ function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
   const [symbol, setSymbol] = useState("$");
   const [tax, setTax] = useState("5");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -111,7 +113,9 @@ function SettingsPage() {
 
   useEffect(() => {
     if (!store) return;
-    setName(store.name);
+    setName(store.name || "");
+    setAddress(store.address || "");
+    setPhone(store.phone || "");
     setSymbol(store.currency_symbol || "$");
     setTax(String(store.tax_rate ?? 5));
   }, [store]);
@@ -129,6 +133,8 @@ function SettingsPage() {
     try {
       await updateStore({
         name: name.trim(),
+        address: address.trim(),
+        phone: phone.trim(),
         currency_symbol: symbol.trim() || "$",
         tax_rate: Number(tax) || 0,
       });
@@ -247,6 +253,33 @@ function SettingsPage() {
                   className={inputClass}
                 />
               </div>
+
+              <div>
+                <label className={labelClass} htmlFor="store-phone">
+                  ဖုန်းနံပါတ်
+                </label>
+                <input
+                  id="store-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="09123456789"
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label className={labelClass} htmlFor="store-address">
+                  ဆိုင်လိပ်စာ
+                </label>
+                <input
+                  id="store-address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="အမှတ် (၁၂၃)၊ လမ်းမတော်၊ ရန်ကုန်"
+                  className={inputClass}
+                />
+              </div>
+
               <div>
                 <label className={labelClass} htmlFor="currency">
                   ငွေကြေး သင်္ကေတ
@@ -275,6 +308,7 @@ function SettingsPage() {
                   </div>
                 </div>
               </div>
+
               <div>
                 <label className={labelClass} htmlFor="tax">
                   မူလ အရောင်းအခွန် (%)
@@ -289,6 +323,7 @@ function SettingsPage() {
                   className={inputClass}
                 />
               </div>
+
               <div className="sm:col-span-2">
                 <button
                   onClick={() => void saveProfile()}
@@ -523,3 +558,4 @@ function ModeSwitchModal({
     </div>
   );
 }
+
