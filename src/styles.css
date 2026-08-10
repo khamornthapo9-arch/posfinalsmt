@@ -232,6 +232,17 @@
     padding: 0.06in;
     overflow: hidden;
   }
+
+  /* 80mm kitchen order ticket */
+  .kitchen-ticket {
+    width: 80mm;
+    max-width: 80mm;
+    padding: 4mm 3mm;
+    font-family: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 600;
+  }
 }
 
 /* Dashed divider used on receipts (visible on screen and in print). */
