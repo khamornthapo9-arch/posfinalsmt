@@ -14,8 +14,7 @@ export const Route = createFileRoute("/login")({
       { title: "အကောင့်ဝင်ရန် — SMT POS" },
       {
         name: "description",
-        content:
-          "အီးမေးလ် အတည်ပြုကုဒ်ဖြင့် ဝင်ရောက်ပါ။",
+        content: "အီးမေးလ် အတည်ပြုကုဒ်ဖြင့် ဝင်ရောက်ပါ။",
       },
       { property: "og:title", content: "အကောင့်ဝင်ရန် — SMT POS" },
       { property: "og:description", content: "သင့်ဆိုင်အတွက် အီးမေးလ်အတည်ပြုကုဒ်ဖြင့် အကောင့်ဝင်ရန်။" },
@@ -57,10 +56,8 @@ function LoginPage() {
       toast.error("မှန်ကန်သော အီးမေးလ်လိပ်စာ ထည့်သွင်းပေးပါ။");
       return;
     }
-    // Persist the store name first so magic-link sign-in in a new tab still has it.
     window.localStorage.setItem(PENDING_STORE_NAME_KEY, storeName.trim());
 
-    // Switch to the code screen immediately, regardless of the network call.
     setStep("code");
     setSeconds(60);
     setDigits(Array(6).fill(""));
@@ -128,11 +125,12 @@ function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
         <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary p-2 text-primary-foreground shadow-sm">
+          {/* Fixed Logo Box */}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background p-1 shadow-xs">
             <img
               src="/smt-pos-logo.png"
               alt="SMT POS Logo"
-              className="h-full w-full object-contain"
+              className="h-10 w-10 object-contain"
             />
           </div>
           <div>
@@ -228,4 +226,3 @@ function LoginPage() {
     </main>
   );
 }
-
