@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { ScannerModal } from "@/components/pos/scanner-modal";
 import { usePos } from "@/lib/pos-store";
+import { useAccountingStore, CREDIT_METHOD, type Customer } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { stockStatus } from "@/lib/pos-utils";
 import type { CachedItem, PendingSaleLine } from "@/lib/pos-db";
@@ -52,6 +53,10 @@ interface Receipt {
   timestamp: string;
   offline: boolean;
   tableNumber?: number | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  previousDebt?: number;
+  newDebt?: number;
 }
 
 interface KitchenTicket {
@@ -62,12 +67,19 @@ interface KitchenTicket {
 }
 
 // Payment options in Myanmar
-const PAYMENTS = ["ငွေသား", "kbzpay", "wavepay"] as const;
+const PAYMENTS: { id: string; label: string; logo?: string }[] = [
+  { id: "ငွေသား", label: "ငွေသား" },
+  { id: "kbzpay", label: "KBZ Pay", logo: "/kbzpay.webp" },
+  { id: "wavepay", label: "Wave Pay", logo: "/wavepay.webp" },
+  { id: CREDIT_METHOD, label: CREDIT_METHOD },
+];
 const TABLE_COUNT = 12;
 
 function RegisterPage() {
   const { items, recordSale, openTabs, holdTab, closeTab } = usePos();
-  const { fmt, taxRate, taxPercent, isRestaurant, store } = useStoreSettings();
+  const { fmt, taxRate, taxPercent, isRestaurant, store, address, cashierName, phoneNumbers } =
+    useStoreSettings();
+  const { customers, quickAddCustomer, postSale } = useAccountingStore();
 
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -78,6 +90,8 @@ function RegisterPage() {
   const [busy, setBusy] = useState(false);
   const [activeTable, setActiveTable] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
+  const [creditCustomer, setCreditCustomer] = useState<Customer | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
@@ -201,15 +215,51 @@ function RegisterPage() {
     return true;
   };
 
+  const cogsFor = (lines: CartLine[]) =>
+    lines.reduce(
+      (sum, line) =>
+        sum + line.quantity * (items.find((i) => i.id === line.item_id)?.cost_price ?? 0),
+      0,
+    );
+
+  const selectPayment = (method: string) => {
+    if (method === CREDIT_METHOD) {
+      setPayment(CREDIT_METHOD);
+      setPickerOpen(true);
+      return;
+    }
+    setPayment(method);
+    setCreditCustomer(null);
+  };
+
   const completeSale = async () => {
     if (cart.length === 0 || !validateStock()) return;
+    const isCredit = payment === CREDIT_METHOD;
+    if (isCredit && !creditCustomer) {
+      setPickerOpen(true);
+      toast.error("အကြွေးရောင်းရန် ဖောက်သည် ရွေးပါ");
+      return;
+    }
     setBusy(true);
     try {
-      const { offline } = await recordSale({
+      const { offline, saleId } = await recordSale({
         lines: cart.map(({ stock: _stock, ...line }) => line),
         total,
         paymentMethod: payment,
+        customerId: isCredit ? creditCustomer!.id : null,
+        status: isCredit ? "UNPAID" : "COMPLETED",
       });
+      if (!offline) {
+        await postSale({
+          saleId,
+          subtotal,
+          tax,
+          cogs: cogsFor(cart),
+          paymentMethod: payment,
+          customerId: isCredit ? creditCustomer!.id : null,
+        });
+      }
+      const previousDebt = creditCustomer?.balance ?? 0;
       setReceipt({
         lines: cart,
         subtotal,
@@ -218,8 +268,18 @@ function RegisterPage() {
         paymentMethod: payment,
         timestamp: new Date().toLocaleString(),
         offline,
+        ...(isCredit
+          ? {
+              customerName: creditCustomer!.name,
+              customerPhone: creditCustomer!.phone ?? "",
+              previousDebt,
+              newDebt: previousDebt + total,
+            }
+          : {}),
       });
       setCart([]);
+      setCreditCustomer(null);
+      setPayment("ငွေသား");
       toast.success(offline ? "အရောင်းကို အော့ဖ်လိုင်း မှတ်ထားသည်" : "ရောင်းချမှု အောင်မြင်သည်");
     } catch {
       toast.error("အရောင်းစာရင်း မသိမ်းဆည်းနိုင်ပါ");
@@ -502,22 +562,49 @@ function RegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 px-4">
+          <div className="grid grid-cols-2 gap-2 px-4">
             {PAYMENTS.map((method) => (
               <button
-                key={method}
-                onClick={() => setPayment(method)}
+                key={method.id}
+                onClick={() => selectPayment(method.id)}
                 className={cn(
-                  "min-h-11 rounded-md border px-2 text-xs font-medium transition-colors",
-                  payment === method
+                  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
+                  payment === method.id
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border hover:bg-accent",
                 )}
               >
-                {method}
+                {method.logo && (
+                  <img
+                    src={method.logo}
+                    alt={`${method.label} logo`}
+                    className="h-5 w-5 rounded-xs bg-white object-contain p-px"
+                  />
+                )}
+                {method.label}
               </button>
             ))}
           </div>
+
+          {payment === CREDIT_METHOD && (
+            <div className="mx-4 mt-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
+              {creditCustomer ? (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate">
+                    <span className="font-medium">{creditCustomer.name}</span>{" "}
+                    <span className="text-muted-foreground">{creditCustomer.phone ?? ""}</span>
+                  </span>
+                  <button onClick={() => setPickerOpen(true)} className="shrink-0 text-primary underline">
+                    ပြောင်းရန်
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setPickerOpen(true)} className="text-primary underline">
+                  ဖောက်သည် ရွေးပါ
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2 p-4">
             {isRestaurant ? (
@@ -559,10 +646,29 @@ function RegisterPage() {
         }}
       />
 
+      {pickerOpen && (
+        <CustomerPickerModal
+          customers={customers}
+          onClose={() => {
+            setPickerOpen(false);
+            if (!creditCustomer) setPayment("ငွေသား");
+          }}
+          onPick={(customer) => {
+            setCreditCustomer(customer);
+            setPayment(CREDIT_METHOD);
+            setPickerOpen(false);
+          }}
+          onQuickAdd={quickAddCustomer}
+        />
+      )}
+
       {receipt && (
         <ReceiptModal
           receipt={receipt}
           storeName={store?.name ?? "SMT POS"}
+          address={address}
+          cashierName={cashierName}
+          phoneNumbers={phoneNumbers}
           fmt={fmt}
           onClose={() => setReceipt(null)}
         />
@@ -572,47 +678,204 @@ function RegisterPage() {
   );
 }
 
+function CustomerPickerModal({
+  customers,
+  onClose,
+  onPick,
+  onQuickAdd,
+}: {
+  customers: Customer[];
+  onClose: () => void;
+  onPick: (customer: Customer) => void;
+  onQuickAdd: (input: { name: string; phone: string }) => Promise<Customer>;
+}) {
+  const [query, setQuery] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const list = customers.filter((c) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return c.name.toLowerCase().includes(q) || (c.phone ?? "").includes(q);
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+      <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-lg border border-border bg-card p-5 shadow-lg">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">အကြွေး ဖောက်သည် ရွေးရန်</h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {adding ? (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="qa-name">
+                အမည်
+              </label>
+              <input
+                id="qa-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="qa-phone">
+                ဖုန်းနံပါတ်
+              </label>
+              <input
+                id="qa-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                inputMode="tel"
+                className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAdding(false)}
+                className="h-11 flex-1 rounded-md border border-border text-sm font-medium hover:bg-accent"
+              >
+                နောက်သို့
+              </button>
+              <button
+                disabled={busy || !name.trim() || !phone.trim()}
+                onClick={() => {
+                  setBusy(true);
+                  void onQuickAdd({ name: name.trim(), phone: phone.trim() })
+                    .then((customer) => {
+                      toast.success("ဖောက်သည် ထည့်ပြီးပါပြီ");
+                      onPick(customer);
+                    })
+                    .catch(() => toast.error("ဖောက်သည် မထည့်နိုင်ပါ"))
+                    .finally(() => setBusy(false));
+                }}
+                className="h-11 flex-1 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                သိမ်းပြီး ရွေးမည်
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="အမည် သို့ ဖုန်းဖြင့် ရှာပါ"
+                className="h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border">
+              {list.map((customer) => (
+                <button
+                  key={customer.id}
+                  onClick={() => onPick(customer)}
+                  className="flex w-full items-center justify-between gap-2 border-b border-border px-3 py-3 text-left last:border-0 hover:bg-accent"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{customer.name}</span>
+                    <span className="block text-xs text-muted-foreground">{customer.phone ?? "—"}</span>
+                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {customer.balance > 0 ? `အကြွေး ${customer.balance}` : "—"}
+                  </span>
+                </button>
+              ))}
+              {list.length === 0 && (
+                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  ဖောက်သည် မတွေ့ပါ။
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setAdding(true)}
+              className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" /> ဖောက်သည် အမြန်ထည့်မည်
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ReceiptModal({
   receipt,
   storeName,
+  address,
+  cashierName,
+  phoneNumbers,
   fmt,
   onClose,
 }: {
   receipt: Receipt;
   storeName: string;
+  address: string;
+  cashierName: string;
+  phoneNumbers: string[];
   fmt: (n: number) => string;
   onClose: () => void;
 }) {
+  const isCredit = receipt.paymentMethod === CREDIT_METHOD;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
-      <div className="print-area receipt-sheet w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
+      <div className="print-area receipt-sheet my-auto w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-lg">
         <div className="mb-3 flex items-center justify-between print:hidden">
           <h2 className="text-sm font-semibold">ပြေစာ</h2>
           <button onClick={onClose} aria-label="ပြေစာ ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
+
         <div className="text-center">
           <p className="text-base font-semibold">{storeName}</p>
-          <p className="text-xs text-muted-foreground">{receipt.timestamp}</p>
+          {address && <p className="text-xs text-muted-foreground">{address}</p>}
+          {phoneNumbers.length > 0 && (
+            <p className="text-xs text-muted-foreground">ဖုန်း — {phoneNumbers.join(" / ")}</p>
+          )}
+          {cashierName && <p className="text-xs text-muted-foreground">ကောင်တာ — {cashierName}</p>}
           {receipt.tableNumber != null && (
             <p className="text-xs font-medium">စားပွဲ {receipt.tableNumber}</p>
           )}
           {receipt.offline && (
-            <p className="mt-1 text-xs font-medium text-amber-600">အော့ဖ်လိုင်း အရောင်း — ချိတ်ဆက်ရန် စောင့်ဆိုင်းနေသည်</p>
+            <p className="mt-1 text-xs font-medium text-amber-600">
+              အော့ဖ်လိုင်း အရောင်း — ချိတ်ဆက်ရန် စောင့်ဆိုင်းနေသည်
+            </p>
           )}
         </div>
+
         <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
-        <div className="text-sm">
-          {receipt.lines.map((line) => (
-            <div key={line.item_id} className="flex justify-between py-0.5">
-              <span className="truncate pr-2">
-                {line.quantity} × {line.name}
-              </span>
-              <span className="tabular-nums">{fmt(line.quantity * line.unit_price)}</span>
-            </div>
-          ))}
-        </div>
+        <table className="w-full text-xs">
+          <thead className="text-left text-muted-foreground">
+            <tr>
+              <th className="pb-1 font-medium">ပစ္စည်း</th>
+              <th className="pb-1 text-center font-medium">အရေ</th>
+              <th className="pb-1 text-right font-medium">နှုန်း</th>
+              <th className="pb-1 text-right font-medium">ပေါင်း</th>
+            </tr>
+          </thead>
+          <tbody>
+            {receipt.lines.map((line) => (
+              <tr key={line.item_id}>
+                <td className="py-0.5 pr-1">{line.name}</td>
+                <td className="py-0.5 text-center tabular-nums">{line.quantity}</td>
+                <td className="py-0.5 text-right tabular-nums">{fmt(line.unit_price)}</td>
+                <td className="py-0.5 text-right tabular-nums">
+                  {fmt(line.quantity * line.unit_price)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
         <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
         <div className="text-sm">
           <div className="flex justify-between text-muted-foreground">
@@ -627,8 +890,46 @@ function ReceiptModal({
             <span>ကျသင့်ငွေ</span>
             <span className="tabular-nums">{fmt(receipt.total)}</span>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">ပေးချေသည့် နည်းလမ်း: {receipt.paymentMethod}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            ပေးချေသည့် နည်းလမ်း: {receipt.paymentMethod}
+          </p>
         </div>
+
+        {isCredit && (
+          <>
+            <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+            <div className="space-y-0.5 text-xs">
+              <p className="text-sm font-semibold">အကြွေး အချက်အလက်</p>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ဖောက်သည်</span>
+                <span>{receipt.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ဖုန်း</span>
+                <span>{receipt.customerPhone || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ယခင် အကြွေး</span>
+                <span className="tabular-nums">{fmt(receipt.previousDebt ?? 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ယခု ဝယ်ယူမှု</span>
+                <span className="tabular-nums">{fmt(receipt.total)}</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span>စုစုပေါင်း အကြွေး</span>
+                <span className="tabular-nums">{fmt(receipt.newDebt ?? receipt.total)}</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+        <div className="text-center text-xs text-muted-foreground">
+          <p>ဝယ်ယူအားပေးမှုကို ကျေးဇူးအထူးတင်ရှိပါသည်။</p>
+          <p className="mt-1">{receipt.timestamp}</p>
+        </div>
+
         <div className="mt-4 flex gap-2 print:hidden">
           <button
             onClick={() => window.print()}

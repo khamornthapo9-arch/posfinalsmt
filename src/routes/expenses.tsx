@@ -24,7 +24,7 @@ export const Route = createFileRoute("/expenses")({
 const inputClass =
   "h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring";
 const labelClass = "mb-1.5 block text-xs font-medium text-muted-foreground";
-const CATEGORIES = ["အငှားခ", "မီတာခ", "လစာ", "ပို့ဆောင်ခ", "အခြား"];
+const CATEGORIES = ["ငှားခ", "လျှပ်စစ်", "လစာ", "ပို့ဆောင်စရိတ်", "အခြား"];
 
 function ExpensesPage() {
   const { enabled, expenses, totalExpenses, saveExpense, deleteExpense } = useAccountingStore();
