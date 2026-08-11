@@ -35,6 +35,7 @@ export interface Customer {
   phone: string | null;
   note: string | null;
   balance: number;
+  customer_type: string;
 }
 
 export interface Supplier {
@@ -143,6 +144,7 @@ interface AccountingContextValue {
     note: string;
   }) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
+  quickAddCustomer: (input: { name: string; phone: string }) => Promise<Customer>;
   saveSupplier: (input: {
     id?: string;
     name: string;
@@ -205,8 +207,8 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const [c, s, p, e, l] = await Promise.all([
-        supabase.from("customers").select("id,name,phone,note,balance").eq("store_id", storeId).order("name"),
-        supabase.from("suppliers").select("id,name,phone,note,balance").eq("store_id", storeId).order("name"),
+        supabase.from("customers").select("id,name,phone,note,balance,customer_type").eq("store_id", storeId).order("name"),
+        supabase.from("suppliers").select("id,name,phone,note,balance,customer_type").eq("store_id", storeId).order("name"),
         supabase
           .from("purchases")
           .select(
@@ -322,6 +324,26 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
         : await supabase.from("customers").insert(payload);
       if (error) throw error;
       await refreshAll();
+    },
+    [refreshAll, storeId],
+  );
+
+  const quickAddCustomer = useCallback<AccountingContextValue["quickAddCustomer"]>(
+    async ({ name, phone }) => {
+      if (!storeId) throw new Error("No active store");
+      const { data, error } = await supabase
+        .from("customers")
+        .insert({
+          store_id: storeId,
+          name,
+          phone: phone || null,
+          customer_type: "QUICK",
+        })
+        .select("id,name,phone,note,balance,customer_type")
+        .single();
+      if (error || !data) throw error ?? new Error("Customer failed");
+      await refreshAll();
+      return { ...data, balance: Number(data.balance) } as Customer;
     },
     [refreshAll, storeId],
   );
@@ -572,6 +594,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       postSale,
       saveCustomer,
       deleteCustomer,
+      quickAddCustomer,
       saveSupplier,
       deleteSupplier,
       createPurchase,
@@ -600,6 +623,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       postSale,
       saveCustomer,
       deleteCustomer,
+      quickAddCustomer,
       saveSupplier,
       deleteSupplier,
       createPurchase,
