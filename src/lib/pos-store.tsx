@@ -51,6 +51,7 @@ interface PosContextValue {
     total: number;
     paymentMethod: string;
     customerId?: string | null;
+    status?: string;
   }) => Promise<{ offline: boolean; saleId: string | null }>;
   saveItem: (input: {
     id?: string;
@@ -188,7 +189,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   }, [storeId]);
 
   const recordSale = useCallback<PosContextValue["recordSale"]>(
-    async ({ lines, total, paymentMethod, customerId }) => {
+    async ({ lines, total, paymentMethod, customerId, status }) => {
       const createdAt = new Date().toISOString();
       const applyLocalStock = async () => {
         await posDb.transaction("rw", posDb.cached_items, async () => {
@@ -215,6 +216,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
               created_at: createdAt,
               store_id: storeId,
               customer_id: customerId ?? null,
+              status: status ?? "COMPLETED",
             })
             .select("id")
             .single();
