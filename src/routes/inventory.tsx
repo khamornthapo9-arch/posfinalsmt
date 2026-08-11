@@ -32,7 +32,14 @@ export const Route = createFileRoute("/inventory")({
 
 type Filter = "all" | "low" | "out";
 
-const EMPTY = { sku: "", name: "", price: "", stock_quantity: "", min_stock_threshold: "5" };
+const EMPTY = {
+  sku: "",
+  name: "",
+  price: "",
+  cost_price: "",
+  stock_quantity: "",
+  min_stock_threshold: "5",
+};
 
 function InventoryPage() {
   const { items, saveItem, deleteItem } = usePos();
@@ -264,6 +271,7 @@ function ProductModal({
     sku: string;
     name: string;
     price: number;
+    cost_price: number;
     stock_quantity: number;
     min_stock_threshold: number;
   }) => Promise<void>;
@@ -274,6 +282,7 @@ function ProductModal({
           sku: item.sku,
           name: item.name,
           price: String(item.price),
+          cost_price: String(item.cost_price ?? 0),
           stock_quantity: String(item.stock_quantity),
           min_stock_threshold: String(item.min_stock_threshold),
         }
@@ -308,6 +317,7 @@ function ProductModal({
           {field("sku", "SKU နံပါတ်")}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {field("price", "စျေးနှုန်း", "number")}
+            {field("cost_price", "အရင်းစျေး", "number")}
             {field("stock_quantity", "လက်ကျန်", "number")}
             {field("min_stock_threshold", "သတိပေး ရေတွက်မှု", "number")}
           </div>
@@ -321,6 +331,7 @@ function ProductModal({
               sku: form.sku.trim(),
               name: form.name.trim(),
               price: Number(form.price) || 0,
+              cost_price: Number(form.cost_price) || 0,
               stock_quantity: Math.trunc(Number(form.stock_quantity) || 0),
               min_stock_threshold: Math.trunc(Number(form.min_stock_threshold) || 0),
             }).finally(() => setSaving(false));
