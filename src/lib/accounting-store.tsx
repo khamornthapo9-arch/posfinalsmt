@@ -92,6 +92,24 @@ export interface LedgerLine {
 export const PURCHASE_RECEIVED = "ရရှိပြီး";
 export const PURCHASE_PENDING = "စောင့်ဆိုင်းဆဲ";
 
+interface PurchaseRow {
+  id: string;
+  supplier_id: string | null;
+  status: string;
+  total_amount: number | string;
+  amount_paid: number | string;
+  notes: string | null;
+  created_at: string;
+  purchase_items:
+    | {
+        item_id: string;
+        quantity: number;
+        unit_cost: number | string;
+        items: { name: string } | null;
+      }[]
+    | null;
+}
+
 interface AccountingContextValue {
   enabled: boolean;
   loading: boolean;
