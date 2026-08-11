@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { ScannerModal } from "@/components/pos/scanner-modal";
 import { usePos } from "@/lib/pos-store";
+import { useAccountingStore, CREDIT_METHOD, type Customer } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { stockStatus } from "@/lib/pos-utils";
 import type { CachedItem, PendingSaleLine } from "@/lib/pos-db";
@@ -52,6 +53,10 @@ interface Receipt {
   timestamp: string;
   offline: boolean;
   tableNumber?: number | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  previousDebt?: number;
+  newDebt?: number;
 }
 
 interface KitchenTicket {
@@ -62,12 +67,19 @@ interface KitchenTicket {
 }
 
 // Payment options in Myanmar
-const PAYMENTS = ["ငွေသား", "kbzpay", "wavepay"] as const;
+const PAYMENTS: { id: string; label: string; logo?: string }[] = [
+  { id: "ငွေသား", label: "ငွေသား" },
+  { id: "kbzpay", label: "KBZ Pay", logo: "/kbzpay.webp" },
+  { id: "wavepay", label: "Wave Pay", logo: "/wavepay.webp" },
+  { id: CREDIT_METHOD, label: CREDIT_METHOD },
+];
 const TABLE_COUNT = 12;
 
 function RegisterPage() {
   const { items, recordSale, openTabs, holdTab, closeTab } = usePos();
-  const { fmt, taxRate, taxPercent, isRestaurant, store } = useStoreSettings();
+  const { fmt, taxRate, taxPercent, isRestaurant, store, address, cashierName, phoneNumbers } =
+    useStoreSettings();
+  const { customers, quickAddCustomer, postSale } = useAccountingStore();
 
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -78,6 +90,8 @@ function RegisterPage() {
   const [busy, setBusy] = useState(false);
   const [activeTable, setActiveTable] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
+  const [creditCustomer, setCreditCustomer] = useState<Customer | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
@@ -201,15 +215,51 @@ function RegisterPage() {
     return true;
   };
 
+  const cogsFor = (lines: CartLine[]) =>
+    lines.reduce(
+      (sum, line) =>
+        sum + line.quantity * (items.find((i) => i.id === line.item_id)?.cost_price ?? 0),
+      0,
+    );
+
+  const selectPayment = (method: string) => {
+    if (method === CREDIT_METHOD) {
+      setPayment(CREDIT_METHOD);
+      setPickerOpen(true);
+      return;
+    }
+    setPayment(method);
+    setCreditCustomer(null);
+  };
+
   const completeSale = async () => {
     if (cart.length === 0 || !validateStock()) return;
+    const isCredit = payment === CREDIT_METHOD;
+    if (isCredit && !creditCustomer) {
+      setPickerOpen(true);
+      toast.error("အကြွေးရောင်းရန် ဖောက်သည် ရွေးပါ");
+      return;
+    }
     setBusy(true);
     try {
-      const { offline } = await recordSale({
+      const { offline, saleId } = await recordSale({
         lines: cart.map(({ stock: _stock, ...line }) => line),
         total,
         paymentMethod: payment,
+        customerId: isCredit ? creditCustomer!.id : null,
+        status: isCredit ? "UNPAID" : "COMPLETED",
       });
+      if (!offline) {
+        await postSale({
+          saleId,
+          subtotal,
+          tax,
+          cogs: cogsFor(cart),
+          paymentMethod: payment,
+          customerId: isCredit ? creditCustomer!.id : null,
+        });
+      }
+      const previousDebt = creditCustomer?.balance ?? 0;
       setReceipt({
         lines: cart,
         subtotal,
@@ -218,8 +268,18 @@ function RegisterPage() {
         paymentMethod: payment,
         timestamp: new Date().toLocaleString(),
         offline,
+        ...(isCredit
+          ? {
+              customerName: creditCustomer!.name,
+              customerPhone: creditCustomer!.phone ?? "",
+              previousDebt,
+              newDebt: previousDebt + total,
+            }
+          : {}),
       });
       setCart([]);
+      setCreditCustomer(null);
+      setPayment("ငွေသား");
       toast.success(offline ? "အရောင်းကို အော့ဖ်လိုင်း မှတ်ထားသည်" : "ရောင်းချမှု အောင်မြင်သည်");
     } catch {
       toast.error("အရောင်းစာရင်း မသိမ်းဆည်းနိုင်ပါ");
@@ -502,22 +562,49 @@ function RegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 px-4">
+          <div className="grid grid-cols-2 gap-2 px-4">
             {PAYMENTS.map((method) => (
               <button
-                key={method}
-                onClick={() => setPayment(method)}
+                key={method.id}
+                onClick={() => selectPayment(method.id)}
                 className={cn(
-                  "min-h-11 rounded-md border px-2 text-xs font-medium transition-colors",
-                  payment === method
+                  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
+                  payment === method.id
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border hover:bg-accent",
                 )}
               >
-                {method}
+                {method.logo && (
+                  <img
+                    src={method.logo}
+                    alt={`${method.label} logo`}
+                    className="h-5 w-5 rounded-xs bg-white object-contain p-px"
+                  />
+                )}
+                {method.label}
               </button>
             ))}
           </div>
+
+          {payment === CREDIT_METHOD && (
+            <div className="mx-4 mt-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
+              {creditCustomer ? (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate">
+                    <span className="font-medium">{creditCustomer.name}</span>{" "}
+                    <span className="text-muted-foreground">{creditCustomer.phone ?? ""}</span>
+                  </span>
+                  <button onClick={() => setPickerOpen(true)} className="shrink-0 text-primary underline">
+                    ပြောင်းရန်
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setPickerOpen(true)} className="text-primary underline">
+                  ဖောက်သည် ရွေးပါ
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2 p-4">
             {isRestaurant ? (
@@ -559,10 +646,29 @@ function RegisterPage() {
         }}
       />
 
+      {pickerOpen && (
+        <CustomerPickerModal
+          customers={customers}
+          onClose={() => {
+            setPickerOpen(false);
+            if (!creditCustomer) setPayment("ငွေသား");
+          }}
+          onPick={(customer) => {
+            setCreditCustomer(customer);
+            setPayment(CREDIT_METHOD);
+            setPickerOpen(false);
+          }}
+          onQuickAdd={quickAddCustomer}
+        />
+      )}
+
       {receipt && (
         <ReceiptModal
           receipt={receipt}
           storeName={store?.name ?? "SMT POS"}
+          address={address}
+          cashierName={cashierName}
+          phoneNumbers={phoneNumbers}
           fmt={fmt}
           onClose={() => setReceipt(null)}
         />
