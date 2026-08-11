@@ -5,6 +5,7 @@ export interface CachedItem {
   sku: string;
   name: string;
   price: number;
+  cost_price: number;
   stock_quantity: number;
   min_stock_threshold: number;
   created_at: string;
@@ -36,6 +37,19 @@ class PosDatabase extends Dexie {
       cached_items: "id, sku, name",
       pending_sales: "++localId, created_at",
     });
+    this.version(2)
+      .stores({
+        cached_items: "id, sku, name",
+        pending_sales: "++localId, created_at",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table("cached_items")
+          .toCollection()
+          .modify((item: Partial<CachedItem>) => {
+            if (item.cost_price == null) item.cost_price = 0;
+          });
+      });
   }
 }
 

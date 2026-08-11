@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   BarChart3,
   Boxes,
+  Banknote,
   CircleDot,
   Loader2,
   LogOut,
@@ -11,6 +12,8 @@ import {
   PanelLeftOpen,
   ScanLine,
   Settings,
+  Truck,
+  Users,
   X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -29,6 +32,12 @@ const NAV = [
   { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes },
   { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3 },
   { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings },
+] as const;
+
+const ADVANCED_NAV = [
+  { to: "/customers", label: "ဖောက်သည်များ", icon: Users },
+  { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", icon: Truck },
+  { to: "/expenses", label: "အသုံးစရိတ်", icon: Banknote },
 ] as const;
 
 function PaymentBadges() {
@@ -119,9 +128,11 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 }
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+  const { store } = useAuth();
+  const items = store?.advanced_accounting_mode ? [...NAV, ...ADVANCED_NAV] : [...NAV];
   return (
     <nav className="flex flex-col gap-0.5">
-      {NAV.map((item) => (
+      {items.map((item) => (
         <Link
           key={item.to}
           to={item.to as string}

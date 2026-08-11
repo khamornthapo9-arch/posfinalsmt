@@ -50,12 +50,14 @@ interface PosContextValue {
     lines: PendingSaleLine[];
     total: number;
     paymentMethod: string;
-  }) => Promise<{ offline: boolean }>;
+    customerId?: string | null;
+  }) => Promise<{ offline: boolean; saleId: string | null }>;
   saveItem: (input: {
     id?: string;
     sku: string;
     name: string;
     price: number;
+    cost_price: number;
     stock_quantity: number;
     min_stock_threshold: number;
   }) => Promise<void>;
@@ -105,6 +107,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       sku: row.sku,
       name: row.name,
       price: Number(row.price),
+      cost_price: Number(row.cost_price ?? 0),
       stock_quantity: row.stock_quantity,
       min_stock_threshold: row.min_stock_threshold,
       created_at: row.created_at,
@@ -185,7 +188,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   }, [storeId]);
 
   const recordSale = useCallback<PosContextValue["recordSale"]>(
-    async ({ lines, total, paymentMethod }) => {
+    async ({ lines, total, paymentMethod, customerId }) => {
       const createdAt = new Date().toISOString();
       const applyLocalStock = async () => {
         await posDb.transaction("rw", posDb.cached_items, async () => {
@@ -211,6 +214,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
               is_offline_sync: false,
               created_at: createdAt,
               store_id: storeId,
+              customer_id: customerId ?? null,
             })
             .select("id")
             .single();
@@ -225,7 +229,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           );
           if (lineError) throw lineError;
           await refreshCatalog();
-          return { offline: false };
+          return { offline: false, saleId: saleRow.id as string };
         } catch {
           setIsOnline(false);
         }
@@ -239,7 +243,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       };
       await posDb.pending_sales.add(offlineSale);
       await applyLocalStock();
-      return { offline: true };
+      return { offline: true, saleId: null };
     },
     [isOnline, refreshCatalog, storeId],
   );
@@ -252,6 +256,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         sku: input.sku,
         name: input.name,
         price: input.price,
+        cost_price: input.cost_price,
         stock_quantity: input.stock_quantity,
         min_stock_threshold: input.min_stock_threshold,
       };
