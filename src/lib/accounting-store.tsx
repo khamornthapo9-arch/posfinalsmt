@@ -208,7 +208,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
     try {
       const [c, s, p, e, l] = await Promise.all([
         supabase.from("customers").select("id,name,phone,note,balance,customer_type").eq("store_id", storeId).order("name"),
-        supabase.from("suppliers").select("id,name,phone,note,balance,customer_type").eq("store_id", storeId).order("name"),
+        supabase.from("suppliers").select("id,name,phone,note,balance").eq("store_id", storeId).order("name"),
         supabase
           .from("purchases")
           .select(
