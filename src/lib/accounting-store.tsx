@@ -214,20 +214,21 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       setSuppliers(
         (s.data ?? []).map((row) => ({ ...row, balance: Number(row.balance) })) as Supplier[],
       );
+      const purchaseRows = (p.data ?? []) as unknown as PurchaseRow[];
       setPurchases(
-        ((p.data ?? []) as unknown as Array<Record<string, unknown>>).map((row) => ({
-          id: row.id as string,
-          supplier_id: (row.supplier_id as string | null) ?? null,
-          status: row.status as string,
+        purchaseRows.map((row) => ({
+          id: row.id,
+          supplier_id: row.supplier_id ?? null,
+          status: row.status,
           total_amount: Number(row.total_amount),
           amount_paid: Number(row.amount_paid),
-          notes: (row.notes as string | null) ?? null,
-          created_at: row.created_at as string,
-          lines: ((row.purchase_items as Array<Record<string, unknown>>) ?? []).map((line) => ({
-            item_id: line.item_id as string,
+          notes: row.notes ?? null,
+          created_at: row.created_at,
+          lines: (row.purchase_items ?? []).map((line) => ({
+            item_id: line.item_id,
             quantity: Number(line.quantity),
             unit_cost: Number(line.unit_cost),
-            name: ((line.items as { name?: string } | null)?.name ?? "") as string,
+            name: line.items?.name ?? "",
           })),
         })),
       );
