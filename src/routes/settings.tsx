@@ -8,6 +8,7 @@ import {
   Loader2,
   LogOut,
   Mail,
+  Plus,
   Send,
   Store,
   Upload,
