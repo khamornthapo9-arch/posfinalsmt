@@ -14,8 +14,135 @@ export type Database = {
   }
   public: {
     Tables: {
+      customers: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          phone: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          phone?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          phone?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debt_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          method: string
+          note: string | null
+          party_id: string
+          party_type: string
+          store_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          method?: string
+          note?: string | null
+          party_id: string
+          party_type: string
+          store_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          method?: string
+          note?: string | null
+          party_id?: string
+          party_type?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_payments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          id: string
+          note: string | null
+          paid_with: string
+          spent_at: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          paid_with?: string
+          spent_at?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          paid_with?: string
+          spent_at?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
+          cost_price: number
           created_at: string
           id: string
           min_stock_threshold: number
@@ -26,6 +153,7 @@ export type Database = {
           store_id: string
         }
         Insert: {
+          cost_price?: number
           created_at?: string
           id?: string
           min_stock_threshold?: number
@@ -36,6 +164,7 @@ export type Database = {
           store_id: string
         }
         Update: {
+          cost_price?: number
           created_at?: string
           id?: string
           min_stock_threshold?: number
@@ -51,6 +180,149 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ledger_entries: {
+        Row: {
+          account: string
+          amount: number
+          created_at: string
+          direction: string
+          entry_date: string
+          id: string
+          memo: string | null
+          reference_id: string | null
+          reference_type: string | null
+          store_id: string
+        }
+        Insert: {
+          account: string
+          amount: number
+          created_at?: string
+          direction: string
+          entry_date?: string
+          id?: string
+          memo?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          store_id: string
+        }
+        Update: {
+          account?: string
+          amount?: number
+          created_at?: string
+          direction?: string
+          entry_date?: string
+          id?: string
+          memo?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_entries_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          purchase_id: string
+          quantity: number
+          unit_cost: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          purchase_id: string
+          quantity: number
+          unit_cost: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          purchase_id?: string
+          quantity?: number
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchases: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          id: string
+          notes: string | null
+          received_at: string | null
+          status: string
+          store_id: string
+          supplier_id: string | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          status?: string
+          store_id: string
+          supplier_id?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          status?: string
+          store_id?: string
+          supplier_id?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -97,6 +369,7 @@ export type Database = {
       sales: {
         Row: {
           created_at: string
+          customer_id: string | null
           id: string
           is_offline_sync: boolean
           notes: string | null
@@ -108,6 +381,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_id?: string | null
           id?: string
           is_offline_sync?: boolean
           notes?: string | null
@@ -119,6 +393,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_id?: string | null
           id?: string
           is_offline_sync?: boolean
           notes?: string | null
@@ -130,6 +405,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
@@ -140,36 +422,89 @@ export type Database = {
       }
       stores: {
         Row: {
+          address: string | null
+          advanced_accounting_mode: boolean
           business_type: string
+          cashier_name: string | null
           created_at: string
           currency_symbol: string
           id: string
           logo_url: string | null
           name: string
           owner_id: string
+          phone_numbers: string[]
           tax_rate: number
         }
         Insert: {
+          address?: string | null
+          advanced_accounting_mode?: boolean
           business_type?: string
+          cashier_name?: string | null
           created_at?: string
           currency_symbol?: string
           id?: string
           logo_url?: string | null
           name: string
           owner_id: string
+          phone_numbers?: string[]
           tax_rate?: number
         }
         Update: {
+          address?: string | null
+          advanced_accounting_mode?: boolean
           business_type?: string
+          cashier_name?: string | null
           created_at?: string
           currency_symbol?: string
           id?: string
           logo_url?: string | null
           name?: string
           owner_id?: string
+          phone_numbers?: string[]
           tax_rate?: number
         }
         Relationships: []
+      }
+      suppliers: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          phone: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          phone?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          phone?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
