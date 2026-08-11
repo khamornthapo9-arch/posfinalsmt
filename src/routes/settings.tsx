@@ -102,6 +102,10 @@ function SettingsPage() {
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("$");
   const [tax, setTax] = useState("5");
+  const [address, setAddress] = useState("");
+  const [cashierName, setCashierName] = useState("");
+  const [phones, setPhones] = useState<string[]>([""]);
+  const [advancedSaving, setAdvancedSaving] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [email, setEmail] = useState("");
@@ -114,6 +118,9 @@ function SettingsPage() {
     setName(store.name);
     setSymbol(store.currency_symbol || "$");
     setTax(String(store.tax_rate ?? 5));
+    setAddress(store.address ?? "");
+    setCashierName(store.cashier_name ?? "");
+    setPhones(store.phone_numbers?.length ? store.phone_numbers : [""]);
   }, [store]);
 
   useEffect(() => {
@@ -131,12 +138,32 @@ function SettingsPage() {
         name: name.trim(),
         currency_symbol: symbol.trim() || "$",
         tax_rate: Number(tax) || 0,
+        address: address.trim() || null,
+        cashier_name: cashierName.trim() || null,
+        phone_numbers: phones.map((p) => p.trim()).filter(Boolean),
       });
       toast.success("ဆိုင်အချက်အလက်များကို သိမ်းဆည်းပြီးပါပြီ");
     } catch {
       toast.error("ဆိုင်အချက်အလက်များကို သိမ်းဆည်း၍ မရပါ");
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const toggleAdvanced = async () => {
+    if (!store) return;
+    setAdvancedSaving(true);
+    try {
+      await updateStore({ advanced_accounting_mode: !store.advanced_accounting_mode });
+      toast.success(
+        store.advanced_accounting_mode
+          ? "အဆင့်မြင့် စာရင်းကိုင် မုဒ်ကို ပိတ်လိုက်ပါပြီ"
+          : "အဆင့်မြင့် စာရင်းကိုင် မုဒ်ကို ဖွင့်လိုက်ပါပြီ",
+      );
+    } catch {
+      toast.error("မော်ဂျူး ပြင်ဆင်ချက်ကို သိမ်းဆည်း၍ မရပါ");
+    } finally {
+      setAdvancedSaving(false);
     }
   };
 
@@ -290,6 +317,67 @@ function SettingsPage() {
                 />
               </div>
               <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="store-address">
+                  ဆိုင် လိပ်စာ
+                </label>
+                <input
+                  id="store-address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="အမှတ်၊ လမ်း၊ မြို့နယ်"
+                  className={inputClass}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="cashier-name">
+                  ငွေကိုင် / ဝန်ထမ်း အမည်
+                </label>
+                <input
+                  id="cashier-name"
+                  value={cashierName}
+                  onChange={(e) => setCashierName(e.target.value)}
+                  placeholder="ဥပမာ - မမြင့်"
+                  className={inputClass}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <span className={labelClass}>ဖုန်းနံပါတ်များ</span>
+                <div className="space-y-2">
+                  {phones.map((phone, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        value={phone}
+                        onChange={(e) =>
+                          setPhones((prev) =>
+                            prev.map((p, i) => (i === index ? e.target.value : p)),
+                          )
+                        }
+                        inputMode="tel"
+                        placeholder="09xxxxxxxxx"
+                        className={inputClass}
+                      />
+                      <button
+                        onClick={() =>
+                          setPhones((prev) =>
+                            prev.length === 1 ? [""] : prev.filter((_, i) => i !== index),
+                          )
+                        }
+                        aria-label="ဖုန်းနံပါတ် ဖျက်ရန်"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-accent"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setPhones((prev) => [...prev, ""])}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> ဖုန်းနံပါတ် ထပ်ထည့်မည်
+                  </button>
+                </div>
+              </div>
+              <div className="sm:col-span-2">
                 <button
                   onClick={() => void saveProfile()}
                   disabled={savingProfile}
@@ -299,6 +387,40 @@ function SettingsPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </Section>
+
+        <Section
+          title="အသုံးပြုမည့် မော်ဂျူးများ"
+          description="လိုအပ်သော မော်ဂျူးများကိုသာ ဖွင့်၍ အသုံးပြုနိုင်ပါသည်။"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">
+                အဆင့်မြင့် စာရင်းကိုင် မုဒ် (အကြွေး၊ ဝယ်ယူမှုနှင့် အသုံးစရိတ်)
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                ဖောက်သည် အကြွေးစာရင်း၊ ကုန်သွင်းသူ ဝယ်ယူမှုနှင့် အသုံးစရိတ် မှတ်တမ်းများ ပွင့်လာပါမည်။
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={Boolean(store?.advanced_accounting_mode)}
+              aria-label="အဆင့်မြင့် စာရင်းကိုင် မုဒ်"
+              disabled={advancedSaving}
+              onClick={() => void toggleAdvanced()}
+              className={cn(
+                "relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50",
+                store?.advanced_accounting_mode ? "bg-primary" : "bg-muted",
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block h-5 w-5 transform rounded-full bg-card shadow transition-transform",
+                  store?.advanced_accounting_mode ? "translate-x-5" : "translate-x-0.5",
+                )}
+              />
+            </button>
           </div>
         </Section>
 
