@@ -11,10 +11,21 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Download, DollarSign, Package, Receipt, TrendingUp } from "lucide-react";
+import {
+  Download,
+  DollarSign,
+  HandCoins,
+  Package,
+  PiggyBank,
+  Receipt,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
-import { downloadCsv, money } from "@/lib/pos-utils";
+import { downloadCsv } from "@/lib/pos-utils";
+import { useStoreSettings } from "@/lib/use-store-settings";
+import { useAccountingStore, CREDIT_METHOD } from "@/lib/accounting-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/analytics")({
@@ -45,7 +56,19 @@ interface SaleRow {
   payment_method: string;
   is_offline_sync: boolean;
   created_at: string;
-  sale_items: { quantity: number; unit_price: number; items: { name: string } | null }[];
+  status: string;
+  customer_id: string | null;
+  customers: {
+    name: string;
+    phone: string | null;
+    balance: number;
+    customer_type: string;
+  } | null;
+  sale_items: {
+    quantity: number;
+    unit_price: number;
+    items: { name: string; cost_price: number } | null;
+  }[];
 }
 
 function startOf(range: RangeKey) {
@@ -62,6 +85,8 @@ function AnalyticsPage() {
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const { fmt } = useStoreSettings();
+  const { customers, expenses } = useAccountingStore();
 
   const fromDate = range === "custom" ? new Date(`${from}T00:00:00`) : startOf(range);
   const toDate = range === "custom" ? new Date(`${to}T23:59:59`) : new Date();
@@ -73,7 +98,9 @@ function AnalyticsPage() {
     setLoading(true);
     void supabase
       .from("sales")
-      .select("id,total_amount,payment_method,is_offline_sync,created_at,sale_items(quantity,unit_price,items(name))")
+      .select(
+        "id,total_amount,payment_method,is_offline_sync,created_at,status,customer_id,customers(name,phone,balance,customer_type),sale_items(quantity,unit_price,items(name,cost_price))",
+      )
       .gte("created_at", fromIso)
       .lte("created_at", toIso)
       .order("created_at")
@@ -93,13 +120,41 @@ function AnalyticsPage() {
       (sum, s) => sum + s.sale_items.reduce((q, line) => q + line.quantity, 0),
       0,
     );
+    const cogs = sales.reduce(
+      (sum, s) =>
+        sum +
+        s.sale_items.reduce(
+          (c, line) => c + line.quantity * Number(line.items?.cost_price ?? 0),
+          0,
+        ),
+      0,
+    );
     return {
       revenue,
+      cogs,
       transactions: sales.length,
       units,
       average: sales.length ? revenue / sales.length : 0,
     };
   }, [sales]);
+
+  const rangeExpenses = useMemo(
+    () =>
+      expenses
+        .filter((e) => {
+          const d = new Date(e.spent_at).getTime();
+          return d >= fromDate.getTime() && d <= toDate.getTime();
+        })
+        .reduce((sum, e) => sum + e.amount, 0),
+    [expenses, fromIso, toIso],
+  );
+
+  const activeDebt = useMemo(
+    () => customers.reduce((sum, c) => sum + Math.max(c.balance, 0), 0),
+    [customers],
+  );
+  const grossProfit = metrics.revenue - metrics.cogs;
+  const netProfit = grossProfit - rangeExpenses;
 
   const trend = useMemo(() => {
     const buckets = new Map<string, number>();
@@ -134,24 +189,64 @@ function AnalyticsPage() {
 
   const exportCsv = () => {
     const rows: (string | number)[][] = [
-      ["အရောင်း အိုင်ဒီ", "ရက်စွဲ", "ငွေပေးချေမှု နည်းလမ်း", "အော့ဖ်လိုင်း စင့်ခ်လုပ်မှု", "အရေအတွက်", "စုစုပေါင်း"],
-      ...sales.map((sale) => [
-        sale.id,
-        new Date(sale.created_at).toLocaleString("my-MM"),
-        sale.payment_method,
-        sale.is_offline_sync ? "ဟုတ်ပါသည်" : "မဟုတ်ပါ",
-        sale.sale_items.reduce((q, line) => q + line.quantity, 0),
-        Number(sale.total_amount).toFixed(2),
-      ]),
+      [
+        "အရောင်း အိုင်ဒီ",
+        "ရက်စွဲ",
+        "ငွေပေးချေမှု နည်းလမ်း",
+        "အခြေအနေ",
+        "ဖောက်သည် အမျိုးအစား",
+        "ဖောက်သည် အမည်",
+        "ဖုန်း",
+        "အကြွေး လက်ကျန်",
+        "အော့ဖ်လိုင်း စင့်ခ်လုပ်မှု",
+        "အရေအတွက်",
+        "စုစုပေါင်း",
+      ],
+      ...sales.map((sale) => {
+        const credit = sale.payment_method === CREDIT_METHOD;
+        const customer = sale.customers;
+        return [
+          sale.id,
+          new Date(sale.created_at).toLocaleString("my-MM"),
+          sale.payment_method,
+          sale.status,
+          credit
+            ? customer?.customer_type === "QUICK"
+              ? "Quick-Added"
+              : "Registered"
+            : "—",
+          credit ? customer?.name ?? "—" : "—",
+          credit ? customer?.phone ?? "—" : "—",
+          credit ? Number(customer?.balance ?? 0).toFixed(2) : "0.00",
+          sale.is_offline_sync ? "ဟုတ်ပါသည်" : "မဟုတ်ပါ",
+          sale.sale_items.reduce((q, line) => q + line.quantity, 0),
+          Number(sale.total_amount).toFixed(2),
+        ];
+      }),
+      [],
+      ["အကျဉ်းချုပ်"],
+      ["စုစုပေါင်း ဝင်ငွေ", metrics.revenue.toFixed(2)],
+      ["ကုန်ကျစရိတ် (COGS)", metrics.cogs.toFixed(2)],
+      ["အကြမ်း အမြတ်", grossProfit.toFixed(2)],
+      ["အသုံးစရိတ်", rangeExpenses.toFixed(2)],
+      ["အသားတင် အမြတ်", netProfit.toFixed(2)],
+      ["လက်ကျန် အကြွေး စုစုပေါင်း", activeDebt.toFixed(2)],
     ];
-    downloadCsv(`sales-${from}-to-${to}.csv`, rows);
+    downloadCsv(`smt-pos-master-${from}-to-${to}.csv`, rows);
   };
 
   const cards = [
-    { label: "စုစုပေါင်း ဝင်ငွေ", value: money(metrics.revenue), icon: DollarSign },
+    { label: "စုစုပေါင်း ဝင်ငွေ", value: fmt(metrics.revenue), icon: DollarSign },
     { label: "အရောင်းပြေစာ အရေအတွက်", value: String(metrics.transactions), icon: Receipt },
     { label: "ရောင်းရသော ပစ္စည်းအရေအတွက်", value: String(metrics.units), icon: Package },
-    { label: "ပျမ်းမျှ ဝယ်ယူမှု ပမာဏ", value: money(metrics.average), icon: TrendingUp },
+    { label: "ပျမ်းမျှ ဝယ်ယူမှု ပမာဏ", value: fmt(metrics.average), icon: TrendingUp },
+  ];
+
+  const profitCards = [
+    { label: "လက်ကျန် အကြွေး", value: fmt(activeDebt), icon: HandCoins },
+    { label: "အသုံးစရိတ်", value: fmt(rangeExpenses), icon: Wallet },
+    { label: "အကြမ်း အမြတ်", value: fmt(grossProfit), icon: TrendingUp },
+    { label: "အသားတင် အမြတ်", value: fmt(netProfit), icon: PiggyBank },
   ];
 
   return (
@@ -199,7 +294,7 @@ function AnalyticsPage() {
             onClick={exportCsv}
             className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
           >
-            <Download className="h-4 w-4" /> CSV ထုတ်မည်
+            <Download className="h-4 w-4" /> CSV ထုတ်ယူမည်
           </button>
         </div>
 
@@ -211,6 +306,20 @@ function AnalyticsPage() {
                 <card.icon className="h-4 w-4 text-muted-foreground" />
               </div>
               <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">{card.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {profitCards.map((card) => (
+            <div key={card.label} className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
+                <card.icon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">
+                {card.value}
+              </p>
             </div>
           ))}
         </div>
@@ -230,7 +339,7 @@ function AnalyticsPage() {
                     <XAxis dataKey="date" fontSize={11} stroke="var(--muted-foreground)" />
                     <YAxis fontSize={11} stroke="var(--muted-foreground)" />
                     <Tooltip
-                      formatter={(value: number) => money(value)}
+                      formatter={(value: number) => fmt(value)}
                       contentStyle={{
                         background: "var(--card)",
                         border: "1px solid var(--border)",
