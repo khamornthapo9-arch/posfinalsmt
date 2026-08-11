@@ -4,6 +4,7 @@ import { Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, PENDING_STORE_NAME_KEY } from "@/lib/auth-store";
+import smtPosLogo from "@/assets/smt-pos-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,7 +127,20 @@ function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+      <div className="w-full max-w-md">
+        <div className="mb-6 flex justify-center">
+          <img
+            src={smtPosLogo}
+            alt="SMT POS"
+            width={72}
+            height={72}
+            className="h-18 w-18 max-h-20 object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <ScanLine className="h-5 w-5" />
@@ -220,6 +234,7 @@ function LoginPage() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </main>
   );
