@@ -11,6 +11,10 @@ export interface StoreRecord {
   currency_symbol: string;
   tax_rate: number;
   business_type: string;
+  advanced_accounting_mode: boolean;
+  address: string | null;
+  cashier_name: string | null;
+  phone_numbers: string[];
 }
 
 interface AuthContextValue {
@@ -24,7 +28,8 @@ interface AuthContextValue {
 
 export const PENDING_STORE_NAME_KEY = "pos-pending-store-name";
 
-const STORE_COLUMNS = "id, name, logo_url, currency_symbol, tax_rate, business_type";
+const STORE_COLUMNS =
+  "id, name, logo_url, currency_symbol, tax_rate, business_type, advanced_accounting_mode, address, cashier_name, phone_numbers";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
