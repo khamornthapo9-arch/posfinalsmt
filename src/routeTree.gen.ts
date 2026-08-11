@@ -16,6 +16,7 @@ import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SuppliersRouteImport } from './routes/suppliers'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +53,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SuppliersRoute = SuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/suppliers': typeof SuppliersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/suppliers': typeof SuppliersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
+  '/suppliers': typeof SuppliersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/login'
     | '/settings'
+    | '/suppliers'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/login'
     | '/settings'
+    | '/suppliers'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/login'
     | '/settings'
+    | '/suppliers'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,6 +131,7 @@ export interface RootRouteChildren {
   InventoryRoute: typeof InventoryRoute
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
+  SuppliersRoute: typeof SuppliersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -172,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/suppliers': {
+      id: '/suppliers'
+      path: '/suppliers'
+      fullPath: '/suppliers'
+      preLoaderRoute: typeof SuppliersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -183,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryRoute: InventoryRoute,
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
+  SuppliersRoute: SuppliersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
