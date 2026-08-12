@@ -1,5 +1,14 @@
 import Dexie, { type Table } from "dexie";
 
+export interface ItemUnit {
+  id: string;
+  item_id: string;
+  unit_name: string;
+  conversion: number;
+  price: number;
+  is_default: boolean;
+}
+
 export interface CachedItem {
   id: string;
   sku: string;
@@ -13,8 +22,8 @@ export interface CachedItem {
   barcode: string | null;
   qr_value: string | null;
   created_at: string;
+  units: ItemUnit[];
 }
-
 
 export interface PendingSaleLine {
   item_id: string;
@@ -22,6 +31,8 @@ export interface PendingSaleLine {
   name: string;
   quantity: number;
   unit_price: number;
+  unit_name?: string;
+  conversion?: number;
 }
 
 export interface PendingSale {
@@ -83,8 +94,20 @@ class PosDatabase extends Dexie {
             if (item.qr_value === undefined) item.qr_value = null;
           });
       });
+    this.version(5)
+      .stores({
+        cached_items: "id, sku, name, category",
+        pending_sales: "++localId, created_at",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table("cached_items")
+          .toCollection()
+          .modify((item: Partial<CachedItem>) => {
+            if (!item.units) item.units = [];
+          });
+      });
   }
 }
-
 
 export const posDb = new PosDatabase();
