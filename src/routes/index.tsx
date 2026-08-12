@@ -14,7 +14,7 @@ import { useStoreSettings } from "@/lib/use-store-settings";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useReceiptSettings } from "@/lib/receipt-settings";
 import { useRole } from "@/lib/roles";
-import type { CachedItem, PendingSaleLine } from "@/lib/pos-db";
+import type { CachedItem, ItemUnit, PendingSaleLine } from "@/lib/pos-db";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
