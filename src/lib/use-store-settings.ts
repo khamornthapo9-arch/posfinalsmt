@@ -4,7 +4,7 @@ import { DEFAULT_CURRENCY, money } from "@/lib/pos-utils";
 /** Currency + tax settings pulled from the active store record. */
 export function useStoreSettings() {
   const { store } = useAuth();
-  const symbol = store?.currency_symbol || "$";
+  const symbol = store?.currency_symbol || DEFAULT_CURRENCY;
   const taxRate = (store?.tax_rate ?? 5) / 100;
   return {
     store,
