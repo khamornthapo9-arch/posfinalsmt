@@ -94,6 +94,30 @@ function InventoryPage() {
           >
             <Plus className="h-4 w-4" /> ကုန်ပစ္စည်းသစ်ထည့်မည်
           </button>
+          {items.length === 0 && (
+            <button
+              onClick={() => {
+                setSeeding(true);
+                void seedDemoItems()
+                  .then((count) => toast.success(`${count} ကုန်ပစ္စည်း ဥပမာများ ထည့်သွင်းပြီးပါပြီ`))
+                  .catch(() => toast.error("ဥပမာကုန်ပစ္စည်းများ ထည့်သွင်း၍မရပါ"))
+                  .finally(() => setSeeding(false));
+              }}
+              disabled={seeding}
+              className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+            >
+              {seeding ? (
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ထည့်သွင်းနေသည်
+                </span>
+              ) : (
+                <>
+                  <PackagePlus className="h-4 w-4" /> ဥပမာကုန်ပစ္စည်းထည့်မည်
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         <div className="hidden overflow-x-auto rounded-xl border border-border bg-card md:block">
