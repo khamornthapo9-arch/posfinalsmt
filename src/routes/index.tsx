@@ -315,7 +315,10 @@ function RegisterPage() {
       const { offline, saleId } = await recordSale({
         lines: cart.map(({ stock: _stock, ...line }) => line),
         total,
-        paymentMethod: payment,
+        paymentMethod: splitMode ? "SPLIT" : payment,
+        paymentBreakdown: splitMode
+          ? Object.entries(splits).map(([method, amount]) => ({ method, amount }))
+          : [{ method: payment, amount: total }],
         customerId: isCredit ? creditCustomer!.id : null,
         status: isCredit ? "UNPAID" : "COMPLETED",
       });
@@ -335,7 +338,10 @@ function RegisterPage() {
         subtotal,
         tax,
         total,
-        paymentMethod: payment,
+        paymentMethod: splitMode ? "SPLIT" : payment,
+        splits: splitMode
+          ? Object.entries(splits).map(([method, amount]) => ({ method, amount }))
+          : [{ method: payment, amount: total }],
         timestamp: new Date().toLocaleString(),
         offline,
         ...(isCredit
@@ -350,6 +356,8 @@ function RegisterPage() {
       setCart([]);
       setCreditCustomer(null);
       setPayment("ငွေသား");
+      setSplitMode(false);
+      setSplits({});
       toast.success(offline ? "အရောင်းကို အော့ဖ်လိုင်း မှတ်ထားသည်" : "ရောင်းချမှု အောင်မြင်သည်");
     } catch {
       toast.error("အရောင်းစာရင်း မသိမ်းဆည်းနိုင်ပါ");
@@ -463,14 +471,33 @@ function RegisterPage() {
       title={isRestaurant ? `စားပွဲ ${activeTable}` : "POS စာရင်းကိုင်"}
       subtitle={isRestaurant ? (activeTab ? "ဖွင့်ထားသော စာရင်း" : "အော်ဒါအသစ်") : store?.name}
       actions={
-        isRestaurant ? (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setHeldOpen(true)}
+            className="press relative inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
+          >
+            <PauseCircle className="h-3.5 w-3.5" /> ဆိုင်းထား
+            {heldOrders.length > 0 && (
+              <span className="pulse-dot ml-1 rounded-full bg-warning px-1.5 text-[10px] font-bold text-white">
+                {heldOrders.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setHistoryOpen(true)}
+            className="press inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
+          >
+            <History className="h-3.5 w-3.5" /> မှတ်တမ်း
+          </button>
+          {isRestaurant && (
           <button
             onClick={leaveTable}
             className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> စားပွဲများ မြေပုံ
           </button>
-        ) : null
+          )}
+        </div>
       }
     >
       <div className="grid gap-4 p-4 lg:grid-cols-[65fr_35fr] lg:items-start">
