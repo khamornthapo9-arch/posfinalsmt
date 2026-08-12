@@ -11,9 +11,9 @@ export interface CartLine {
   name: string;
   quantity: number;
   unit_price: number;
-  unit_name?: string;
-  conversion?: number;
-  stock?: number;
+  unit_name?: string | undefined;
+  conversion?: number | undefined;
+  stock?: number | undefined;
 }
 
 interface PaymentOption {
