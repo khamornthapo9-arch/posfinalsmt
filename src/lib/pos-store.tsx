@@ -585,11 +585,18 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         if (current) {
           await supabase
             .from("items")
-            .update({ stock_quantity: current.stock_quantity + line.quantity })
+            .update({ stock_quantity: current.stock_quantity + line.quantity * (line.conversion ?? 1) })
             .eq("id", line.item_id);
         }
       }
-      await logMovements(order.lines, "RETURN", orderId);
+      await logMovements(
+        order.lines.map((line) => ({
+          item_id: line.item_id,
+          quantity: line.quantity * (line.conversion ?? 1),
+        })),
+        "RETURN",
+        orderId,
+      );
 
       // Credit portion of the order (if any) is written back off the customer's debt.
       const creditAmount =
