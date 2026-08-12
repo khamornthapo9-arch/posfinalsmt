@@ -319,7 +319,7 @@ function ProductModal({
     min_stock_threshold: number;
     barcode?: string | null;
     qr_value?: string | null;
-    units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[];
+    units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[] | undefined;
   }) => Promise<void>;
 }) {
   const { isPro } = useStoreSettings();
