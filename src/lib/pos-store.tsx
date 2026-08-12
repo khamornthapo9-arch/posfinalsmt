@@ -315,6 +315,8 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   const recordSale = useCallback<PosContextValue["recordSale"]>(
     async ({ lines, total, paymentMethod, paymentBreakdown, customerId, status, paymentStatus }) => {
       const createdAt = new Date().toISOString();
+      const baseQty = (line: PendingSaleLine) => line.quantity * (line.conversion ?? 1);
+
       const applyLocalStock = async () => {
         await posDb.transaction("rw", posDb.cached_items, async () => {
           for (const line of lines) {
@@ -322,7 +324,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
             if (cached) {
               await posDb.cached_items.put({
                 ...cached,
-                stock_quantity: Math.max(cached.stock_quantity - line.quantity, 0),
+                stock_quantity: Math.max(cached.stock_quantity - baseQty(line), 0),
               });
             }
           }
@@ -355,10 +357,16 @@ function PosProviderInner({ children }: { children: ReactNode }) {
               item_id: line.item_id,
               quantity: line.quantity,
               unit_price: line.unit_price,
+              unit_name: line.unit_name ?? null,
+              conversion: line.conversion ?? 1,
             })),
           );
           if (lineError) throw lineError;
-          await logMovements(lines, "SALE", saleRow.id as string);
+          await logMovements(
+            lines.map((line) => ({ item_id: line.item_id, quantity: baseQty(line) })),
+            "SALE",
+            saleRow.id as string,
+          );
           await refreshCatalog();
           return { offline: false, saleId: saleRow.id as string };
         } catch {
