@@ -53,7 +53,22 @@ class PosDatabase extends Dexie {
             if (item.cost_price == null) item.cost_price = 0;
           });
       });
+    this.version(3)
+      .stores({
+        cached_items: "id, sku, name, category",
+        pending_sales: "++localId, created_at",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table("cached_items")
+          .toCollection()
+          .modify((item: Partial<CachedItem>) => {
+            if (!item.category) item.category = "အထွေထွေ";
+            if (item.image_url === undefined) item.image_url = null;
+          });
+      });
   }
 }
+
 
 export const posDb = new PosDatabase();
