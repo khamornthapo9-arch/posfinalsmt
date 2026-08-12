@@ -350,3 +350,12 @@
     font-size: 11px;
   }
 }
+
+/* 58mm thermal roll variant */
+@media print {
+  .receipt-58 {
+    width: 58mm;
+    max-width: 58mm;
+    font-size: 11px;
+  }
+}
