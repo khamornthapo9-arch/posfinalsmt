@@ -412,13 +412,34 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         barcode: input.barcode?.trim() || null,
         qr_value: input.qr_value?.trim() || null,
       };
-      if (input.id) {
-        const { error } = await supabase.from("items").update(payload).eq("id", input.id);
+      let itemId = input.id;
+      if (itemId) {
+        const { error } = await supabase.from("items").update(payload).eq("id", itemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("items").insert(payload);
+        const { data, error } = await supabase.from("items").insert(payload).select("id").single();
         if (error) throw error;
+        itemId = data.id;
       }
+
+      if (itemId && input.units) {
+        const { error: delError } = await supabase.from("item_units").delete().eq("item_id", itemId);
+        if (delError) throw delError;
+        const rows = input.units
+          .filter((u) => u.unit_name.trim() && u.conversion > 0)
+          .map((u) => ({
+            item_id: itemId,
+            unit_name: u.unit_name.trim(),
+            conversion: Math.trunc(u.conversion),
+            price: Number(u.price),
+            is_default: Boolean(u.is_default),
+          }));
+        if (rows.length > 0) {
+          const { error: insertError } = await supabase.from("item_units").insert(rows);
+          if (insertError) throw insertError;
+        }
+      }
+
       await refreshCatalog();
     },
     [refreshCatalog, storeId],
