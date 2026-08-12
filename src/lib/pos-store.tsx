@@ -102,6 +102,7 @@ interface PosContextValue {
     category?: string;
   }) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
+  seedDemoItems: () => Promise<number>;
 }
 
 const PosContext = createContext<PosContextValue | null>(null);
