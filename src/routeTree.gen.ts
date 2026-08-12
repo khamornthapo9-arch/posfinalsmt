@@ -17,6 +17,7 @@ import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SuppliersRouteImport } from './routes/suppliers'
+import { Route as SettingsPlanRouteImport } from './routes/settings_.plan'
 import { Route as SettingsReceiptRouteImport } from './routes/settings_.receipt'
 
 const IndexRoute = IndexRouteImport.update({
@@ -59,6 +60,11 @@ const SuppliersRoute = SuppliersRouteImport.update({
   path: '/suppliers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsPlanRoute = SettingsPlanRouteImport.update({
+  id: '/settings_/plan',
+  path: '/settings/plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsReceiptRoute = SettingsReceiptRouteImport.update({
   id: '/settings_/receipt',
   path: '/settings/receipt',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/suppliers': typeof SuppliersRoute
+  '/settings/plan': typeof SettingsPlanRoute
   '/settings/receipt': typeof SettingsReceiptRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/suppliers': typeof SuppliersRoute
+  '/settings/plan': typeof SettingsPlanRoute
   '/settings/receipt': typeof SettingsReceiptRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/suppliers': typeof SuppliersRoute
+  '/settings_/plan': typeof SettingsPlanRoute
   '/settings_/receipt': typeof SettingsReceiptRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/suppliers'
+    | '/settings/plan'
     | '/settings/receipt'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/suppliers'
+    | '/settings/plan'
     | '/settings/receipt'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/suppliers'
+    | '/settings_/plan'
     | '/settings_/receipt'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
   SuppliersRoute: typeof SuppliersRoute
+  SettingsPlanRoute: typeof SettingsPlanRoute
   SettingsReceiptRoute: typeof SettingsReceiptRoute
 }
 
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuppliersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings_/plan': {
+      id: '/settings_/plan'
+      path: '/settings/plan'
+      fullPath: '/settings/plan'
+      preLoaderRoute: typeof SettingsPlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings_/receipt': {
       id: '/settings_/receipt'
       path: '/settings/receipt'
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
   SuppliersRoute: SuppliersRoute,
+  SettingsPlanRoute: SettingsPlanRoute,
   SettingsReceiptRoute: SettingsReceiptRoute,
 }
 export const routeTree = rootRouteImport
