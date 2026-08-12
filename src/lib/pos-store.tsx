@@ -739,10 +739,19 @@ function PosProviderInner({ children }: { children: ReactNode }) {
             item_id: line.item_id,
             quantity: line.quantity,
             unit_price: line.unit_price,
+            unit_name: line.unit_name ?? null,
+            conversion: line.conversion ?? 1,
           })),
         );
         if (lineError) throw lineError;
-        await logMovements(lines, "SALE", saleRow.id as string);
+        await logMovements(
+          lines.map((line) => ({
+            item_id: line.item_id,
+            quantity: line.quantity * (line.conversion ?? 1),
+          })),
+          "SALE",
+          saleRow.id as string,
+        );
       }
       await refreshTabs();
       await refreshCatalog();
