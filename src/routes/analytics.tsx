@@ -25,7 +25,7 @@ import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadCsv } from "@/lib/pos-utils";
 import { useStoreSettings } from "@/lib/use-store-settings";
-import { useAccountingStore, CREDIT_METHOD } from "@/lib/accounting-store";
+import { useAccountingStore, CREDIT_METHOD, CASH_METHOD } from "@/lib/accounting-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/analytics")({
