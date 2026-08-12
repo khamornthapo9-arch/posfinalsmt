@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
 import { posDb, type CachedItem, type PendingSale, type PendingSaleLine } from "@/lib/pos-db";
 import { DEMO_CATALOG } from "@/lib/demo-catalog";
+import { CREDIT_METHOD } from "@/lib/accounting-store";
 
 export type SyncState = "online" | "offline" | "syncing";
 
@@ -90,6 +91,7 @@ interface PosContextValue {
     paymentBreakdown?: PaymentSplit[];
     customerId?: string | null;
     status?: string;
+    paymentStatus?: string;
   }) => Promise<{ offline: boolean; saleId: string | null }>;
   saveItem: (input: {
     id?: string;
@@ -100,6 +102,8 @@ interface PosContextValue {
     stock_quantity: number;
     min_stock_threshold: number;
     category?: string;
+    barcode?: string | null;
+    qr_value?: string | null;
   }) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   seedDemoItems: () => Promise<number>;
@@ -182,6 +186,8 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       min_stock_threshold: row.min_stock_threshold,
       category: (row as { category?: string | null }).category || DEFAULT_CATEGORY,
       image_url: (row as { image_url?: string | null }).image_url ?? null,
+      barcode: (row as { barcode?: string | null }).barcode ?? null,
+      qr_value: (row as { qr_value?: string | null }).qr_value ?? null,
       created_at: row.created_at,
     }));
     await posDb.transaction("rw", posDb.cached_items, async () => {
@@ -282,7 +288,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   }, [storeId]);
 
   const recordSale = useCallback<PosContextValue["recordSale"]>(
-    async ({ lines, total, paymentMethod, paymentBreakdown, customerId, status }) => {
+    async ({ lines, total, paymentMethod, paymentBreakdown, customerId, status, paymentStatus }) => {
       const createdAt = new Date().toISOString();
       const applyLocalStock = async () => {
         await posDb.transaction("rw", posDb.cached_items, async () => {
@@ -313,6 +319,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
               store_id: storeId,
               customer_id: customerId ?? null,
               status: status ?? "COMPLETED",
+              payment_status: paymentStatus ?? "PAID",
             })
             .select("id")
             .single();
@@ -359,6 +366,8 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         stock_quantity: input.stock_quantity,
         min_stock_threshold: input.min_stock_threshold,
         category: input.category?.trim() || DEFAULT_CATEGORY,
+        barcode: input.barcode?.trim() || null,
+        qr_value: input.qr_value?.trim() || null,
       };
       if (input.id) {
         const { error } = await supabase.from("items").update(payload).eq("id", input.id);
@@ -516,6 +525,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         .from("sales")
         .update({
           status: "REFUNDED",
+          payment_status: "REFUNDED",
           refund_reason: reason,
           refund_note: note.trim() || null,
           refunded_at: new Date().toISOString(),
@@ -538,6 +548,75 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         }
       }
       await logMovements(order.lines, "RETURN", orderId);
+
+      // Credit portion of the order (if any) is written back off the customer's debt.
+      const creditAmount =
+        order.payment_breakdown.length > 0
+          ? order.payment_breakdown
+              .filter((split) => split.method === CREDIT_METHOD)
+              .reduce((sum, split) => sum + Number(split.amount || 0), 0)
+          : order.payment_method === CREDIT_METHOD
+            ? order.total_amount
+            : 0;
+
+      if (creditAmount > 0 && order.customer_id) {
+        const { data: customer } = await supabase
+          .from("customers")
+          .select("balance")
+          .eq("id", order.customer_id)
+          .maybeSingle();
+        const nextBalance = Math.max(Number(customer?.balance ?? 0) - creditAmount, 0);
+        await supabase
+          .from("customers")
+          .update({ balance: Number(nextBalance.toFixed(2)) })
+          .eq("id", order.customer_id);
+        await supabase.from("debt_payments").insert({
+          store_id: storeId,
+          party_type: "CUSTOMER",
+          party_id: order.customer_id,
+          amount: creditAmount,
+          method: "REFUND",
+          note: `ပြန်အမ်းငွေ · ${reason}`,
+        });
+      }
+
+      // Reverse the money side of the sale in the ledger.
+      await supabase.from("ledger_entries").insert(
+        [
+          creditAmount > 0
+            ? {
+                store_id: storeId,
+                account: "ACCOUNTS_RECEIVABLE",
+                direction: "CREDIT",
+                amount: creditAmount,
+                reference_type: "REFUND",
+                reference_id: orderId,
+                memo: reason,
+              }
+            : null,
+          order.total_amount - creditAmount > 0
+            ? {
+                store_id: storeId,
+                account: "CASH",
+                direction: "CREDIT",
+                amount: order.total_amount - creditAmount,
+                reference_type: "REFUND",
+                reference_id: orderId,
+                memo: reason,
+              }
+            : null,
+          {
+            store_id: storeId,
+            account: "SALES_REVENUE",
+            direction: "DEBIT",
+            amount: order.total_amount,
+            reference_type: "REFUND",
+            reference_id: orderId,
+            memo: reason,
+          },
+        ].filter(Boolean) as never[],
+      );
+
       await refreshRecentOrders();
       await refreshCatalog();
     },

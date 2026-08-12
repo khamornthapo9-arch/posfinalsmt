@@ -115,12 +115,15 @@ function AnalyticsPage() {
   }, [fromIso, toIso]);
 
   const metrics = useMemo(() => {
-    const revenue = sales.reduce((sum, s) => sum + Number(s.total_amount), 0);
-    const units = sales.reduce(
+    const active = sales.filter((s) => s.status !== "REFUNDED");
+    const refunded = sales.filter((s) => s.status === "REFUNDED");
+    const revenue = active.reduce((sum, s) => sum + Number(s.total_amount), 0);
+    const refundedTotal = refunded.reduce((sum, s) => sum + Number(s.total_amount), 0);
+    const units = active.reduce(
       (sum, s) => sum + s.sale_items.reduce((q, line) => q + line.quantity, 0),
       0,
     );
-    const cogs = sales.reduce(
+    const cogs = active.reduce(
       (sum, s) =>
         sum +
         s.sale_items.reduce(
@@ -131,10 +134,11 @@ function AnalyticsPage() {
     );
     return {
       revenue,
+      refundedTotal,
       cogs,
-      transactions: sales.length,
+      transactions: active.length,
       units,
-      average: sales.length ? revenue / sales.length : 0,
+      average: active.length ? revenue / active.length : 0,
     };
   }, [sales]);
 
@@ -158,7 +162,7 @@ function AnalyticsPage() {
 
   const trend = useMemo(() => {
     const buckets = new Map<string, number>();
-    for (const sale of sales) {
+    for (const sale of sales.filter((s) => s.status !== "REFUNDED")) {
       const key = new Date(sale.created_at).toISOString().slice(0, 10);
       buckets.set(key, (buckets.get(key) ?? 0) + Number(sale.total_amount));
     }
@@ -175,7 +179,7 @@ function AnalyticsPage() {
 
   const topProducts = useMemo(() => {
     const totals = new Map<string, number>();
-    for (const sale of sales) {
+    for (const sale of sales.filter((s) => s.status !== "REFUNDED")) {
       for (const line of sale.sale_items) {
         const name = line.items?.name ?? "မသိရှိသော ပစ္စည်း";
         totals.set(name, (totals.get(name) ?? 0) + line.quantity);
@@ -243,7 +247,8 @@ function AnalyticsPage() {
   ];
 
   const profitCards = [
-    { label: "လက်ကျန် အကြွေး", value: fmt(activeDebt), icon: HandCoins },
+    { label: "လက်ကျန် အကြွေး စုစုပေါင်း", value: fmt(activeDebt), icon: HandCoins },
+    { label: "ပြန်အမ်းငွေ", value: fmt(metrics.refundedTotal), icon: Receipt },
     { label: "အသုံးစရိတ်", value: fmt(rangeExpenses), icon: Wallet },
     { label: "အကြမ်း အမြတ်", value: fmt(grossProfit), icon: TrendingUp },
     { label: "အသားတင် အမြတ်", value: fmt(netProfit), icon: PiggyBank },
@@ -310,7 +315,7 @@ function AnalyticsPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {profitCards.map((card) => (
             <div key={card.label} className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center justify-between">

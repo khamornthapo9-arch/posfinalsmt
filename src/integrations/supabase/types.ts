@@ -237,6 +237,7 @@ export type Database = {
       }
       items: {
         Row: {
+          barcode: string | null
           category: string
           cost_price: number
           created_at: string
@@ -245,11 +246,13 @@ export type Database = {
           min_stock_threshold: number
           name: string
           price: number
+          qr_value: string | null
           sku: string
           stock_quantity: number
           store_id: string
         }
         Insert: {
+          barcode?: string | null
           category?: string
           cost_price?: number
           created_at?: string
@@ -258,11 +261,13 @@ export type Database = {
           min_stock_threshold?: number
           name: string
           price: number
+          qr_value?: string | null
           sku: string
           stock_quantity?: number
           store_id: string
         }
         Update: {
+          barcode?: string | null
           category?: string
           cost_price?: number
           created_at?: string
@@ -271,6 +276,7 @@ export type Database = {
           min_stock_threshold?: number
           name?: string
           price?: number
+          qr_value?: string | null
           sku?: string
           stock_quantity?: number
           store_id?: string
@@ -476,6 +482,7 @@ export type Database = {
           notes: string | null
           payment_breakdown: Json
           payment_method: string
+          payment_status: string
           refund_note: string | null
           refund_reason: string | null
           refunded_at: string | null
@@ -492,6 +499,7 @@ export type Database = {
           notes?: string | null
           payment_breakdown?: Json
           payment_method?: string
+          payment_status?: string
           refund_note?: string | null
           refund_reason?: string | null
           refunded_at?: string | null
@@ -508,6 +516,7 @@ export type Database = {
           notes?: string | null
           payment_breakdown?: Json
           payment_method?: string
+          payment_status?: string
           refund_note?: string | null
           refund_reason?: string | null
           refunded_at?: string | null
@@ -584,6 +593,8 @@ export type Database = {
           name: string
           owner_id: string
           phone_numbers: string[]
+          receipt_footer: string | null
+          receipt_header: string | null
           tax_rate: number
         }
         Insert: {
@@ -598,6 +609,8 @@ export type Database = {
           name: string
           owner_id: string
           phone_numbers?: string[]
+          receipt_footer?: string | null
+          receipt_header?: string | null
           tax_rate?: number
         }
         Update: {
@@ -612,6 +625,8 @@ export type Database = {
           name?: string
           owner_id?: string
           phone_numbers?: string[]
+          receipt_footer?: string | null
+          receipt_header?: string | null
           tax_rate?: number
         }
         Relationships: []

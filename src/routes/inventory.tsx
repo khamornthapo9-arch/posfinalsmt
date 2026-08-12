@@ -39,6 +39,8 @@ const EMPTY = {
   cost_price: "",
   stock_quantity: "",
   min_stock_threshold: "5",
+  barcode: "",
+  qr_value: "",
 };
 
 function InventoryPage() {
@@ -313,9 +315,11 @@ function ProductModal({
     cost_price: number;
     stock_quantity: number;
     min_stock_threshold: number;
+    barcode?: string | null;
+    qr_value?: string | null;
   }) => Promise<void>;
 }) {
-  const [form, setForm] = useState(
+  const [form, setForm] = useState<typeof EMPTY>(
     item
       ? {
           sku: item.sku,
@@ -324,6 +328,8 @@ function ProductModal({
           cost_price: String(item.cost_price ?? 0),
           stock_quantity: String(item.stock_quantity),
           min_stock_threshold: String(item.min_stock_threshold),
+          barcode: item.barcode ?? "",
+          qr_value: item.qr_value ?? "",
         }
       : EMPTY,
   );
@@ -354,6 +360,10 @@ function ProductModal({
         <div className="space-y-3">
           {field("name", "အမည်")}
           {field("sku", "SKU နံပါတ်")}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {field("barcode", "ဘားကုဒ် (မထည့်လျှင် SKU သုံးမည်)")}
+            {field("qr_value", "QR တန်ဖိုး (မထည့်လျှင် SKU သုံးမည်)")}
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {field("price", "စျေးနှုန်း", "number")}
             {field("cost_price", "အရင်းစျေး", "number")}
@@ -373,6 +383,8 @@ function ProductModal({
               cost_price: Number(form.cost_price) || 0,
               stock_quantity: Math.trunc(Number(form.stock_quantity) || 0),
               min_stock_threshold: Math.trunc(Number(form.min_stock_threshold) || 0),
+              barcode: form.barcode.trim() || null,
+              qr_value: form.qr_value.trim() || null,
             }).finally(() => setSaving(false));
           }}
           className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-transform hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
