@@ -303,7 +303,9 @@ function PosProviderInner({ children }: { children: ReactNode }) {
             .insert({
               total_amount: total,
               payment_method: paymentMethod,
-              payment_breakdown: paymentBreakdown ?? [{ method: paymentMethod, amount: total }],
+              payment_breakdown: (paymentBreakdown ?? [
+                { method: paymentMethod, amount: total },
+              ]) as unknown as never,
               is_offline_sync: false,
               created_at: createdAt,
               store_id: storeId,
