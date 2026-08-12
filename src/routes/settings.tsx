@@ -328,6 +328,12 @@ function SettingsPage() {
                   placeholder="အမှတ်၊ လမ်း၊ မြို့နယ်"
                   className={inputClass}
                 />
+                <Link
+                  to="/settings/receipt"
+                  className="mt-2 inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+                >
+                  ပြေစာ ဒီဇိုင်း ပြင်ဆင်ရန်
+                </Link>
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="cashier-name">
