@@ -12,6 +12,7 @@ export interface StoreRecord {
   tax_rate: number;
   business_type: string;
   advanced_accounting_mode: boolean;
+  is_pro: boolean;
   address: string | null;
   cashier_name: string | null;
   phone_numbers: string[];
