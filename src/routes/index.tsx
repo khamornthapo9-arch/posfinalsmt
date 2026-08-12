@@ -550,6 +550,7 @@ function RegisterPage() {
             onCategoryChange={setCategory}
             lowStockCount={lowStockItems.length}
             currencySymbol={symbol}
+            isPro={isPro}
             onScan={() => setScannerOpen(true)}
             onAdd={addToCart}
           />
