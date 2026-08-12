@@ -36,7 +36,7 @@ const ADVANCED_NAV = [
   { to: "/expenses", label: "အသုံးစရိတ်", icon: Banknote },
 ] as const;
 
-/** Cashiers only ever reach the register (and customer credit in advanced mode). */
+/** Cashiers only ever reach the register and customer credit. */
 export const CASHIER_PATHS = ["/", "/customers"] as const;
 
 
@@ -70,9 +70,8 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
   const { isCashier } = useRole();
   const advanced = Boolean(store?.advanced_accounting_mode);
   const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
-  void advanced;
   const items = isCashier
-    ? all.filter((item) => item.to === "/" || item.to === "/customers")
+    ? [NAV[0], ADVANCED_NAV[0]]
     : all;
   return (
     <nav className="flex flex-col gap-0.5">
