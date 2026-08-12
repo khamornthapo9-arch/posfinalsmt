@@ -7,6 +7,13 @@ import { posDb, type CachedItem, type PendingSale, type PendingSaleLine } from "
 
 export type SyncState = "online" | "offline" | "syncing";
 
+export const DEFAULT_CATEGORY = "အထွေထွေ";
+
+export interface PaymentSplit {
+  method: string;
+  amount: number;
+}
+
 export interface OpenTabLine {
   item_id: string;
   sku: string;
@@ -23,14 +30,43 @@ export interface OpenTab {
   lines: OpenTabLine[];
 }
 
+export interface HeldOrder {
+  id: string;
+  note: string | null;
+  total_amount: number;
+  created_at: string;
+  lines: OpenTabLine[];
+}
+
+export interface OrderSummary {
+  id: string;
+  created_at: string;
+  total_amount: number;
+  payment_method: string;
+  payment_breakdown: PaymentSplit[];
+  status: string;
+  customer_id: string | null;
+  refund_reason: string | null;
+  lines: OpenTabLine[];
+}
+
 interface PosContextValue {
   items: CachedItem[];
+  categories: string[];
   loading: boolean;
   isOnline: boolean;
   syncState: SyncState;
   pendingCount: number;
   lowStockCount: number;
+  lowStockItems: CachedItem[];
   openTabs: OpenTab[];
+  heldOrders: HeldOrder[];
+  recentOrders: OrderSummary[];
+  refreshHeldOrders: () => Promise<void>;
+  refreshRecentOrders: () => Promise<void>;
+  holdOrder: (input: { lines: PendingSaleLine[]; total: number; note: string }) => Promise<void>;
+  deleteHeldOrder: (id: string) => Promise<void>;
+  refundOrder: (input: { orderId: string; reason: string; note: string }) => Promise<void>;
   refreshTabs: () => Promise<void>;
   holdTab: (input: {
     saleId?: string | undefined;
@@ -50,6 +86,7 @@ interface PosContextValue {
     lines: PendingSaleLine[];
     total: number;
     paymentMethod: string;
+    paymentBreakdown?: PaymentSplit[];
     customerId?: string | null;
     status?: string;
   }) => Promise<{ offline: boolean; saleId: string | null }>;
@@ -61,6 +98,7 @@ interface PosContextValue {
     cost_price: number;
     stock_quantity: number;
     min_stock_threshold: number;
+    category?: string;
   }) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
 }
@@ -80,13 +118,42 @@ export function PosProvider({ children }: { children: ReactNode }) {
   return <PosProviderInner>{children}</PosProviderInner>;
 }
 
+interface SaleItemRow {
+  item_id: string;
+  quantity: number;
+  unit_price: number | string;
+  items: { name: string; sku: string } | null;
+}
+
+function mapLines(rows: SaleItemRow[] | null): OpenTabLine[] {
+  const merged = new Map<string, OpenTabLine>();
+  for (const line of rows ?? []) {
+    const existing = merged.get(line.item_id);
+    if (existing) {
+      existing.quantity += line.quantity;
+    } else {
+      merged.set(line.item_id, {
+        item_id: line.item_id,
+        name: line.items?.name ?? "Item",
+        sku: line.items?.sku ?? "",
+        quantity: line.quantity,
+        unit_price: Number(line.unit_price),
+      });
+    }
+  }
+  return [...merged.values()];
+}
+
 function PosProviderInner({ children }: { children: ReactNode }) {
-  const { store } = useAuth();
+  const { store, session } = useAuth();
   const storeId = store?.id ?? null;
+  const userId = session?.user.id ?? null;
   const [isOnline, setIsOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [openTabs, setOpenTabs] = useState<OpenTab[]>([]);
+  const [heldOrders, setHeldOrders] = useState<HeldOrder[]>([]);
+  const [recentOrders, setRecentOrders] = useState<OrderSummary[]>([]);
 
   const items = useLiveQuery(() => posDb.cached_items.orderBy("name").toArray(), [], []);
   const pending = useLiveQuery(() => posDb.pending_sales.toArray(), [], []);
@@ -111,6 +178,8 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       cost_price: Number(row.cost_price ?? 0),
       stock_quantity: row.stock_quantity,
       min_stock_threshold: row.min_stock_threshold,
+      category: (row as { category?: string | null }).category || DEFAULT_CATEGORY,
+      image_url: (row as { image_url?: string | null }).image_url ?? null,
       created_at: row.created_at,
     }));
     await posDb.transaction("rw", posDb.cached_items, async () => {
@@ -118,6 +187,27 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       await posDb.cached_items.bulkPut(rows);
     });
   }, [storeId]);
+
+  const logMovements = useCallback(
+    async (
+      lines: { item_id: string; quantity: number }[],
+      movementType: string,
+      referenceId: string | null,
+    ) => {
+      if (!storeId || lines.length === 0) return;
+      await supabase.from("inventory_movements").insert(
+        lines.map((line) => ({
+          store_id: storeId,
+          item_id: line.item_id,
+          movement_type: movementType,
+          quantity: movementType === "RETURN" ? line.quantity : -line.quantity,
+          reference_id: referenceId,
+          created_by: userId,
+        })),
+      );
+    },
+    [storeId, userId],
+  );
 
   const pushPendingSales = useCallback(async () => {
     if (!storeId) return;
@@ -144,9 +234,10 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         })),
       );
       if (lineError) throw lineError;
+      await logMovements(sale.lines, "SALE", saleRow.id as string);
       if (sale.localId != null) await posDb.pending_sales.delete(sale.localId);
     }
-  }, [storeId]);
+  }, [logMovements, storeId]);
 
   const syncNow = useCallback(async () => {
     if (syncing || !storeId) return;
@@ -189,7 +280,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   }, [storeId]);
 
   const recordSale = useCallback<PosContextValue["recordSale"]>(
-    async ({ lines, total, paymentMethod, customerId, status }) => {
+    async ({ lines, total, paymentMethod, paymentBreakdown, customerId, status }) => {
       const createdAt = new Date().toISOString();
       const applyLocalStock = async () => {
         await posDb.transaction("rw", posDb.cached_items, async () => {
@@ -212,6 +303,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
             .insert({
               total_amount: total,
               payment_method: paymentMethod,
+              payment_breakdown: paymentBreakdown ?? [{ method: paymentMethod, amount: total }],
               is_offline_sync: false,
               created_at: createdAt,
               store_id: storeId,
@@ -230,6 +322,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
             })),
           );
           if (lineError) throw lineError;
+          await logMovements(lines, "SALE", saleRow.id as string);
           await refreshCatalog();
           return { offline: false, saleId: saleRow.id as string };
         } catch {
@@ -247,7 +340,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       await applyLocalStock();
       return { offline: true, saleId: null };
     },
-    [isOnline, refreshCatalog, storeId],
+    [isOnline, logMovements, refreshCatalog, storeId],
   );
 
   const saveItem = useCallback<PosContextValue["saveItem"]>(
@@ -261,6 +354,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         cost_price: input.cost_price,
         stock_quantity: input.stock_quantity,
         min_stock_threshold: input.min_stock_threshold,
+        category: input.category?.trim() || DEFAULT_CATEGORY,
       };
       if (input.id) {
         const { error } = await supabase.from("items").update(payload).eq("id", input.id);
@@ -298,36 +392,137 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     if (error || !data) return;
     const tabs: OpenTab[] = data
       .filter((row) => row.table_number != null)
-      .map((row) => {
-        const merged = new Map<string, OpenTabLine>();
-        for (const line of row.sale_items ?? []) {
-          const existing = merged.get(line.item_id);
-          if (existing) {
-            existing.quantity += line.quantity;
-          } else {
-            merged.set(line.item_id, {
-              item_id: line.item_id,
-              name: line.items?.name ?? "Item",
-              sku: line.items?.sku ?? "",
-              quantity: line.quantity,
-              unit_price: Number(line.unit_price),
-            });
-          }
-        }
-        return {
-          id: row.id,
-          table_number: row.table_number as number,
-          total_amount: Number(row.total_amount),
-          notes: row.notes,
-          lines: [...merged.values()],
-        };
-      });
+      .map((row) => ({
+        id: row.id,
+        table_number: row.table_number as number,
+        total_amount: Number(row.total_amount),
+        notes: row.notes,
+        lines: mapLines(row.sale_items as SaleItemRow[] | null),
+      }));
     setOpenTabs(tabs);
   }, [storeId]);
 
+  // ---------- Parked / held orders ----------
+  const refreshHeldOrders = useCallback(async () => {
+    if (!storeId) {
+      setHeldOrders([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("held_orders")
+      .select("id, note, total_amount, created_at, cart_data")
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false });
+    if (error || !data) return;
+    setHeldOrders(
+      data.map((row) => ({
+        id: row.id,
+        note: row.note,
+        total_amount: Number(row.total_amount),
+        created_at: row.created_at,
+        lines: (row.cart_data as unknown as OpenTabLine[]) ?? [],
+      })),
+    );
+  }, [storeId]);
+
+  const holdOrder = useCallback<PosContextValue["holdOrder"]>(
+    async ({ lines, total, note }) => {
+      if (!storeId) throw new Error("No active store");
+      const { error } = await supabase.from("held_orders").insert({
+        store_id: storeId,
+        cart_data: lines as unknown as never,
+        total_amount: total,
+        note: note.trim() || null,
+        created_by: userId,
+      });
+      if (error) throw error;
+      await refreshHeldOrders();
+    },
+    [refreshHeldOrders, storeId, userId],
+  );
+
+  const deleteHeldOrder = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.from("held_orders").delete().eq("id", id);
+      if (error) throw error;
+      await refreshHeldOrders();
+    },
+    [refreshHeldOrders],
+  );
+
+  // ---------- Order history + refunds ----------
+  const refreshRecentOrders = useCallback(async () => {
+    if (!storeId) {
+      setRecentOrders([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("sales")
+      .select(
+        "id, created_at, total_amount, payment_method, payment_breakdown, status, customer_id, refund_reason, sale_items(item_id, quantity, unit_price, items(name, sku))",
+      )
+      .eq("store_id", storeId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error || !data) return;
+    setRecentOrders(
+      data.map((row) => ({
+        id: row.id,
+        created_at: row.created_at,
+        total_amount: Number(row.total_amount),
+        payment_method: row.payment_method,
+        payment_breakdown: (row.payment_breakdown as unknown as PaymentSplit[]) ?? [],
+        status: row.status,
+        customer_id: row.customer_id,
+        refund_reason: (row as { refund_reason?: string | null }).refund_reason ?? null,
+        lines: mapLines(row.sale_items as SaleItemRow[] | null),
+      })),
+    );
+  }, [storeId]);
+
+  const refundOrder = useCallback<PosContextValue["refundOrder"]>(
+    async ({ orderId, reason, note }) => {
+      if (!storeId) throw new Error("No active store");
+      const order = recentOrders.find((o) => o.id === orderId);
+      if (!order) throw new Error("Order not found");
+
+      const { error } = await supabase
+        .from("sales")
+        .update({
+          status: "REFUNDED",
+          refund_reason: reason,
+          refund_note: note.trim() || null,
+          refunded_at: new Date().toISOString(),
+        })
+        .eq("id", orderId);
+      if (error) throw error;
+
+      // Put the stock back item by item.
+      for (const line of order.lines) {
+        const { data: current } = await supabase
+          .from("items")
+          .select("stock_quantity")
+          .eq("id", line.item_id)
+          .maybeSingle();
+        if (current) {
+          await supabase
+            .from("items")
+            .update({ stock_quantity: current.stock_quantity + line.quantity })
+            .eq("id", line.item_id);
+        }
+      }
+      await logMovements(order.lines, "RETURN", orderId);
+      await refreshRecentOrders();
+      await refreshCatalog();
+    },
+    [logMovements, recentOrders, refreshCatalog, refreshRecentOrders, storeId],
+  );
+
   useEffect(() => {
     void refreshTabs();
-  }, [refreshTabs]);
+    void refreshHeldOrders();
+    void refreshRecentOrders();
+  }, [refreshTabs, refreshHeldOrders, refreshRecentOrders]);
 
   const holdTab = useCallback<PosContextValue["holdTab"]>(
     async ({ saleId, tableNumber, lines, total, notes }) => {
@@ -352,6 +547,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
             })),
           );
           if (error) throw error;
+          await logMovements(deltas, "SALE", saleId);
         }
         const { error: updateError } = await supabase
           .from("sales")
@@ -383,12 +579,13 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           })),
         );
         if (lineError) throw lineError;
+        await logMovements(lines, "SALE", saleRow.id as string);
       }
       await refreshTabs();
       await refreshCatalog();
       return createdId ?? saleId!;
     },
-    [openTabs, refreshCatalog, refreshTabs, storeId],
+    [logMovements, openTabs, refreshCatalog, refreshTabs, storeId],
   );
 
   const closeTab = useCallback<PosContextValue["closeTab"]>(
@@ -400,23 +597,35 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       if (error) throw error;
       await refreshTabs();
       await refreshCatalog();
+      await refreshRecentOrders();
     },
-    [refreshCatalog, refreshTabs],
+    [refreshCatalog, refreshRecentOrders, refreshTabs],
   );
 
   const list = items ?? [];
-  const lowStockCount = list.filter((i) => i.stock_quantity <= i.min_stock_threshold).length;
+  const lowStockItems = list.filter((i) => i.stock_quantity <= i.min_stock_threshold);
+  const lowStockCount = lowStockItems.length;
+  const categories = [...new Set(list.map((i) => i.category || DEFAULT_CATEGORY))].sort();
   const syncState: SyncState = syncing ? "syncing" : isOnline ? "online" : "offline";
 
   const value = useMemo<PosContextValue>(
     () => ({
       items: list,
+      categories,
       loading,
       isOnline,
       syncState,
       pendingCount,
       lowStockCount,
+      lowStockItems,
       openTabs,
+      heldOrders,
+      recentOrders,
+      refreshHeldOrders,
+      refreshRecentOrders,
+      holdOrder,
+      deleteHeldOrder,
+      refundOrder,
       refreshTabs,
       holdTab,
       closeTab,
@@ -428,12 +637,21 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     }),
     [
       list,
+      categories,
       loading,
       isOnline,
       syncState,
       pendingCount,
       lowStockCount,
+      lowStockItems,
       openTabs,
+      heldOrders,
+      recentOrders,
+      refreshHeldOrders,
+      refreshRecentOrders,
+      holdOrder,
+      deleteHeldOrder,
+      refundOrder,
       refreshTabs,
       holdTab,
       closeTab,
