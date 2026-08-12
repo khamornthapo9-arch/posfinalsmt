@@ -381,6 +381,28 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     [refreshCatalog],
   );
 
+  const seedDemoItems = useCallback(async () => {
+    if (!storeId) throw new Error("No active store");
+    const { data: existing } = await supabase
+      .from("items")
+      .select("sku")
+      .eq("store_id", storeId)
+      .in(
+        "sku",
+        DEMO_CATALOG.map((i) => i.sku),
+      );
+    const existingSkus = new Set((existing ?? []).map((r) => r.sku));
+    const toInsert = DEMO_CATALOG.filter((i) => !existingSkus.has(i.sku)).map((i) => ({
+      ...i,
+      store_id: storeId,
+    }));
+    if (toInsert.length === 0) return 0;
+    const { error } = await supabase.from("items").insert(toInsert);
+    if (error) throw error;
+    await refreshCatalog();
+    return toInsert.length;
+  }, [refreshCatalog, storeId]);
+
   const refreshTabs = useCallback(async () => {
     if (!storeId) {
       setOpenTabs([]);
