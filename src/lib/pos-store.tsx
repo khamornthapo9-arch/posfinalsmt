@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
-import { posDb, type CachedItem, type PendingSale, type PendingSaleLine } from "@/lib/pos-db";
+import { posDb, type CachedItem, type ItemUnit, type PendingSale, type PendingSaleLine } from "@/lib/pos-db";
 import { DEMO_CATALOG } from "@/lib/demo-catalog";
 import { CREDIT_METHOD } from "@/lib/accounting-store";
 
@@ -22,6 +22,8 @@ export interface OpenTabLine {
   name: string;
   quantity: number;
   unit_price: number;
+  unit_name?: string | undefined;
+  conversion?: number | undefined;
 }
 
 export interface OpenTab {
@@ -104,6 +106,7 @@ interface PosContextValue {
     category?: string;
     barcode?: string | null;
     qr_value?: string | null;
+    units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[] | undefined;
   }) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   seedDemoItems: () => Promise<number>;
@@ -170,13 +173,35 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       await posDb.cached_items.clear();
       return;
     }
-    const { data, error } = await supabase
+    const { data: itemsData, error: itemsError } = await supabase
       .from("items")
       .select("*")
       .eq("store_id", storeId)
       .order("name");
-    if (error || !data) return;
-    const rows: CachedItem[] = data.map((row) => ({
+    if (itemsError || !itemsData) return;
+
+    const { data: unitsData } = await supabase
+      .from("item_units")
+      .select("*")
+      .in(
+        "item_id",
+        itemsData.map((i) => i.id),
+      );
+    const unitsByItem = new Map<string, ItemUnit[]>();
+    for (const u of unitsData ?? []) {
+      const list = unitsByItem.get(u.item_id) ?? [];
+      list.push({
+        id: u.id,
+        item_id: u.item_id,
+        unit_name: u.unit_name,
+        conversion: u.conversion,
+        price: Number(u.price),
+        is_default: u.is_default,
+      });
+      unitsByItem.set(u.item_id, list);
+    }
+
+    const rows: CachedItem[] = itemsData.map((row) => ({
       id: row.id,
       sku: row.sku,
       name: row.name,
@@ -189,6 +214,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       barcode: (row as { barcode?: string | null }).barcode ?? null,
       qr_value: (row as { qr_value?: string | null }).qr_value ?? null,
       created_at: row.created_at,
+      units: unitsByItem.get(row.id) ?? [],
     }));
     await posDb.transaction("rw", posDb.cached_items, async () => {
       await posDb.cached_items.clear();
@@ -239,10 +265,19 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           item_id: line.item_id,
           quantity: line.quantity,
           unit_price: line.unit_price,
+          unit_name: line.unit_name ?? null,
+          conversion: line.conversion ?? 1,
         })),
       );
       if (lineError) throw lineError;
-      await logMovements(sale.lines, "SALE", saleRow.id as string);
+      await logMovements(
+        sale.lines.map((line) => ({
+          item_id: line.item_id,
+          quantity: line.quantity * (line.conversion ?? 1),
+        })),
+        "SALE",
+        saleRow.id as string,
+      );
       if (sale.localId != null) await posDb.pending_sales.delete(sale.localId);
     }
   }, [logMovements, storeId]);
@@ -290,6 +325,8 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   const recordSale = useCallback<PosContextValue["recordSale"]>(
     async ({ lines, total, paymentMethod, paymentBreakdown, customerId, status, paymentStatus }) => {
       const createdAt = new Date().toISOString();
+      const baseQty = (line: PendingSaleLine) => line.quantity * (line.conversion ?? 1);
+
       const applyLocalStock = async () => {
         await posDb.transaction("rw", posDb.cached_items, async () => {
           for (const line of lines) {
@@ -297,7 +334,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
             if (cached) {
               await posDb.cached_items.put({
                 ...cached,
-                stock_quantity: Math.max(cached.stock_quantity - line.quantity, 0),
+                stock_quantity: Math.max(cached.stock_quantity - baseQty(line), 0),
               });
             }
           }
@@ -330,10 +367,16 @@ function PosProviderInner({ children }: { children: ReactNode }) {
               item_id: line.item_id,
               quantity: line.quantity,
               unit_price: line.unit_price,
+              unit_name: line.unit_name ?? null,
+              conversion: line.conversion ?? 1,
             })),
           );
           if (lineError) throw lineError;
-          await logMovements(lines, "SALE", saleRow.id as string);
+          await logMovements(
+            lines.map((line) => ({ item_id: line.item_id, quantity: baseQty(line) })),
+            "SALE",
+            saleRow.id as string,
+          );
           await refreshCatalog();
           return { offline: false, saleId: saleRow.id as string };
         } catch {
@@ -369,13 +412,34 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         barcode: input.barcode?.trim() || null,
         qr_value: input.qr_value?.trim() || null,
       };
-      if (input.id) {
-        const { error } = await supabase.from("items").update(payload).eq("id", input.id);
+      let itemId = input.id;
+      if (itemId) {
+        const { error } = await supabase.from("items").update(payload).eq("id", itemId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("items").insert(payload);
+        const { data, error } = await supabase.from("items").insert(payload).select("id").single();
         if (error) throw error;
+        itemId = data.id;
       }
+
+      if (itemId && input.units) {
+        const { error: delError } = await supabase.from("item_units").delete().eq("item_id", itemId);
+        if (delError) throw delError;
+        const rows = input.units
+          .filter((u) => u.unit_name.trim() && u.conversion > 0)
+          .map((u) => ({
+            item_id: itemId,
+            unit_name: u.unit_name.trim(),
+            conversion: Math.trunc(u.conversion),
+            price: Number(u.price),
+            is_default: Boolean(u.is_default),
+          }));
+        if (rows.length > 0) {
+          const { error: insertError } = await supabase.from("item_units").insert(rows);
+          if (insertError) throw insertError;
+        }
+      }
+
       await refreshCatalog();
     },
     [refreshCatalog, storeId],
@@ -543,11 +607,18 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         if (current) {
           await supabase
             .from("items")
-            .update({ stock_quantity: current.stock_quantity + line.quantity })
+            .update({ stock_quantity: current.stock_quantity + line.quantity * (line.conversion ?? 1) })
             .eq("id", line.item_id);
         }
       }
-      await logMovements(order.lines, "RETURN", orderId);
+      await logMovements(
+        order.lines.map((line) => ({
+          item_id: line.item_id,
+          quantity: line.quantity * (line.conversion ?? 1),
+        })),
+        "RETURN",
+        orderId,
+      );
 
       // Credit portion of the order (if any) is written back off the customer's debt.
       const creditAmount =
@@ -649,10 +720,19 @@ function PosProviderInner({ children }: { children: ReactNode }) {
               item_id: line.item_id,
               quantity: line.quantity,
               unit_price: line.unit_price,
+              unit_name: line.unit_name ?? null,
+              conversion: line.conversion ?? 1,
             })),
           );
           if (error) throw error;
-          await logMovements(deltas, "SALE", saleId);
+          await logMovements(
+            deltas.map((line) => ({
+              item_id: line.item_id,
+              quantity: line.quantity * (line.conversion ?? 1),
+            })),
+            "SALE",
+            saleId,
+          );
         }
         const { error: updateError } = await supabase
           .from("sales")
@@ -681,10 +761,19 @@ function PosProviderInner({ children }: { children: ReactNode }) {
             item_id: line.item_id,
             quantity: line.quantity,
             unit_price: line.unit_price,
+            unit_name: line.unit_name ?? null,
+            conversion: line.conversion ?? 1,
           })),
         );
         if (lineError) throw lineError;
-        await logMovements(lines, "SALE", saleRow.id as string);
+        await logMovements(
+          lines.map((line) => ({
+            item_id: line.item_id,
+            quantity: line.quantity * (line.conversion ?? 1),
+          })),
+          "SALE",
+          saleRow.id as string,
+        );
       }
       await refreshTabs();
       await refreshCatalog();

@@ -25,7 +25,7 @@ import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadCsv } from "@/lib/pos-utils";
 import { useStoreSettings } from "@/lib/use-store-settings";
-import { useAccountingStore, CREDIT_METHOD } from "@/lib/accounting-store";
+import { useAccountingStore, CREDIT_METHOD, CASH_METHOD } from "@/lib/accounting-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/analytics")({
@@ -54,6 +54,7 @@ interface SaleRow {
   id: string;
   total_amount: number;
   payment_method: string;
+  payment_breakdown: { method: string; amount: number }[] | null;
   is_offline_sync: boolean;
   created_at: string;
   status: string;
@@ -69,6 +70,20 @@ interface SaleRow {
     unit_price: number;
     items: { name: string; cost_price: number } | null;
   }[];
+}
+
+interface DebtPaymentRow {
+  id: string;
+  amount: number;
+  method: string;
+  created_at: string;
+}
+
+interface ExpenseRow {
+  id: string;
+  amount: number;
+  paid_with: string;
+  spent_at: string;
 }
 
 function startOf(range: RangeKey) {
@@ -93,22 +108,39 @@ function AnalyticsPage() {
   const fromIso = fromDate.toISOString();
   const toIso = toDate.toISOString();
 
+  const [debtPayments, setDebtPayments] = useState<DebtPaymentRow[]>([]);
+  const [rangeExpenses, setRangeExpenses] = useState<ExpenseRow[]>([]);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
-    void supabase
-      .from("sales")
-      .select(
-        "id,total_amount,payment_method,is_offline_sync,created_at,status,customer_id,customers(name,phone,balance,customer_type),sale_items(quantity,unit_price,items(name,cost_price))",
-      )
-      .gte("created_at", fromIso)
-      .lte("created_at", toIso)
-      .order("created_at")
-      .then(({ data }) => {
-        if (!active) return;
-        setSales((data ?? []) as unknown as SaleRow[]);
-        setLoading(false);
-      });
+    void (async () => {
+      const [{ data: salesData }, { data: debtData }, { data: expenseData }] = await Promise.all([
+        supabase
+          .from("sales")
+          .select(
+            "id,total_amount,payment_method,payment_breakdown,is_offline_sync,created_at,status,customer_id,customers(name,phone,balance,customer_type),sale_items(quantity,unit_price,items(name,cost_price))",
+          )
+          .gte("created_at", fromIso)
+          .lte("created_at", toIso)
+          .order("created_at"),
+        supabase
+          .from("debt_payments")
+          .select("id,amount,method,created_at")
+          .gte("created_at", fromIso)
+          .lte("created_at", toIso),
+        supabase
+          .from("expenses")
+          .select("id,amount,paid_with,spent_at")
+          .gte("spent_at", fromIso)
+          .lte("spent_at", toIso),
+      ]);
+      if (!active) return;
+      setSales((salesData ?? []) as unknown as SaleRow[]);
+      setDebtPayments((debtData ?? []) as unknown as DebtPaymentRow[]);
+      setRangeExpenses((expenseData ?? []) as unknown as ExpenseRow[]);
+      setLoading(false);
+    })();
     return () => {
       active = false;
     };
@@ -142,15 +174,9 @@ function AnalyticsPage() {
     };
   }, [sales]);
 
-  const rangeExpenses = useMemo(
-    () =>
-      expenses
-        .filter((e) => {
-          const d = new Date(e.spent_at).getTime();
-          return d >= fromDate.getTime() && d <= toDate.getTime();
-        })
-        .reduce((sum, e) => sum + e.amount, 0),
-    [expenses, fromIso, toIso],
+  const totalExpenses = useMemo(
+    () => rangeExpenses.reduce((sum, e) => sum + Number(e.amount), 0),
+    [rangeExpenses],
   );
 
   const activeDebt = useMemo(
@@ -158,7 +184,7 @@ function AnalyticsPage() {
     [customers],
   );
   const grossProfit = metrics.revenue - metrics.cogs;
-  const netProfit = grossProfit - rangeExpenses;
+  const netProfit = grossProfit - totalExpenses;
 
   const trend = useMemo(() => {
     const buckets = new Map<string, number>();
@@ -190,6 +216,48 @@ function AnalyticsPage() {
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 5);
   }, [sales]);
+
+  const paymentBuckets = useMemo(() => {
+    const buckets = {
+      cashIn: 0,
+      kbzIn: 0,
+      waveIn: 0,
+      creditIssued: 0,
+      cashRefunds: 0,
+      cashExpenses: 0,
+    };
+    for (const sale of sales) {
+      const breakdown = sale.payment_breakdown?.length ? sale.payment_breakdown : [{ method: sale.payment_method, amount: sale.total_amount }];
+      for (const split of breakdown) {
+        const method = split.method.toLowerCase();
+        const amount = Number(split.amount || 0);
+        if (method === CASH_METHOD.toLowerCase()) {
+          if (sale.status === "REFUNDED") buckets.cashRefunds += amount;
+          else buckets.cashIn += amount;
+        } else if (method === CREDIT_METHOD.toLowerCase()) {
+          if (sale.status !== "REFUNDED") buckets.creditIssued += amount;
+        } else if (method.includes("kbz")) {
+          if (sale.status !== "REFUNDED") buckets.kbzIn += amount;
+        } else if (method.includes("wave")) {
+          if (sale.status !== "REFUNDED") buckets.waveIn += amount;
+        }
+      }
+    }
+    for (const dp of debtPayments) {
+      const amount = Number(dp.amount);
+      if (amount > 0 && dp.method.toLowerCase() === CASH_METHOD.toLowerCase()) {
+        buckets.cashIn += amount;
+      }
+    }
+    for (const e of rangeExpenses) {
+      if (e.paid_with.toLowerCase() === CASH_METHOD.toLowerCase()) {
+        buckets.cashExpenses += Number(e.amount);
+      }
+    }
+    return buckets;
+  }, [sales, debtPayments, rangeExpenses]);
+
+  const netCashOnHand = paymentBuckets.cashIn - paymentBuckets.cashRefunds - paymentBuckets.cashExpenses;
 
   const exportCsv = () => {
     const rows: (string | number)[][] = [
@@ -232,9 +300,19 @@ function AnalyticsPage() {
       ["စုစုပေါင်း ဝင်ငွေ", metrics.revenue.toFixed(2)],
       ["ကုန်ကျစရိတ် (COGS)", metrics.cogs.toFixed(2)],
       ["အကြမ်း အမြတ်", grossProfit.toFixed(2)],
-      ["အသုံးစရိတ်", rangeExpenses.toFixed(2)],
+      ["အသုံးစရိတ်", totalExpenses.toFixed(2)],
       ["အသားတင် အမြတ်", netProfit.toFixed(2)],
       ["လက်ကျန် အကြွေး စုစုပေါင်း", activeDebt.toFixed(2)],
+      [],
+      ["ငွေပေးချေမှု ခွဲခြမ်းစိတ်ဖြာချက်"],
+      ["ငွေသား ဝင်ငွေ", paymentBuckets.cashIn.toFixed(2)],
+      ["KBZ Pay ဝင်ငွေ", paymentBuckets.kbzIn.toFixed(2)],
+      ["Wave Pay ဝင်ငွေ", paymentBuckets.waveIn.toFixed(2)],
+      ["အကြွေး ထုတ်ပေးထားသော ငွေ", paymentBuckets.creditIssued.toFixed(2)],
+      ["အကြွေး ပြန်ဆပ်ငွေ", debtPayments.reduce((sum, dp) => sum + Math.max(Number(dp.amount), 0), 0).toFixed(2)],
+      ["ပြန်အမ်းငွေ", metrics.refundedTotal.toFixed(2)],
+      ["ငွေသား အသုံးစရိတ်", paymentBuckets.cashExpenses.toFixed(2)],
+      ["လက်ကျန် ငွေသား", netCashOnHand.toFixed(2)],
     ];
     downloadCsv(`smt-pos-master-${from}-to-${to}.csv`, rows);
   };
@@ -249,7 +327,7 @@ function AnalyticsPage() {
   const profitCards = [
     { label: "လက်ကျန် အကြွေး စုစုပေါင်း", value: fmt(activeDebt), icon: HandCoins },
     { label: "ပြန်အမ်းငွေ", value: fmt(metrics.refundedTotal), icon: Receipt },
-    { label: "အသုံးစရိတ်", value: fmt(rangeExpenses), icon: Wallet },
+    { label: "အသုံးစရိတ်", value: fmt(totalExpenses), icon: Wallet },
     { label: "အကြမ်း အမြတ်", value: fmt(grossProfit), icon: TrendingUp },
     { label: "အသားတင် အမြတ်", value: fmt(netProfit), icon: PiggyBank },
   ];

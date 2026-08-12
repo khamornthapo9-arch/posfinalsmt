@@ -235,6 +235,47 @@ export type Database = {
           },
         ]
       }
+      item_units: {
+        Row: {
+          conversion: number
+          created_at: string
+          id: string
+          is_default: boolean
+          item_id: string
+          price: number
+          unit_name: string
+          updated_at: string
+        }
+        Insert: {
+          conversion: number
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          item_id: string
+          price: number
+          unit_name: string
+          updated_at?: string
+        }
+        Update: {
+          conversion?: number
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          item_id?: string
+          price?: number
+          unit_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_units_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
           barcode: string | null
@@ -436,24 +477,30 @@ export type Database = {
       }
       sale_items: {
         Row: {
+          conversion: number | null
           id: string
           item_id: string
           quantity: number
           sale_id: string
+          unit_name: string | null
           unit_price: number
         }
         Insert: {
+          conversion?: number | null
           id?: string
           item_id: string
           quantity: number
           sale_id: string
+          unit_name?: string | null
           unit_price: number
         }
         Update: {
+          conversion?: number | null
           id?: string
           item_id?: string
           quantity?: number
           sale_id?: string
+          unit_name?: string | null
           unit_price?: number
         }
         Relationships: [
@@ -589,6 +636,7 @@ export type Database = {
           created_at: string
           currency_symbol: string
           id: string
+          is_pro: boolean
           logo_url: string | null
           name: string
           owner_id: string
@@ -605,6 +653,7 @@ export type Database = {
           created_at?: string
           currency_symbol?: string
           id?: string
+          is_pro?: boolean
           logo_url?: string | null
           name: string
           owner_id: string
@@ -621,6 +670,7 @@ export type Database = {
           created_at?: string
           currency_symbol?: string
           id?: string
+          is_pro?: boolean
           logo_url?: string | null
           name?: string
           owner_id?: string
@@ -688,7 +738,7 @@ export type Database = {
       owns_store: { Args: { _store_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "OWNER" | "CASHIER"
+      app_role: "OWNER" | "CASHIER" | "MANAGER"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -816,7 +866,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["OWNER", "CASHIER"],
+      app_role: ["OWNER", "CASHIER", "MANAGER"],
     },
   },
 } as const

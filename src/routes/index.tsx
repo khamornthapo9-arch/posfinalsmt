@@ -1,31 +1,20 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  AlertTriangle,
-  ArrowLeft,
-  Boxes,
-  Camera,
-  ChefHat,
-  History,
-  Minus,
-  PauseCircle,
-  Plus,
-  Printer,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
+import { ArrowLeft, History, PauseCircle, Plus, Printer, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { ScannerModal } from "@/components/pos/scanner-modal";
+import { DenseProductList } from "@/components/pos/dense-product-list";
+import { CartPanel, type CartLine } from "@/components/pos/cart-panel";
+import { MobileCheckoutBar } from "@/components/pos/mobile-checkout-bar";
+import { MobileCheckoutDrawer } from "@/components/pos/mobile-checkout-drawer";
 import { usePos, type HeldOrder, type OrderSummary, type PaymentSplit } from "@/lib/pos-store";
 import { useAccountingStore, CREDIT_METHOD, type Customer } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useReceiptSettings } from "@/lib/receipt-settings";
 import { useRole } from "@/lib/roles";
-import { stockStatus } from "@/lib/pos-utils";
-import type { CachedItem, PendingSaleLine } from "@/lib/pos-db";
+import type { CachedItem, ItemUnit, PendingSaleLine } from "@/lib/pos-db";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -47,8 +36,6 @@ export const Route = createFileRoute("/")({
   }),
   component: RegisterPage,
 });
-
-type CartLine = PendingSaleLine & { stock: number };
 
 interface Receipt {
   lines: CartLine[];
@@ -97,8 +84,18 @@ function RegisterPage() {
     recentOrders,
     refundOrder,
   } = usePos();
-  const { fmt, taxRate, taxPercent, isRestaurant, store, address, cashierName, phoneNumbers } =
-    useStoreSettings();
+  const {
+    fmt,
+    taxRate,
+    taxPercent,
+    isRestaurant,
+    isPro,
+    store,
+    symbol,
+    address,
+    cashierName,
+    phoneNumbers,
+  } = useStoreSettings();
   const { customers, quickAddCustomer, postSale } = useAccountingStore();
   const { isOwner } = useRole();
   const logoUrl = useStoreLogo();
@@ -121,6 +118,7 @@ function RegisterPage() {
   const [holdNoteOpen, setHoldNoteOpen] = useState(false);
   const [heldOpen, setHeldOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
@@ -129,17 +127,23 @@ function RegisterPage() {
     [openTabs, activeTable],
   );
 
-  const addToCart = useCallback((item: CachedItem, qty = 1) => {
+  const addToCart = useCallback((item: CachedItem, unit?: ItemUnit) => {
+    const unitName = unit?.unit_name;
+    const conversion = unit?.conversion ?? 1;
+    const unitPrice = unit?.price ?? item.price;
+    const lineKey = `${item.id}:${unitName ?? "base"}`;
+
     setCart((prev) => {
-      const existing = prev.find((line) => line.item_id === item.id);
-      const nextQty = (existing?.quantity ?? 0) + qty;
-      if (nextQty > item.stock_quantity) {
+      const existing = prev.find((line) => line.item_id === item.id && (line.unit_name ?? "base") === (unitName ?? "base"));
+      const nextQty = (existing?.quantity ?? 0) + 1;
+      const baseQty = nextQty * conversion;
+      if (baseQty > item.stock_quantity) {
         toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
         return prev;
       }
       if (existing) {
         return prev.map((line) =>
-          line.item_id === item.id
+          line.item_id === item.id && (line.unit_name ?? "base") === (unitName ?? "base")
             ? { ...line, quantity: nextQty, stock: item.stock_quantity }
             : line,
         );
@@ -150,8 +154,10 @@ function RegisterPage() {
           item_id: item.id,
           sku: item.sku,
           name: item.name,
-          quantity: qty,
-          unit_price: item.price,
+          quantity: 1,
+          unit_price: unitPrice,
+          unit_name: unitName,
+          conversion,
           stock: item.stock_quantity,
         },
       ];
@@ -228,20 +234,36 @@ function RegisterPage() {
     });
   };
 
-  const changeQty = (itemId: string, delta: number) =>
+  const changeQty = (itemId: string, delta: number, unitName?: string) =>
     setCart((prev) =>
       prev
         .map((line) => {
           if (line.item_id !== itemId) return line;
-          const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? line.stock;
-          if (delta > 0 && line.quantity + delta > stock) {
+          if (unitName && (line.unit_name ?? "base") !== unitName) return line;
+          const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? (line.stock ?? 0);
+          const conversion = line.conversion ?? 1;
+          const nextQty = line.quantity + delta;
+          if (delta > 0 && nextQty * conversion > stock) {
             toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
             return line;
           }
-          return { ...line, quantity: line.quantity + delta };
+          return { ...line, quantity: nextQty };
         })
         .filter((line) => line.quantity > 0),
     );
+
+  const removeFromCart = (itemId: string, unitName?: string) =>
+    setCart((prev) =>
+      prev.filter(
+        (line) =>
+          line.item_id !== itemId || (unitName && (line.unit_name ?? "base") !== unitName),
+      ),
+    );
+
+  const toggleSplitMode = () => {
+    setSplitMode((v) => !v);
+    setSplits({});
+  };
 
   const parkOrder = async (note: string) => {
     if (cart.length === 0) return;
@@ -488,7 +510,13 @@ function RegisterPage() {
   return (
     <PosShell
       title={isRestaurant ? `စားပွဲ ${activeTable}` : "POS စာရင်းကိုင်"}
-      subtitle={isRestaurant ? (activeTab ? "ဖွင့်ထားသော စာရင်း" : "အော်ဒါအသစ်") : store?.name}
+      subtitle={
+        isRestaurant
+          ? activeTab
+            ? "ဖွင့်ထားသော စာရင်း"
+            : "အော်ဒါအသစ်"
+          : `${store?.name ?? "Store"} · ${cashierName || "ကောင်တာ"}`
+      }
       actions={
         <div className="flex items-center gap-2">
           <button
@@ -509,377 +537,141 @@ function RegisterPage() {
             <History className="h-3.5 w-3.5" /> မှတ်တမ်း
           </button>
           {isRestaurant && (
-          <button
-            onClick={leaveTable}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> စားပွဲများ မြေပုံ
-          </button>
+            <button
+              onClick={leaveTable}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> စားပွဲများ မြေပုံ
+            </button>
           )}
         </div>
       }
     >
-      <div className="grid gap-4 p-4 lg:grid-cols-[65fr_35fr] lg:items-start">
-        <section className="min-w-0">
-          <div className="mb-3 flex gap-2">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="အမည် (သို့) SKU ဖြင့် ရှာပါ၊ သို့မဟုတ် ဘားကုဒ် ဖတ်ပါ"
-                className="h-11 w-full rounded-md border border-input bg-card pl-9 pr-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <button
-              onClick={() => setScannerOpen(true)}
-              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
-            >
-              <Camera className="h-4 w-4" /> စကင်န်ဖတ်ရန်
-            </button>
-          </div>
-
-          {lowStockItems.length > 0 && (
-            <div className="mb-3 flex items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
-              <p className="min-w-0 flex-1 text-xs font-medium">
-                လက်ကျန်နည်းနေသော ပစ္စည်း {lowStockItems.length} မျိုး ရှိပါသည်။
-              </p>
-              <Link
-                to="/suppliers"
-                className="press shrink-0 rounded-md bg-warning px-3 py-1.5 text-xs font-semibold text-white"
-              >
-                ဝယ်ယူမှု ဖန်တီးမည်
-              </Link>
-            </div>
-          )}
-
-          <div className="mb-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-            {["အားလုံး", ...categories].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategory(cat)}
-                className={cn(
-                  "press shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
-                  category === cat
-                    ? "border-transparent bg-primary text-primary-foreground"
-                    : "border-border bg-card hover:bg-accent",
-                )}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((item) => {
-              const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => addToCart(item)}
-                  disabled={item.stock_quantity <= 0}
-                  className="press relative flex min-h-[132px] flex-col overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm transition-colors hover:border-primary/60 disabled:opacity-50"
-                >
-                  {item.image_url ? (
-                    <img
-                      src={item.image_url}
-                      alt={item.name}
-                      loading="lazy"
-                      className="h-20 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-20 w-full items-center justify-center bg-primary/5 text-lg font-bold text-primary">
-                      {item.name.slice(0, 2)}
-                    </div>
-                  )}
-                  {status !== "ok" && (
-                    <span
-                      className={cn(
-                        "badge-pop absolute right-2 top-2 rounded-md px-2 py-0.5 text-[10px] font-bold text-white",
-                        status === "low" ? "bg-warning" : "bg-destructive",
-                      )}
-                    >
-                      {status === "low" ? "လက်ကျန်နည်း" : "ကုန်နေသည်"}
-                    </span>
-                  )}
-                  <div className="flex flex-1 flex-col px-3 py-2">
-                    <span className="line-clamp-2 text-sm font-semibold">{item.name}</span>
-                    <div className="mt-auto flex items-center justify-between pt-2">
-                      <span className="text-base font-bold tabular-nums text-primary">
-                        {fmt(item.price)}
-                      </span>
-                      <span className="text-[11px] font-medium text-muted-foreground">
-                        {item.stock_quantity} ကျန်
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-
-            {filtered.length === 0 && (
-              <div className="col-span-full flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center">
-                {items.length === 0 ? (
-                  <>
-                    <Boxes className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      ကုန်ပစ္စည်း စာရင်းမရှိသေးပါ။ ပစ္စည်းအသစ် ထည့်သွင်းပါ။
-                    </p>
-                    <Link
-                      to="/inventory"
-                      className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                    >
-                      ကုန်ပစ္စည်းစာရင်းသို့ သွားရန်
-                    </Link>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">ရှာဖွေမှုနှင့် ကိုက်ညီသော ပစ္စည်းမရှိပါ။</p>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="flex h-fit flex-col rounded-lg border border-border bg-card shadow-sm lg:sticky lg:top-4">
-          <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-            <h2 className="text-sm font-semibold">
-              {isRestaurant ? `စားပွဲ ${activeTable} အော်ဒါ` : "လက်ရှိ ရောင်းချမှု"}
-            </h2>
-            <span className="text-xs text-muted-foreground">
-              {cart.length} မျိုး
-            </span>
-          </div>
-          <div className="max-h-[46vh] overflow-y-auto">
-            {cart.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-                ဈေးဝယ်ခြင်းတောင်း လွတ်နေပါသည်။ ပစ္စည်းတစ်ခုကို နှိပ်ပါ သို့မဟုတ် စကင်န်ဖတ်ပါ။
-              </p>
-            ) : (
-              cart.map((line) => (
-                <div
-                  key={line.item_id}
-                  className="flex items-center gap-2 border-b border-border px-4 py-2.5"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{line.name}</p>
-                    <p className="text-xs tabular-nums text-muted-foreground">
-                      {fmt(line.unit_price)} တစ်ခု
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => changeQty(line.item_id, -1)}
-                      aria-label="အရေအတွက် လျှော့ရန်"
-                      className="flex h-11 w-11 items-center justify-center rounded-md border border-border hover:bg-accent sm:h-9 sm:w-9"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                    <span className="w-7 text-center text-sm tabular-nums">{line.quantity}</span>
-                    <button
-                      onClick={() => changeQty(line.item_id, 1)}
-                      aria-label="အရေအတွက် တိုးရန်"
-                      className="flex h-11 w-11 items-center justify-center rounded-md border border-border hover:bg-accent sm:h-9 sm:w-9"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <span className="w-16 text-right text-sm font-semibold tabular-nums">
-                    {fmt(line.quantity * line.unit_price)}
-                  </span>
-                  <button
-                    onClick={() => setCart((prev) => prev.filter((l) => l.item_id !== line.item_id))}
-                    aria-label={`${line.name} ကို ဖျက်ရန်`}
-                    className="flex h-11 w-9 items-center justify-center text-muted-foreground hover:text-destructive sm:h-9"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-
-          {isRestaurant && (
-            <div className="border-t border-border px-4 py-3">
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                မီးဖိုချောင် မှတ်ချက်
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-                placeholder="ကြက်သွန်မပါ၊ အစပ်ကဲ…"
-                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-          )}
-
-          <div className="space-y-1.5 border-t border-border px-4 py-3 text-sm">
-            <div className="flex justify-between text-muted-foreground">
-              <span>စုစုပေါင်း</span>
-              <span className="tabular-nums">{fmt(subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>အခွန် ({taxPercent}%)</span>
-              <span className="tabular-nums">{fmt(tax)}</span>
-            </div>
-            <div className="flex justify-between text-base font-semibold">
-              <span>ကျသင့်ငွေ</span>
-              <span className="tabular-nums">{fmt(total)}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between px-4 pb-2">
-            <span className="text-xs font-medium text-muted-foreground">ငွေခွဲပေးမည်</span>
-            <button
-              role="switch"
-              aria-checked={splitMode}
-              aria-label="ငွေခွဲပေးမည်"
-              onClick={() => {
-                setSplitMode((v) => !v);
-                setSplits({});
-              }}
-              className={cn(
-                "press relative h-6 w-11 rounded-full transition-colors",
-                splitMode ? "bg-primary" : "bg-muted",
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all",
-                  splitMode ? "left-[22px]" : "left-0.5",
-                )}
-              />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 px-4">
-            {PAYMENTS.map((method) => {
-              const active = splitMode ? (splits[method.id] ?? 0) > 0 : payment === method.id;
-              return (
-                <div key={method.id} className="space-y-1">
-                  <button
-                    onClick={() => (splitMode ? toggleSplit(method.id) : selectPayment(method.id))}
-                    className={cn(
-                      "press inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
-                      active
-                        ? `${method.tone} text-white border-transparent`
-                        : "border-border hover:bg-accent",
-                    )}
-                  >
-                    {method.logo && (
-                      <img
-                        src={method.logo}
-                        alt={`${method.label} logo`}
-                        className="h-5 w-5 rounded-xs bg-white object-contain p-px"
-                      />
-                    )}
-                    {method.label}
-                  </button>
-                  {splitMode && (
-                    <input
-                      value={splits[method.id] ?? ""}
-                      onChange={(e) =>
-                        setSplits((prev) => ({ ...prev, [method.id]: Number(e.target.value) || 0 }))
-                      }
-                      inputMode="numeric"
-                      placeholder="0"
-                      aria-label={`${method.label} ပမာဏ`}
-                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-right text-xs tabular-nums outline-none focus:ring-2 focus:ring-ring"
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {splitMode && (
-            <div
-              className={cn(
-                "mx-4 mt-2 flex items-center justify-between rounded-md px-3 py-2 text-sm font-semibold",
-                remaining === 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive",
-              )}
-            >
-              <span>ကျန်ငွေ</span>
-              <span className="tabular-nums">{fmt(remaining)}</span>
-            </div>
-          )}
-
-          {creditPortion > 0 && (
-            <div
-              className={cn(
-                "mx-4 mt-2 rounded-md border px-3 py-2 text-xs",
-                needsCreditCustomer
-                  ? "border-destructive/40 bg-destructive/5"
-                  : "border-border bg-muted/40",
-              )}
-            >
-              <p className="mb-1 font-medium">
-                အကြွေး {fmt(creditPortion)} — ဖောက်သည် ရွေးရန် လိုအပ်သည်
-              </p>
-              {creditCustomer ? (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate">
-                    <span className="font-medium">{creditCustomer.name}</span>{" "}
-                    <span className="text-muted-foreground">{creditCustomer.phone ?? ""}</span>
-                  </span>
-                  <button onClick={() => setPickerOpen(true)} className="shrink-0 text-primary underline">
-                    ပြောင်းရန်
-                  </button>
-                </div>
-              ) : (
-                <button onClick={() => setPickerOpen(true)} className="text-primary underline">
-                  ဖောက်သည် ရွေးပါ
-                </button>
-              )}
-            </div>
-          )}
-
-          <div className="space-y-2 p-4">
-            {isRestaurant ? (
-              <>
-                <button
-                  onClick={() => void sendToKitchen()}
-                  disabled={cart.length === 0 || busy}
-                  className="press inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-background text-sm font-semibold hover:bg-accent disabled:opacity-50"
-                >
-                  <ChefHat className="h-4 w-4" /> ခေတ္တသိမ်း / မီးဖိုချောင်သို့ပို့ရန်
-                </button>
-                <button
-                  onClick={() => void payAndClose()}
-                  disabled={cart.length === 0 || busy}
-                  className="press h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {busy ? "လုပ်ဆောင်နေသည်…" : `ငွေရှင်းပြီး စားပွဲပိတ်မည် · ${fmt(total)}`}
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => setHoldNoteOpen(true)}
-                  disabled={cart.length === 0 || busy}
-                  className="press inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-warning bg-warning/10 text-sm font-semibold text-warning hover:bg-warning/20 disabled:opacity-50"
-                >
-                  <PauseCircle className="h-4 w-4" /> ခဏဆိုင်းထားမည်
-                </button>
-                <button
-                  onClick={() => void completeSale()}
-                  disabled={
-                    cart.length === 0 ||
-                    busy ||
-                    needsCreditCustomer ||
-                    (splitMode && remaining !== 0)
-                  }
-                  className="press h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {busy ? "လုပ်ဆောင်နေသည်…" : `စာရင်းတွက်မည်· ${fmt(total)}`}
-                </button>
-              </>
-            )}
-          </div>
-
-        </section>
+      {/* Desktop/Tablet: fixed 60/40 split */}
+      <div className="hidden h-[calc(100vh-64px)] md:grid md:grid-cols-[60fr_40fr]">
+        <div className="min-w-0 overflow-hidden">
+          <DenseProductList
+            items={items}
+            query={query}
+            onQueryChange={setQuery}
+            selectedCategory={category}
+            onCategoryChange={setCategory}
+            lowStockCount={lowStockItems.length}
+            currencySymbol={symbol}
+            isPro={isPro}
+            onScan={() => setScannerOpen(true)}
+            onAdd={addToCart}
+          />
+        </div>
+        <div className="min-w-0 border-l border-border">
+          <CartPanel
+            cart={cart}
+            items={items}
+            isRestaurant={isRestaurant}
+            activeTable={activeTable}
+            notes={notes}
+            payment={payment}
+            splitMode={splitMode}
+            splits={splits}
+            creditCustomer={creditCustomer}
+            busy={busy}
+            subtotal={subtotal}
+            tax={tax}
+            total={total}
+            taxPercent={taxPercent}
+            remaining={remaining}
+            creditPortion={creditPortion}
+            needsCreditCustomer={needsCreditCustomer}
+            currencySymbol={symbol}
+            payments={PAYMENTS}
+            onChangeQty={changeQty}
+            onRemove={removeFromCart}
+            onNotesChange={setNotes}
+            onSelectPayment={selectPayment}
+            onToggleSplit={toggleSplit}
+            onSplitChange={(methodId: string, amount: number) =>
+              setSplits((prev) => ({ ...prev, [methodId]: amount }))
+            }
+            onToggleSplitMode={toggleSplitMode}
+            onPickCustomer={() => setPickerOpen(true)}
+            onPark={() => setHoldNoteOpen(true)}
+            onComplete={() => void completeSale()}
+            onSendToKitchen={() => void sendToKitchen()}
+            onPayAndClose={() => void payAndClose()}
+          />
+        </div>
       </div>
+
+      {/* Mobile: scrollable product list + sticky checkout bar */}
+      <div className="flex h-[calc(100vh-64px)] flex-col md:hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <DenseProductList
+            items={items}
+            query={query}
+            onQueryChange={setQuery}
+            selectedCategory={category}
+            onCategoryChange={setCategory}
+            lowStockCount={lowStockItems.length}
+            currencySymbol={symbol}
+            isPro={isPro}
+            onScan={() => setScannerOpen(true)}
+            onAdd={addToCart}
+          />
+        </div>
+        <MobileCheckoutBar
+          cart={cart}
+          total={total}
+          currencySymbol={symbol}
+          onCheckout={() => setCheckoutOpen(true)}
+        />
+      </div>
+
+      <MobileCheckoutDrawer
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        cart={cart}
+        items={items}
+        isRestaurant={isRestaurant}
+        activeTable={activeTable}
+        notes={notes}
+        payment={payment}
+        splitMode={splitMode}
+        splits={splits}
+        creditCustomer={creditCustomer}
+        busy={busy}
+        subtotal={subtotal}
+        tax={tax}
+        total={total}
+        taxPercent={taxPercent}
+        remaining={remaining}
+        creditPortion={creditPortion}
+        needsCreditCustomer={needsCreditCustomer}
+        currencySymbol={symbol}
+        payments={PAYMENTS}
+        onChangeQty={changeQty}
+        onRemove={removeFromCart}
+        onNotesChange={setNotes}
+        onSelectPayment={selectPayment}
+        onToggleSplit={toggleSplit}
+        onSplitChange={(methodId: string, amount: number) =>
+          setSplits((prev) => ({ ...prev, [methodId]: amount }))
+        }
+        onToggleSplitMode={toggleSplitMode}
+        onPickCustomer={() => setPickerOpen(true)}
+        onPark={() => setHoldNoteOpen(true)}
+        onComplete={() => {
+          setCheckoutOpen(false);
+          void completeSale();
+        }}
+        onSendToKitchen={() => {
+          setCheckoutOpen(false);
+          void sendToKitchen();
+        }}
+        onPayAndClose={() => {
+          setCheckoutOpen(false);
+          void payAndClose();
+        }}
+      />
 
       <ScannerModal
         open={scannerOpen}
