@@ -893,6 +893,16 @@ function ReceiptModal({
           <p className="mt-2 text-xs text-muted-foreground">
             ပေးချေသည့် နည်းလမ်း: {receipt.paymentMethod}
           </p>
+          {receipt.splits && receipt.splits.length > 1 && (
+            <div className="mt-1 space-y-0.5 text-xs">
+              {receipt.splits.map((split) => (
+                <div key={split.method} className="flex justify-between text-muted-foreground">
+                  <span>{split.method}</span>
+                  <span className="tabular-nums">{fmt(split.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {isCredit && (
@@ -926,9 +936,10 @@ function ReceiptModal({
 
         <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
         <div className="text-center text-xs text-muted-foreground">
-          <p>ဝယ်ယူအားပေးမှုကို ကျေးဇူးအထူးတင်ရှိပါသည်။</p>
+          <p>{footerNote || "ဝယ်ယူအားပေးမှုကို ကျေးဇူးအထူးတင်ရှိပါသည်။"}</p>
           <p className="mt-1">{receipt.timestamp}</p>
         </div>
+
 
         <div className="mt-4 flex gap-2 print:hidden">
           <button
