@@ -234,17 +234,20 @@ function RegisterPage() {
     });
   };
 
-  const changeQty = (itemId: string, delta: number) =>
+  const changeQty = (itemId: string, delta: number, unitName?: string) =>
     setCart((prev) =>
       prev
         .map((line) => {
           if (line.item_id !== itemId) return line;
+          if (unitName && (line.unit_name ?? "base") !== unitName) return line;
           const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? (line.stock ?? 0);
-          if (delta > 0 && line.quantity + delta > stock) {
+          const conversion = line.conversion ?? 1;
+          const nextQty = line.quantity + delta;
+          if (delta > 0 && nextQty * conversion > stock) {
             toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
             return line;
           }
-          return { ...line, quantity: line.quantity + delta };
+          return { ...line, quantity: nextQty };
         })
         .filter((line) => line.quantity > 0),
     );
