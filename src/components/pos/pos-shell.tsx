@@ -70,8 +70,9 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
   const { isCashier } = useRole();
   const advanced = Boolean(store?.advanced_accounting_mode);
   const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
+  void advanced;
   const items = isCashier
-    ? all.filter((item) => item.to === "/" || (advanced && item.to === "/customers"))
+    ? all.filter((item) => item.to === "/" || item.to === "/customers")
     : all;
   return (
     <nav className="flex flex-col gap-0.5">
@@ -170,9 +171,7 @@ export function PosShell({
 
   useEffect(() => {
     if (loading || roleLoading || !isCashier) return;
-    const allowed =
-      pathname === "/" ||
-      (Boolean(store?.advanced_accounting_mode) && pathname.startsWith("/customers"));
+    const allowed = pathname === "/" || pathname.startsWith("/customers");
     if (!allowed) void navigate({ to: "/", replace: true });
   }, [loading, roleLoading, isCashier, pathname, store, navigate]);
 
