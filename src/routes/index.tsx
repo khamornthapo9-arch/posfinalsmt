@@ -531,6 +531,7 @@ function RegisterPage() {
             selectedCategory={category}
             onCategoryChange={setCategory}
             lowStockCount={lowStockItems.length}
+            currencySymbol={symbol}
             onScan={() => setScannerOpen(true)}
             onAdd={addToCart}
           />
