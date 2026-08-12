@@ -3,12 +3,15 @@ import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
 
-export type StoreRole = "OWNER" | "CASHIER";
+export type StoreRole = "OWNER" | "MANAGER" | "CASHIER";
 
 interface RoleContextValue {
   role: StoreRole;
   isOwner: boolean;
+  isManager: boolean;
   isCashier: boolean;
+  /** Cost prices, purchases and profit figures are owner/manager only. */
+  canSeeCost: boolean;
   loading: boolean;
 }
 
@@ -45,7 +48,14 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   }, [session, store]);
 
   const value = useMemo<RoleContextValue>(
-    () => ({ role, isOwner: role === "OWNER", isCashier: role === "CASHIER", loading }),
+    () => ({
+      role,
+      isOwner: role === "OWNER",
+      isManager: role === "MANAGER",
+      isCashier: role === "CASHIER",
+      canSeeCost: role !== "CASHIER",
+      loading,
+    }),
     [role, loading],
   );
 
@@ -53,10 +63,20 @@ export function RoleProvider({ children }: { children: ReactNode }) {
 }
 
 export function useRole(): RoleContextValue {
-  return useContext(RoleContext) ?? { role: "OWNER", isOwner: true, isCashier: false, loading: false };
+  return (
+    useContext(RoleContext) ?? {
+      role: "OWNER",
+      isOwner: true,
+      isManager: false,
+      isCashier: false,
+      canSeeCost: true,
+      loading: false,
+    }
+  );
 }
 
 export const ROLE_LABEL: Record<StoreRole, string> = {
   OWNER: "ဆိုင်ပိုင်ရှင်",
+  MANAGER: "မန်နေဂျာ",
   CASHIER: "ကောင်တာဝန်ထမ်း",
 };
