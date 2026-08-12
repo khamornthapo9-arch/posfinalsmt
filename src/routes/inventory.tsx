@@ -5,6 +5,7 @@ import { Barcode as BarcodeIcon, PackagePlus, Pencil, Plus, Printer, QrCode, Sea
 import Barcode from "react-barcode";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
+import { useAuth } from "@/lib/auth-store";
 import { usePos } from "@/lib/pos-store";
 import { money, stockStatus } from "@/lib/pos-utils";
 import type { CachedItem } from "@/lib/pos-db";
