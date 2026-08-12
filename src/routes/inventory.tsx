@@ -263,9 +263,16 @@ function InventoryPage() {
             );
           })}
           {filtered.length === 0 && (
-            <p className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
-              ကုန်ပစ္စည်း ရှာမတွေ့ပါ။
-            </p>
+            <div className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
+              {items.length === 0 ? (
+                <div className="space-y-2">
+                  <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
+                  <p className="text-xs">"ဥပမာကုန်ပစ္စည်းထည့်မည်" ခလုတ်ကို နှိပ်ပြီး စမ်းသပ်နိုင်ပါသည်။</p>
+                </div>
+              ) : (
+                "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
+              )}
+            </div>
           )}
         </div>
       </div>
