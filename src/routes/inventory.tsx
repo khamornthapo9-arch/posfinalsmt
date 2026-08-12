@@ -376,7 +376,7 @@ function ProductModal({
           {field("sku", "SKU နံပါတ်")}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {field("barcode", "ဘားကုဒ် (မထည့်လျှင် SKU သုံးမည်)")}
-            {field("qr_value", "QR တန်ဖိုး (မထည့်လျှင် SKU သုံး�မည်)")}
+            {field("qr_value", "QR တန်ဖိုး (မထည့်လျှင် SKU သုံးမည်)")}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {field("price", "စျေးနှုန်း", "number")}
