@@ -1265,3 +1265,226 @@ function KitchenTicketModal({
     </div>
   );
 }
+
+function HoldNoteModal({
+  onClose,
+  onConfirm,
+}: {
+  onClose: () => void;
+  onConfirm: (note: string) => void;
+}) {
+  const [note, setNote] = useState("");
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-lg">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">ခဏဆိုင်းထားမည်</h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="hold-note">
+          မှတ်ချက် (ဖောက်သည်အမည် / စားပွဲနံပါတ်)
+        </label>
+        <input
+          id="hold-note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+        />
+        <button
+          onClick={() => onConfirm(note)}
+          className="press mt-4 h-11 w-full rounded-md bg-warning text-sm font-semibold text-white"
+        >
+          ခဏဆိုင်းမည်
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function HeldOrdersDrawer({
+  orders,
+  fmt,
+  onClose,
+  onResume,
+  onDelete,
+}: {
+  orders: HeldOrder[];
+  fmt: (n: number) => string;
+  onClose: () => void;
+  onResume: (order: HeldOrder) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60" onClick={onClose}>
+      <aside
+        className="flex h-full w-full max-w-md flex-col bg-card shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="text-sm font-semibold">ခဏဆိုင်းထားသော ဘောက်ချာများ ({orders.length})</h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {orders.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted-foreground">ဆိုင်းထားသော ဘောက်ချာ မရှိပါ။</p>
+          )}
+          {orders.map((order) => (
+            <div key={order.id} className="mb-3 rounded-lg border border-border p-3 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">{order.note || "မှတ်ချက်မရှိ"}</span>
+                <span className="text-sm font-bold tabular-nums">{fmt(order.total_amount)}</span>
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {new Date(order.created_at).toLocaleString()} · {order.lines.length} မျိုး
+              </p>
+              <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                {order.lines.map((line) => (
+                  <li key={line.item_id} className="flex justify-between">
+                    <span className="truncate pr-2">{line.name} × {line.quantity}</span>
+                    <span className="tabular-nums">{fmt(line.quantity * line.unit_price)}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  onClick={() => onResume(order)}
+                  className="press h-10 flex-1 rounded-md bg-success text-xs font-semibold text-white"
+                >
+                  ပြန်ဖွင့်မည်
+                </button>
+                <button
+                  onClick={() => onDelete(order.id)}
+                  aria-label="ဖျက်ရန်"
+                  className="flex h-10 w-10 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+const REFUND_REASONS = ["ပစ္စည်း ပြန်အပ်", "ပစ္စည်း ချွတ်ယွင်း", "အမှားရိုက်မိ", "အခြား"];
+
+function OrderHistoryDrawer({
+  orders,
+  fmt,
+  canRefund,
+  onClose,
+  onRefund,
+}: {
+  orders: OrderSummary[];
+  fmt: (n: number) => string;
+  canRefund: boolean;
+  onClose: () => void;
+  onRefund: (orderId: string, reason: string, note: string) => Promise<void>;
+}) {
+  const [selected, setSelected] = useState<OrderSummary | null>(null);
+  const [reason, setReason] = useState(REFUND_REASONS[0]!);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60" onClick={onClose}>
+      <aside
+        className="flex h-full w-full max-w-md flex-col bg-card shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="text-sm font-semibold">ဘောက်ချာ မှတ်တမ်း</h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {orders.map((order) => (
+            <button
+              key={order.id}
+              onClick={() => setSelected(order)}
+              className="mb-2 flex w-full items-center justify-between gap-2 rounded-lg border border-border px-3 py-2.5 text-left hover:bg-accent"
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold tabular-nums">{fmt(order.total_amount)}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {new Date(order.created_at).toLocaleString()} · {order.payment_method}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold text-white",
+                  order.status === "REFUNDED"
+                    ? "bg-destructive"
+                    : order.status === "OPEN" || order.status === "UNPAID"
+                      ? "bg-warning"
+                      : "bg-success",
+                )}
+              >
+                {order.status}
+              </span>
+            </button>
+          ))}
+          {orders.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted-foreground">မှတ်တမ်း မရှိသေးပါ။</p>
+          )}
+        </div>
+
+        {selected && (
+          <div className="border-t border-border p-4">
+            <p className="text-sm font-semibold">ဘောက်ချာ အသေးစိတ်</p>
+            <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+              {selected.lines.map((line) => (
+                <li key={line.item_id} className="flex justify-between">
+                  <span className="truncate pr-2">{line.name} × {line.quantity}</span>
+                  <span className="tabular-nums">{fmt(line.quantity * line.unit_price)}</span>
+                </li>
+              ))}
+            </ul>
+            {canRefund && selected.status !== "REFUNDED" && (
+              <div className="mt-3 space-y-2">
+                <select
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  aria-label="ပြန်အမ်းရသည့် အကြောင်းရင်း"
+                  className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  {REFUND_REASONS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="မှတ်ချက် (ရွေးချယ်နိုင်)"
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                />
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    setBusy(true);
+                    void onRefund(selected.id, reason, note).finally(() => {
+                      setBusy(false);
+                      setSelected(null);
+                    });
+                  }}
+                  className="press h-10 w-full rounded-md border border-destructive text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                >
+                  ပြန်အမ်း / ဘောက်ချာဖျက်မည်
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
