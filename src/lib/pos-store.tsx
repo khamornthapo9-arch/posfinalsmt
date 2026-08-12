@@ -660,6 +660,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       recordSale,
       saveItem,
       deleteItem,
+      seedDemoItems,
     }),
     [
       list,
