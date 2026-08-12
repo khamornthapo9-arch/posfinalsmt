@@ -84,8 +84,18 @@ function RegisterPage() {
     recentOrders,
     refundOrder,
   } = usePos();
-  const { fmt, taxRate, taxPercent, isRestaurant, store, symbol, address, cashierName, phoneNumbers } =
-    useStoreSettings();
+  const {
+    fmt,
+    taxRate,
+    taxPercent,
+    isRestaurant,
+    isPro,
+    store,
+    symbol,
+    address,
+    cashierName,
+    phoneNumbers,
+  } = useStoreSettings();
   const { customers, quickAddCustomer, postSale } = useAccountingStore();
   const { isOwner } = useRole();
   const logoUrl = useStoreLogo();
