@@ -143,11 +143,105 @@ export type Database = {
           },
         ]
       }
+      held_orders: {
+        Row: {
+          cart_data: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          store_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          cart_data?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          store_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          cart_data?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          store_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "held_orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          item_id: string
+          movement_type: string
+          note: string | null
+          quantity: number
+          reference_id: string | null
+          store_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_id: string
+          movement_type: string
+          note?: string | null
+          quantity: number
+          reference_id?: string | null
+          store_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_id?: string
+          movement_type?: string
+          note?: string | null
+          quantity?: number
+          reference_id?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
+          category: string
           cost_price: number
           created_at: string
           id: string
+          image_url: string | null
           min_stock_threshold: number
           name: string
           price: number
@@ -156,9 +250,11 @@ export type Database = {
           store_id: string
         }
         Insert: {
+          category?: string
           cost_price?: number
           created_at?: string
           id?: string
+          image_url?: string | null
           min_stock_threshold?: number
           name: string
           price: number
@@ -167,9 +263,11 @@ export type Database = {
           store_id: string
         }
         Update: {
+          category?: string
           cost_price?: number
           created_at?: string
           id?: string
+          image_url?: string | null
           min_stock_threshold?: number
           name?: string
           price?: number
@@ -376,7 +474,11 @@ export type Database = {
           id: string
           is_offline_sync: boolean
           notes: string | null
+          payment_breakdown: Json
           payment_method: string
+          refund_note: string | null
+          refund_reason: string | null
+          refunded_at: string | null
           status: string
           store_id: string
           table_number: number | null
@@ -388,7 +490,11 @@ export type Database = {
           id?: string
           is_offline_sync?: boolean
           notes?: string | null
+          payment_breakdown?: Json
           payment_method?: string
+          refund_note?: string | null
+          refund_reason?: string | null
+          refunded_at?: string | null
           status?: string
           store_id: string
           table_number?: number | null
@@ -400,7 +506,11 @@ export type Database = {
           id?: string
           is_offline_sync?: boolean
           notes?: string | null
+          payment_breakdown?: Json
           payment_method?: string
+          refund_note?: string | null
+          refund_reason?: string | null
+          refunded_at?: string | null
           status?: string
           store_id?: string
           table_number?: number | null
@@ -416,6 +526,44 @@ export type Database = {
           },
           {
             foreignKeyName: "sales_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_members: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          store_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          store_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          store_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_members_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
@@ -514,10 +662,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_store_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _store_id: string
+        }
+        Returns: boolean
+      }
+      is_store_member: { Args: { _store_id: string }; Returns: boolean }
       owns_store: { Args: { _store_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "OWNER" | "CASHIER"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -644,6 +800,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["OWNER", "CASHIER"],
+    },
   },
 } as const
