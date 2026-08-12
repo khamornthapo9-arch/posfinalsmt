@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Camera, Plus, Search, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { stockStatus, money } from "@/lib/pos-utils";
@@ -5,11 +6,9 @@ import type { CachedItem } from "@/lib/pos-db";
 
 interface DenseProductListProps {
   items: CachedItem[];
-  filtered: CachedItem[];
-  categories: string[];
   query: string;
-  category: string;
-  lowStockItems: CachedItem[];
+  selectedCategory: string;
+  lowStockCount: number;
   currencySymbol: string;
   onQueryChange: (q: string) => void;
   onCategoryChange: (c: string) => void;
@@ -19,11 +18,9 @@ interface DenseProductListProps {
 
 export function DenseProductList({
   items,
-  filtered,
-  categories,
   query,
-  category,
-  lowStockItems,
+  selectedCategory,
+  lowStockCount,
   currencySymbol,
   onQueryChange,
   onCategoryChange,
@@ -31,6 +28,20 @@ export function DenseProductList({
   onScan,
 }: DenseProductListProps) {
   const fmt = (n: number) => money(n, currencySymbol);
+
+  const categories = useMemo(
+    () => Array.from(new Set(items.map((i) => i.category).filter(Boolean))),
+    [items],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((item) => {
+      if (selectedCategory !== "အားလုံး" && item.category !== selectedCategory) return false;
+      if (!q) return true;
+      return item.name.toLowerCase().includes(q) || item.sku.toLowerCase().includes(q);
+    });
+  }, [items, query, selectedCategory]);
 
   return (
     <div className="flex h-full flex-col">
@@ -55,11 +66,11 @@ export function DenseProductList({
           </button>
         </div>
 
-        {lowStockItems.length > 0 && (
+        {lowStockCount > 0 && (
           <div className="flex items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5">
             <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
             <p className="min-w-0 flex-1 text-xs font-medium">
-              လက်ကျန်နည်းနေသော ပစ္စည်း {lowStockItems.length} မျိုး ရှိပါသည်။
+              လက်ကျန်နည်းနေသော ပစ္စည်း {lowStockCount} မျိုး ရှိပါသည်။
             </p>
           </div>
         )}
@@ -71,7 +82,7 @@ export function DenseProductList({
               onClick={() => onCategoryChange(cat)}
               className={cn(
                 "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                category === cat
+                selectedCategory === cat
                   ? "border-transparent bg-primary text-primary-foreground"
                   : "border-border bg-card hover:bg-accent",
               )}
