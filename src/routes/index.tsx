@@ -207,8 +207,16 @@ function RegisterPage() {
   const total = subtotal + tax;
   const splitPaid = Object.values(splits).reduce((sum, n) => sum + n, 0);
   const remaining = Math.round((total - splitPaid) * 100) / 100;
+  const creditPortion = splitMode
+    ? splits[CREDIT_METHOD] ?? 0
+    : payment === CREDIT_METHOD
+      ? total
+      : 0;
+  const needsCreditCustomer = creditPortion > 0 && !creditCustomer;
 
-  const toggleSplit = (methodId: string) =>
+  const toggleSplit = (methodId: string) => {
+    const enabling = !splits[methodId];
+    if (enabling && methodId === CREDIT_METHOD && !creditCustomer) setPickerOpen(true);
     setSplits((prev) => {
       const next = { ...prev };
       if (next[methodId]) {
@@ -218,6 +226,7 @@ function RegisterPage() {
       }
       return next;
     });
+  };
 
   const changeQty = (itemId: string, delta: number) =>
     setCart((prev) =>
@@ -304,7 +313,15 @@ function RegisterPage() {
 
   const completeSale = async () => {
     if (cart.length === 0 || !validateStock()) return;
-    const isCredit = payment === CREDIT_METHOD;
+    const splitList = splitMode
+      ? Object.entries(splits)
+          .map(([method, amount]) => ({ method, amount }))
+          .filter((split) => split.amount > 0)
+      : [{ method: payment, amount: total }];
+    const creditAmount = splitList
+      .filter((split) => split.method === CREDIT_METHOD)
+      .reduce((sum, split) => sum + split.amount, 0);
+    const isCredit = creditAmount > 0;
     if (isCredit && !creditCustomer) {
       setPickerOpen(true);
       toast.error("အကြွေးရောင်းရန် ဖောက်သည် ရွေးပါ");
@@ -316,11 +333,14 @@ function RegisterPage() {
         lines: cart.map(({ stock: _stock, ...line }) => line),
         total,
         paymentMethod: splitMode ? "SPLIT" : payment,
-        paymentBreakdown: splitMode
-          ? Object.entries(splits).map(([method, amount]) => ({ method, amount }))
-          : [{ method: payment, amount: total }],
+        paymentBreakdown: splitList,
         customerId: isCredit ? creditCustomer!.id : null,
-        status: isCredit ? "UNPAID" : "COMPLETED",
+        status: "COMPLETED",
+        paymentStatus: !isCredit
+          ? "PAID"
+          : creditAmount >= Math.round(total * 100) / 100
+            ? "UNPAID"
+            : "PARTIAL",
       });
       if (!offline) {
         await postSale({
@@ -328,7 +348,8 @@ function RegisterPage() {
           subtotal,
           tax,
           cogs: cogsFor(cart),
-          paymentMethod: payment,
+          paymentMethod: splitMode ? "SPLIT" : payment,
+          splits: splitList,
           customerId: isCredit ? creditCustomer!.id : null,
         });
       }
@@ -339,9 +360,7 @@ function RegisterPage() {
         tax,
         total,
         paymentMethod: splitMode ? "SPLIT" : payment,
-        splits: splitMode
-          ? Object.entries(splits).map(([method, amount]) => ({ method, amount }))
-          : [{ method: payment, amount: total }],
+        splits: splitList,
         timestamp: new Date().toLocaleString(),
         offline,
         ...(isCredit
@@ -349,7 +368,7 @@ function RegisterPage() {
               customerName: creditCustomer!.name,
               customerPhone: creditCustomer!.phone ?? "",
               previousDebt,
-              newDebt: previousDebt + total,
+              newDebt: previousDebt + creditAmount,
             }
           : {}),
       });
@@ -786,8 +805,18 @@ function RegisterPage() {
             </div>
           )}
 
-          {payment === CREDIT_METHOD && (
-            <div className="mx-4 mt-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
+          {creditPortion > 0 && (
+            <div
+              className={cn(
+                "mx-4 mt-2 rounded-md border px-3 py-2 text-xs",
+                needsCreditCustomer
+                  ? "border-destructive/40 bg-destructive/5"
+                  : "border-border bg-muted/40",
+              )}
+            >
+              <p className="mb-1 font-medium">
+                အကြွေး {fmt(creditPortion)} — ဖောက်သည် ရွေးရန် လိုအပ်သည်
+              </p>
               {creditCustomer ? (
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate">
@@ -835,7 +864,12 @@ function RegisterPage() {
                 </button>
                 <button
                   onClick={() => void completeSale()}
-                  disabled={cart.length === 0 || busy || (splitMode && remaining !== 0)}
+                  disabled={
+                    cart.length === 0 ||
+                    busy ||
+                    needsCreditCustomer ||
+                    (splitMode && remaining !== 0)
+                  }
                   className="press h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
                   {busy ? "လုပ်ဆောင်နေသည်…" : `စာရင်းတွက်မည်· ${fmt(total)}`}
@@ -861,11 +895,11 @@ function RegisterPage() {
           customers={customers}
           onClose={() => {
             setPickerOpen(false);
-            if (!creditCustomer) setPayment("ငွေသား");
+            if (!creditCustomer && !splitMode) setPayment("ငွေသား");
           }}
           onPick={(customer) => {
             setCreditCustomer(customer);
-            setPayment(CREDIT_METHOD);
+            if (!splitMode) setPayment(CREDIT_METHOD);
             setPickerOpen(false);
           }}
           onQuickAdd={quickAddCustomer}

@@ -16,6 +16,8 @@ export function useStoreSettings() {
     address: store?.address ?? "",
     cashierName: store?.cashier_name ?? "",
     phoneNumbers: store?.phone_numbers ?? [],
+    receiptHeader: store?.receipt_header ?? "",
+    receiptFooter: store?.receipt_footer ?? "",
     fmt: (n: number) => money(n, symbol),
   };
 }

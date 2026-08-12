@@ -10,6 +10,8 @@ export interface CachedItem {
   min_stock_threshold: number;
   category: string;
   image_url: string | null;
+  barcode: string | null;
+  qr_value: string | null;
   created_at: string;
 }
 
@@ -65,6 +67,20 @@ class PosDatabase extends Dexie {
           .modify((item: Partial<CachedItem>) => {
             if (!item.category) item.category = "အထွေထွေ";
             if (item.image_url === undefined) item.image_url = null;
+          });
+      });
+    this.version(4)
+      .stores({
+        cached_items: "id, sku, name, category",
+        pending_sales: "++localId, created_at",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table("cached_items")
+          .toCollection()
+          .modify((item: Partial<CachedItem>) => {
+            if (item.barcode === undefined) item.barcode = null;
+            if (item.qr_value === undefined) item.qr_value = null;
           });
       });
   }

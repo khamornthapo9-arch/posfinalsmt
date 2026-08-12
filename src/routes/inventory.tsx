@@ -5,6 +5,7 @@ import { Barcode as BarcodeIcon, PackagePlus, Pencil, Plus, Printer, QrCode, Sea
 import Barcode from "react-barcode";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
+import { useAuth } from "@/lib/auth-store";
 import { usePos } from "@/lib/pos-store";
 import { money, stockStatus } from "@/lib/pos-utils";
 import type { CachedItem } from "@/lib/pos-db";
@@ -39,6 +40,8 @@ const EMPTY = {
   cost_price: "",
   stock_quantity: "",
   min_stock_threshold: "5",
+  barcode: "",
+  qr_value: "",
 };
 
 function InventoryPage() {
@@ -313,9 +316,11 @@ function ProductModal({
     cost_price: number;
     stock_quantity: number;
     min_stock_threshold: number;
+    barcode?: string | null;
+    qr_value?: string | null;
   }) => Promise<void>;
 }) {
-  const [form, setForm] = useState(
+  const [form, setForm] = useState<typeof EMPTY>(
     item
       ? {
           sku: item.sku,
@@ -324,6 +329,8 @@ function ProductModal({
           cost_price: String(item.cost_price ?? 0),
           stock_quantity: String(item.stock_quantity),
           min_stock_threshold: String(item.min_stock_threshold),
+          barcode: item.barcode ?? "",
+          qr_value: item.qr_value ?? "",
         }
       : EMPTY,
   );
@@ -354,6 +361,10 @@ function ProductModal({
         <div className="space-y-3">
           {field("name", "အမည်")}
           {field("sku", "SKU နံပါတ်")}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {field("barcode", "ဘားကုဒ် (မထည့်လျှင် SKU သုံးမည်)")}
+            {field("qr_value", "QR တန်ဖိုး (မထည့်လျှင် SKU သုံးမည်)")}
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {field("price", "စျေးနှုန်း", "number")}
             {field("cost_price", "အရင်းစျေး", "number")}
@@ -373,6 +384,8 @@ function ProductModal({
               cost_price: Number(form.cost_price) || 0,
               stock_quantity: Math.trunc(Number(form.stock_quantity) || 0),
               min_stock_threshold: Math.trunc(Number(form.min_stock_threshold) || 0),
+              barcode: form.barcode.trim() || null,
+              qr_value: form.qr_value.trim() || null,
             }).finally(() => setSaving(false));
           }}
           className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-transform hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
@@ -386,6 +399,13 @@ function ProductModal({
 
 function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }) {
   const [mode, setMode] = useState<"qr" | "barcode">("qr");
+  const [qty, setQty] = useState(10);
+  const [size, setSize] = useState<"40x30" | "50x25">("40x30");
+  const [show, setShow] = useState({ name: true, price: true, code: true, shop: false });
+  const { store } = useAuth();
+  const [w, h] = size === "40x30" ? ["40mm", "30mm"] : ["50mm", "25mm"];
+  const codeValue = mode === "qr" ? item.qr_value || item.sku : item.barcode || item.sku;
+  const toggle = (key: keyof typeof show) => setShow((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-6 print:static print:block print:bg-transparent print:p-0">
@@ -415,33 +435,92 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
           ))}
         </div>
 
-        <div className="print-area label-sheet mx-auto flex h-[1in] w-[2in] flex-col items-center justify-center overflow-hidden rounded border border-border bg-white p-1 text-center text-black">
-          {mode === "qr" ? (
-            <div className="flex w-full items-center gap-1.5">
-              <QRCodeCanvas value={item.sku} size={62} level="M" />
-              <div className="min-w-0 flex-1 text-left leading-tight">
-                <p className="truncate text-[10px] font-semibold">{item.name}</p>
-                <p className="text-[13px] font-bold tabular-nums">{money(item.price)}</p>
-                <p className="truncate text-[9px]">{item.sku}</p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <p className="w-full truncate text-[9px] font-semibold leading-tight">{item.name}</p>
-              <Barcode
-                value={item.sku}
-                format="CODE128"
-                width={1}
-                height={30}
-                fontSize={9}
-                margin={0}
-                displayValue
+        <div className="mb-4 space-y-3 print:hidden">
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ["name", "အမည်"],
+                ["price", "ဈေးနှုန်း"],
+                ["code", "SKU / ကုဒ်"],
+                ["shop", "ဆိုင်အမည်"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => toggle(key)}
+                className={cn(
+                  "min-h-9 rounded-full border px-3 text-xs font-medium",
+                  show[key] ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {(["40x30", "50x25"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSize(s)}
+                className={cn(
+                  "min-h-9 rounded-md border px-3 text-xs font-medium",
+                  size === s ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                )}
+              >
+                {s.replace("x", "mm x ")}mm
+              </button>
+            ))}
+            <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+              အရေအတွက်
+              <input
+                type="number"
+                min={1}
+                max={200}
+                value={qty}
+                onChange={(e) =>
+                  setQty(Math.min(200, Math.max(1, Math.trunc(Number(e.target.value) || 1))))
+                }
+                className="h-9 w-20 rounded-lg border border-input bg-background px-2 text-sm"
               />
-              <p className="text-[11px] font-bold tabular-nums leading-tight">
-                {money(item.price)}
-              </p>
-            </>
-          )}
+            </label>
+          </div>
+        </div>
+
+        <div
+          className="print-area label-grid sheet-a4 max-h-[46vh] overflow-y-auto print:max-h-none print:overflow-visible"
+          style={{ ["--label-w" as string]: w, ["--label-h" as string]: h }}
+        >
+          {Array.from({ length: qty }).map((_, index) => (
+            <div key={index} className="label-cell">
+              {show.shop && (
+                <p className="w-full truncate text-[8px] font-semibold uppercase">{store?.name}</p>
+              )}
+              {show.name && (
+                <p className="w-full truncate text-[9px] font-semibold leading-tight">{item.name}</p>
+              )}
+              {mode === "qr" ? (
+                <QRCodeCanvas value={codeValue} size={54} level="M" />
+              ) : (
+                <Barcode
+                  value={codeValue}
+                  format="CODE128"
+                  width={1}
+                  height={26}
+                  fontSize={8}
+                  margin={0}
+                  displayValue={show.code}
+                />
+              )}
+              {show.code && mode === "qr" && (
+                <p className="w-full truncate text-[8px]">{codeValue}</p>
+              )}
+              {show.price && (
+                <p className="text-[11px] font-bold tabular-nums leading-tight">
+                  {money(item.price)}
+                </p>
+              )}
+            </div>
+          ))}
         </div>
 
         <div className="mt-5 flex gap-2 print:hidden">
@@ -449,7 +528,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
             onClick={() => window.print()}
             className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95"
           >
-            <Printer className="h-4 w-4" /> ပရင်ထုတ်မည်
+            <Printer className="h-4 w-4" /> {qty} ခု ပရင်ထုတ်မည်
           </button>
           <button
             onClick={onClose}

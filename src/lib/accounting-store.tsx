@@ -136,6 +136,8 @@ interface AccountingContextValue {
     cogs: number;
     paymentMethod: string;
     customerId?: string | null;
+    /** Payment split breakdown; when omitted the whole total lands on paymentMethod. */
+    splits?: { method: string; amount: number }[];
   }) => Promise<void>;
   saveCustomer: (input: {
     id?: string;
@@ -289,13 +291,23 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   );
 
   const postSale = useCallback<AccountingContextValue["postSale"]>(
-    async ({ saleId, subtotal, tax, cogs, paymentMethod, customerId }) => {
+    async ({ saleId, subtotal, tax, cogs, paymentMethod, customerId, splits }) => {
       if (!storeId) return;
-      const assetAccount = accountForMethod(paymentMethod);
       const total = subtotal + tax;
+      const breakdown =
+        splits && splits.length > 0 ? splits : [{ method: paymentMethod, amount: total }];
+      const creditAmount = breakdown
+        .filter((split) => split.method === CREDIT_METHOD)
+        .reduce((sum, split) => sum + Number(split.amount || 0), 0);
+      const assetLines: LedgerLine[] = breakdown.map((split) => ({
+        account: accountForMethod(split.method),
+        direction: "DEBIT" as const,
+        amount: Number(split.amount || 0),
+        memo: split.method,
+      }));
       await postEntries(
         [
-          { account: assetAccount, direction: "DEBIT", amount: total },
+          ...assetLines,
           { account: ACCOUNTS.SALES_REVENUE, direction: "CREDIT", amount: subtotal },
           { account: ACCOUNTS.TAX_PAYABLE, direction: "CREDIT", amount: tax },
           { account: ACCOUNTS.COGS, direction: "DEBIT", amount: cogs },
@@ -303,12 +315,20 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
         ],
         { type: "SALE", id: saleId ?? null, memo: paymentMethod },
       );
-      if (paymentMethod === CREDIT_METHOD && customerId) {
+      if (creditAmount > 0 && customerId) {
         const current = customers.find((c) => c.id === customerId);
         await supabase
           .from("customers")
-          .update({ balance: Number(((current?.balance ?? 0) + total).toFixed(2)) })
+          .update({ balance: Number(((current?.balance ?? 0) + creditAmount).toFixed(2)) })
           .eq("id", customerId);
+        await supabase.from("debt_payments").insert({
+          store_id: storeId,
+          party_type: "CUSTOMER",
+          party_id: customerId,
+          amount: -creditAmount,
+          method: CREDIT_METHOD,
+          note: saleId ? `အကြွေးရောင်းချမှု · ${saleId}` : "အကြွေးရောင်းချမှု",
+        });
       }
       await refreshAll();
     },

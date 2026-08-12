@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   AlertTriangle,
   BarChart3,
@@ -19,6 +19,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import { usePos } from "@/lib/pos-store";
 import { useAuth } from "@/lib/auth-store";
+import { useRole, ROLE_LABEL } from "@/lib/roles";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,9 @@ const ADVANCED_NAV = [
   { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", icon: Truck },
   { to: "/expenses", label: "အသုံးစရိတ်", icon: Banknote },
 ] as const;
+
+/** Cashiers only ever reach the register (and customer credit in advanced mode). */
+export const CASHIER_PATHS = ["/", "/customers"] as const;
 
 function StatusBadge() {
   const { syncState, pendingCount } = usePos();
@@ -65,6 +69,8 @@ function StatusBadge() {
 
 function LowStockBadge() {
   const { lowStockCount } = usePos();
+  const { isCashier } = useRole();
+  if (isCashier) return null;
   return (
     <Link
       to={"/inventory" as string}
@@ -108,7 +114,12 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const { store } = useAuth();
-  const items = store?.advanced_accounting_mode ? [...NAV, ...ADVANCED_NAV] : [...NAV];
+  const { isCashier } = useRole();
+  const advanced = Boolean(store?.advanced_accounting_mode);
+  const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
+  const items = isCashier
+    ? all.filter((item) => item.to === "/" || (advanced && item.to === "/customers"))
+    : all;
   return (
     <nav className="flex flex-col gap-0.5">
       {items.map((item) => (
@@ -136,6 +147,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
 
 function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   const { session, signOut } = useAuth();
+  const { role } = useRole();
   const navigate = useNavigate();
   const email = session?.user.email ?? "";
   const initial = email.charAt(0).toUpperCase() || "U";
@@ -167,7 +179,7 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-medium text-sidebar-accent-foreground">{email}</p>
-          <p className="text-[11px] text-sidebar-foreground/60">ဆိုင်ပိုင်ရှင်</p>
+          <p className="text-[11px] text-sidebar-foreground/60">{ROLE_LABEL[role]}</p>
         </div>
         <button
           onClick={handleSignOut}
@@ -195,11 +207,21 @@ export function PosShell({
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { session, store, loading } = useAuth();
+  const { isCashier, loading: roleLoading } = useRole();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && (!session || !store)) void navigate({ to: "/login", replace: true });
   }, [loading, session, store, navigate]);
+
+  useEffect(() => {
+    if (loading || roleLoading || !isCashier) return;
+    const allowed =
+      pathname === "/" ||
+      (Boolean(store?.advanced_accounting_mode) && pathname.startsWith("/customers"));
+    if (!allowed) void navigate({ to: "/", replace: true });
+  }, [loading, roleLoading, isCashier, pathname, store, navigate]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("pos-sidebar-collapsed");

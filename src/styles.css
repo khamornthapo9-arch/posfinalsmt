@@ -359,3 +359,52 @@
     font-size: 11px;
   }
 }
+
+/* ---------------------------------------------------------------
+ * Sticker label batch printing
+ * Grid of stickers sized for common roll stock or an A4 sheet.
+ * ------------------------------------------------------------- */
+.label-grid {
+  display: grid;
+  gap: 2mm;
+  grid-template-columns: repeat(auto-fill, minmax(var(--label-w, 40mm), max-content));
+}
+
+.label-cell {
+  width: var(--label-w, 40mm);
+  height: var(--label-h, 30mm);
+  padding: 1.5mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5mm;
+  overflow: hidden;
+  text-align: center;
+  border: 1px dashed #cbd5e1;
+  background: #ffffff;
+  color: #000000;
+}
+
+@media print {
+  .label-grid.sheet-a4 {
+    page: a4sheet;
+  }
+
+  @page a4sheet {
+    size: A4;
+    margin: 8mm;
+  }
+
+  .label-grid.sheet-roll {
+    page: labelroll;
+    gap: 0;
+  }
+
+  .label-cell {
+    border: 0;
+    break-inside: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
