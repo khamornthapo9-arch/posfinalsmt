@@ -217,6 +217,48 @@ function AnalyticsPage() {
       .slice(0, 5);
   }, [sales]);
 
+  const paymentBuckets = useMemo(() => {
+    const buckets: Record<string, number> = {
+      cashIn: 0,
+      kbzIn: 0,
+      waveIn: 0,
+      creditIssued: 0,
+      cashRefunds: 0,
+      cashExpenses: 0,
+    };
+    for (const sale of sales) {
+      const breakdown = sale.payment_breakdown?.length ? sale.payment_breakdown : [{ method: sale.payment_method, amount: sale.total_amount }];
+      for (const split of breakdown) {
+        const method = split.method.toLowerCase();
+        const amount = Number(split.amount || 0);
+        if (method === CASH_METHOD.toLowerCase()) {
+          if (sale.status === "REFUNDED") buckets.cashRefunds += amount;
+          else buckets.cashIn += amount;
+        } else if (method === CREDIT_METHOD.toLowerCase()) {
+          if (sale.status !== "REFUNDED") buckets.creditIssued += amount;
+        } else if (method.includes("kbz")) {
+          if (sale.status !== "REFUNDED") buckets.kbzIn += amount;
+        } else if (method.includes("wave")) {
+          if (sale.status !== "REFUNDED") buckets.waveIn += amount;
+        }
+      }
+    }
+    for (const dp of debtPayments) {
+      const amount = Number(dp.amount);
+      if (amount > 0 && dp.method.toLowerCase() === CASH_METHOD.toLowerCase()) {
+        buckets.cashIn += amount;
+      }
+    }
+    for (const e of rangeExpenses) {
+      if (e.paid_with.toLowerCase() === CASH_METHOD.toLowerCase()) {
+        buckets.cashExpenses += Number(e.amount);
+      }
+    }
+    return buckets;
+  }, [sales, debtPayments, rangeExpenses]);
+
+  const netCashOnHand = paymentBuckets.cashIn - paymentBuckets.cashRefunds - paymentBuckets.cashExpenses;
+
   const exportCsv = () => {
     const rows: (string | number)[][] = [
       [
@@ -258,9 +300,19 @@ function AnalyticsPage() {
       ["စုစုပေါင်း ဝင်ငွေ", metrics.revenue.toFixed(2)],
       ["ကုန်ကျစရိတ် (COGS)", metrics.cogs.toFixed(2)],
       ["အကြမ်း အမြတ်", grossProfit.toFixed(2)],
-      ["အသုံးစရိတ်", rangeExpenses.toFixed(2)],
+      ["အသုံးစရိတ်", totalExpenses.toFixed(2)],
       ["အသားတင် အမြတ်", netProfit.toFixed(2)],
       ["လက်ကျန် အကြွေး စုစုပေါင်း", activeDebt.toFixed(2)],
+      [],
+      ["ငွေပေးချေမှု ခွဲခြမ်းစိတ်ဖြာချက်"],
+      ["ငွေသား ဝင်ငွေ", paymentBuckets.cashIn.toFixed(2)],
+      ["KBZ Pay ဝင်ငွေ", paymentBuckets.kbzIn.toFixed(2)],
+      ["Wave Pay ဝင်ငွေ", paymentBuckets.waveIn.toFixed(2)],
+      ["အကြွေး ထုတ်ပေးထားသော ငွေ", paymentBuckets.creditIssued.toFixed(2)],
+      ["အကြွေး ပြန်ဆပ်ငွေ", debtPayments.reduce((sum, dp) => sum + Math.max(Number(dp.amount), 0), 0).toFixed(2)],
+      ["ပြန်အမ်းငွေ", metrics.refundedTotal.toFixed(2)],
+      ["ငွေသား အသုံးစရိတ်", paymentBuckets.cashExpenses.toFixed(2)],
+      ["လက်ကျန် ငွေသား", netCashOnHand.toFixed(2)],
     ];
     downloadCsv(`smt-pos-master-${from}-to-${to}.csv`, rows);
   };
@@ -275,7 +327,7 @@ function AnalyticsPage() {
   const profitCards = [
     { label: "လက်ကျန် အကြွေး စုစုပေါင်း", value: fmt(activeDebt), icon: HandCoins },
     { label: "ပြန်အမ်းငွေ", value: fmt(metrics.refundedTotal), icon: Receipt },
-    { label: "အသုံးစရိတ်", value: fmt(rangeExpenses), icon: Wallet },
+    { label: "အသုံးစရိတ်", value: fmt(totalExpenses), icon: Wallet },
     { label: "အကြမ်း အမြတ်", value: fmt(grossProfit), icon: TrendingUp },
     { label: "အသားတင် အမြတ်", value: fmt(netProfit), icon: PiggyBank },
   ];
