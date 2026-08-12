@@ -813,6 +813,10 @@ function ReceiptModal({
   address,
   cashierName,
   phoneNumbers,
+  logoUrl,
+  footerNote,
+  paperWidth,
+  showLogo,
   fmt,
   onClose,
 }: {
@@ -821,13 +825,22 @@ function ReceiptModal({
   address: string;
   cashierName: string;
   phoneNumbers: string[];
+  logoUrl: string | null;
+  footerNote: string;
+  paperWidth: "58" | "80";
+  showLogo: boolean;
   fmt: (n: number) => string;
   onClose: () => void;
 }) {
   const isCredit = receipt.paymentMethod === CREDIT_METHOD;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
-      <div className="print-area receipt-sheet my-auto w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-lg">
+      <div
+        className={cn(
+          "print-area receipt-sheet my-auto w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-lg",
+          paperWidth === "58" && "receipt-58",
+        )}
+      >
         <div className="mb-3 flex items-center justify-between print:hidden">
           <h2 className="text-sm font-semibold">ပြေစာ</h2>
           <button onClick={onClose} aria-label="ပြေစာ ပိတ်ရန်" className="text-muted-foreground">
@@ -836,6 +849,9 @@ function ReceiptModal({
         </div>
 
         <div className="text-center">
+          {showLogo && logoUrl && (
+            <img src={logoUrl} alt={`${storeName} လိုဂို`} className="mx-auto mb-2 h-12 w-12 rounded-md object-cover" />
+          )}
           <p className="text-base font-semibold">{storeName}</p>
           {address && <p className="text-xs text-muted-foreground">{address}</p>}
           {phoneNumbers.length > 0 && (
@@ -846,11 +862,12 @@ function ReceiptModal({
             <p className="text-xs font-medium">စားပွဲ {receipt.tableNumber}</p>
           )}
           {receipt.offline && (
-            <p className="mt-1 text-xs font-medium text-amber-600">
+            <p className="mt-1 text-xs font-medium text-warning">
               အော့ဖ်လိုင်း အရောင်း — ချိတ်ဆက်ရန် စောင့်ဆိုင်းနေသည်
             </p>
           )}
         </div>
+
 
         <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
         <table className="w-full text-xs">
