@@ -13,6 +13,7 @@ export function useStoreSettings() {
     taxPercent: store?.tax_rate ?? 5,
     isRestaurant: store?.business_type === "RESTAURANT",
     advanced: Boolean(store?.advanced_accounting_mode),
+    isPro: Boolean(store?.is_pro),
     address: store?.address ?? "",
     cashierName: store?.cashier_name ?? "",
     phoneNumbers: store?.phone_numbers ?? [],
