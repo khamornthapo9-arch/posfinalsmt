@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Camera, Plus, Search, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { stockStatus, money } from "@/lib/pos-utils";
-import type { CachedItem } from "@/lib/pos-db";
+import type { CachedItem, ItemUnit } from "@/lib/pos-db";
 
 interface DenseProductListProps {
   items: CachedItem[];
@@ -10,9 +10,10 @@ interface DenseProductListProps {
   selectedCategory: string;
   lowStockCount: number;
   currencySymbol: string;
+  isPro: boolean;
   onQueryChange: (q: string) => void;
   onCategoryChange: (c: string) => void;
-  onAdd: (item: CachedItem) => void;
+  onAdd: (item: CachedItem, unit?: ItemUnit) => void;
   onScan: () => void;
 }
 
@@ -22,6 +23,7 @@ export function DenseProductList({
   selectedCategory,
   lowStockCount,
   currencySymbol,
+  isPro,
   onQueryChange,
   onCategoryChange,
   onAdd,
@@ -99,57 +101,83 @@ export function DenseProductList({
           {filtered.map((item) => {
             const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
             const outOfStock = item.stock_quantity <= 0;
+            const units = isPro ? item.units : [];
+            const hasUnits = units.length > 0;
+            const defaultUnit = units.find((u) => u.is_default) ?? units[0];
+
             return (
               <div
                 key={item.id}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl border border-border bg-card p-2.5 transition-colors",
+                  "rounded-xl border border-border bg-card p-2.5 transition-colors",
                   outOfStock ? "opacity-60" : "hover:border-primary/40",
                 )}
               >
-                {item.image_url ? (
-                  <img
-                    src={item.image_url}
-                    alt={item.name}
-                    className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-                    {item.name.slice(0, 2)}
+                <div className="flex items-center gap-3">
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
+                      {item.name.slice(0, 2)}
+                    </div>
+                  )}
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{item.name}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span className="tabular-nums">{item.sku}</span>
+                      <span>·</span>
+                      <span
+                        className={cn(
+                          "rounded-md px-1.5 py-0.5 text-[10px] font-medium",
+                          status === "ok" && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+                          status === "low" && "bg-amber-500/15 text-amber-600 dark:text-amber-300",
+                          status === "out" && "bg-destructive/15 text-destructive",
+                        )}
+                      >
+                        {status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
+                      </span>
+                      <span className="tabular-nums">{item.stock_quantity} ကျန်</span>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-bold tabular-nums text-primary">{fmt(item.price)}</p>
+                  </div>
+
+                  <button
+                    onClick={() => onAdd(item, defaultUnit)}
+                    disabled={outOfStock}
+                    aria-label={`${item.name} ထည့်ရန်`}
+                    className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-primary transition-colors hover:bg-accent disabled:opacity-50 sm:h-9 sm:w-9"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {hasUnits && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 pl-[60px]">
+                    <button
+                      onClick={() => onAdd(item)}
+                      className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium hover:bg-accent"
+                    >
+                      အရပ် · {fmt(item.price)}
+                    </button>
+                    {units.map((unit) => (
+                      <button
+                        key={unit.id}
+                        onClick={() => onAdd(item, unit)}
+                        className="rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
+                      >
+                        {unit.unit_name} x{unit.conversion} · {fmt(unit.price)}
+                      </button>
+                    ))}
                   </div>
                 )}
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{item.name}</p>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="tabular-nums">{item.sku}</span>
-                    <span>·</span>
-                    <span
-                      className={cn(
-                        "rounded-md px-1.5 py-0.5 text-[10px] font-medium",
-                        status === "ok" && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
-                        status === "low" && "bg-amber-500/15 text-amber-600 dark:text-amber-300",
-                        status === "out" && "bg-destructive/15 text-destructive",
-                      )}
-                    >
-                      {status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
-                    </span>
-                    <span className="tabular-nums">{item.stock_quantity} ကျန်</span>
-                  </div>
-                </div>
-
-                <div className="shrink-0 text-right">
-                  <p className="text-sm font-bold tabular-nums text-primary">{fmt(item.price)}</p>
-                </div>
-
-                <button
-                  onClick={() => onAdd(item)}
-                  disabled={outOfStock}
-                  aria-label={`${item.name} ထည့်ရန်`}
-                  className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-primary transition-colors hover:bg-accent disabled:opacity-50 sm:h-9 sm:w-9"
-                >
-                  <Plus className="h-5 w-5" />
-                </button>
               </div>
             );
           })}
