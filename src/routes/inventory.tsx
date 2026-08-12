@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Barcode as BarcodeIcon, Pencil, Plus, Printer, QrCode, Search, Trash2, X } from "lucide-react";
+import { Barcode as BarcodeIcon, Pencil, Plus, Printer, QrCode, Search, Seed, Trash2, X } from "lucide-react";
 import Barcode from "react-barcode";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
