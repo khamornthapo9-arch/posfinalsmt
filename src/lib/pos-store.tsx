@@ -172,13 +172,35 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       await posDb.cached_items.clear();
       return;
     }
-    const { data, error } = await supabase
+    const { data: itemsData, error: itemsError } = await supabase
       .from("items")
       .select("*")
       .eq("store_id", storeId)
       .order("name");
-    if (error || !data) return;
-    const rows: CachedItem[] = data.map((row) => ({
+    if (itemsError || !itemsData) return;
+
+    const { data: unitsData } = await supabase
+      .from("item_units")
+      .select("*")
+      .in(
+        "item_id",
+        itemsData.map((i) => i.id),
+      );
+    const unitsByItem = new Map<string, ItemUnit[]>();
+    for (const u of unitsData ?? []) {
+      const list = unitsByItem.get(u.item_id) ?? [];
+      list.push({
+        id: u.id,
+        item_id: u.item_id,
+        unit_name: u.unit_name,
+        conversion: u.conversion,
+        price: Number(u.price),
+        is_default: u.is_default,
+      });
+      unitsByItem.set(u.item_id, list);
+    }
+
+    const rows: CachedItem[] = itemsData.map((row) => ({
       id: row.id,
       sku: row.sku,
       name: row.name,
@@ -191,6 +213,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       barcode: (row as { barcode?: string | null }).barcode ?? null,
       qr_value: (row as { qr_value?: string | null }).qr_value ?? null,
       created_at: row.created_at,
+      units: unitsByItem.get(row.id) ?? [],
     }));
     await posDb.transaction("rw", posDb.cached_items, async () => {
       await posDb.cached_items.clear();
