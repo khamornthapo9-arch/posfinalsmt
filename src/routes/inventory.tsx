@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Barcode as BarcodeIcon, Pencil, Plus, Printer, QrCode, Search, Trash2, X } from "lucide-react";
+import { Barcode as BarcodeIcon, PackagePlus, Pencil, Plus, Printer, QrCode, Search, Trash2, X } from "lucide-react";
 import Barcode from "react-barcode";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
@@ -42,11 +42,12 @@ const EMPTY = {
 };
 
 function InventoryPage() {
-  const { items, saveItem, deleteItem } = usePos();
+  const { items, saveItem, deleteItem, seedDemoItems } = usePos();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [editing, setEditing] = useState<CachedItem | "new" | null>(null);
   const [labelItem, setLabelItem] = useState<CachedItem | null>(null);
+  const [seeding, setSeeding] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -93,6 +94,30 @@ function InventoryPage() {
           >
             <Plus className="h-4 w-4" /> ကုန်ပစ္စည်းသစ်ထည့်မည်
           </button>
+          {items.length === 0 && (
+            <button
+              onClick={() => {
+                setSeeding(true);
+                void seedDemoItems()
+                  .then((count) => toast.success(`${count} ကုန်ပစ္စည်း ဥပမာများ ထည့်သွင်းပြီးပါပြီ`))
+                  .catch(() => toast.error("ဥပမာကုန်ပစ္စည်းများ ထည့်သွင်း၍မရပါ"))
+                  .finally(() => setSeeding(false));
+              }}
+              disabled={seeding}
+              className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+            >
+              {seeding ? (
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ထည့်သွင်းနေသည်
+                </span>
+              ) : (
+                <>
+                  <PackagePlus className="h-4 w-4" /> ဥပမာကုန်ပစ္စည်းထည့်မည်
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         <div className="hidden overflow-x-auto rounded-xl border border-border bg-card md:block">
@@ -164,7 +189,14 @@ function InventoryPage() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                    ကုန်ပစ္စည်း ရှာမတွေ့ပါ။
+                    {items.length === 0 ? (
+                      <div className="space-y-2">
+                        <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
+                        <p className="text-xs">"ဥပမာကုန်ပစ္စည်းထည့်မည်" ခလုတ်ကို နှိပ်ပြီး စမ်းသပ်နိုင်ပါသည်။</p>
+                      </div>
+                    ) : (
+                      "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
+                    )}
                   </td>
                 </tr>
               )}
@@ -231,9 +263,16 @@ function InventoryPage() {
             );
           })}
           {filtered.length === 0 && (
-            <p className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
-              ကုန်ပစ္စည်း ရှာမတွေ့ပါ။
-            </p>
+            <div className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
+              {items.length === 0 ? (
+                <div className="space-y-2">
+                  <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
+                  <p className="text-xs">"ဥပမာကုန်ပစ္စည်းထည့်မည်" ခလုတ်ကို နှိပ်ပြီး စမ်းသပ်နိုင်ပါသည်။</p>
+                </div>
+              ) : (
+                "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
+              )}
+            </div>
           )}
         </div>
       </div>
