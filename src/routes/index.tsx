@@ -252,8 +252,13 @@ function RegisterPage() {
         .filter((line) => line.quantity > 0),
     );
 
-  const removeFromCart = (itemId: string) =>
-    setCart((prev) => prev.filter((line) => line.item_id !== itemId));
+  const removeFromCart = (itemId: string, unitName?: string) =>
+    setCart((prev) =>
+      prev.filter(
+        (line) =>
+          line.item_id !== itemId || (unitName && (line.unit_name ?? "base") !== unitName),
+      ),
+    );
 
   const toggleSplitMode = () => {
     setSplitMode((v) => !v);
