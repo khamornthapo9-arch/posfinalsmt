@@ -698,10 +698,19 @@ function PosProviderInner({ children }: { children: ReactNode }) {
               item_id: line.item_id,
               quantity: line.quantity,
               unit_price: line.unit_price,
+              unit_name: line.unit_name ?? null,
+              conversion: line.conversion ?? 1,
             })),
           );
           if (error) throw error;
-          await logMovements(deltas, "SALE", saleId);
+          await logMovements(
+            deltas.map((line) => ({
+              item_id: line.item_id,
+              quantity: line.quantity * (line.conversion ?? 1),
+            })),
+            "SALE",
+            saleId,
+          );
         }
         const { error: updateError } = await supabase
           .from("sales")
