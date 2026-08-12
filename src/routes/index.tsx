@@ -662,6 +662,53 @@ function RegisterPage() {
         />
       )}
 
+      {holdNoteOpen && (
+        <HoldNoteModal
+          onClose={() => setHoldNoteOpen(false)}
+          onConfirm={(note) => {
+            setHoldNoteOpen(false);
+            void parkOrder(note);
+          }}
+        />
+      )}
+
+      {heldOpen && (
+        <HeldOrdersDrawer
+          orders={heldOrders}
+          fmt={fmt}
+          onClose={() => setHeldOpen(false)}
+          onResume={(order) => {
+            setCart(
+              order.lines.map((line) => ({
+                ...line,
+                stock: items.find((i) => i.id === line.item_id)?.stock_quantity ?? line.quantity,
+              })),
+            );
+            void deleteHeldOrder(order.id);
+            setHeldOpen(false);
+            toast.success("ဘောက်ချာကို ပြန်ဖွင့်ပြီးပါပြီ");
+          }}
+          onDelete={(id) => void deleteHeldOrder(id)}
+        />
+      )}
+
+      {historyOpen && (
+        <OrderHistoryDrawer
+          orders={recentOrders}
+          fmt={fmt}
+          canRefund={isOwner}
+          onClose={() => setHistoryOpen(false)}
+          onRefund={async (orderId, reason, note) => {
+            try {
+              await refundOrder({ orderId, reason, note });
+              toast.success("ဘောက်ချာ ပြန်အမ်းပြီးပါပြီ");
+            } catch {
+              toast.error("ပြန်အမ်း၍ မရပါ");
+            }
+          }}
+        />
+      )}
+
       {receipt && (
         <ReceiptModal
           receipt={receipt}
@@ -669,11 +716,16 @@ function RegisterPage() {
           address={address}
           cashierName={cashierName}
           phoneNumbers={phoneNumbers}
+          logoUrl={logoUrl}
+          footerNote={receiptSettings.footerNote}
+          paperWidth={receiptSettings.paperWidth}
+          showLogo={receiptSettings.showLogo}
           fmt={fmt}
           onClose={() => setReceipt(null)}
         />
       )}
       {ticket && <KitchenTicketModal ticket={ticket} onClose={() => setTicket(null)} />}
+
     </PosShell>
   );
 }
