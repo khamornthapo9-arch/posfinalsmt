@@ -112,20 +112,21 @@ export function CartPanel({
             {cart.map((line) => {
               const item = items.find((i) => i.id === line.item_id);
               const stock = item?.stock_quantity ?? line.stock ?? 0;
+              const unitKey = line.unit_name ?? "base";
               return (
                 <div
-                  key={line.item_id}
+                  key={`${line.item_id}:${unitKey}`}
                   className="flex items-center gap-3 px-4 py-3"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{line.name}</p>
                     <p className="text-[11px] tabular-nums text-muted-foreground">
-                      {fmt(line.unit_price)} တစ်ခု · ကျန် {stock}
+                      {fmt(line.unit_price)} / {line.unit_name ?? "အရပ်"} · ကျန် {stock}
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => onChangeQty(line.item_id, -1)}
+                      onClick={() => onChangeQty(line.item_id, -1, unitKey)}
                       aria-label="အရေအတွက် လျှော့ရန်"
                       className="press grid h-8 w-8 place-items-center rounded-md border border-border hover:bg-accent"
                     >
@@ -135,7 +136,7 @@ export function CartPanel({
                       {line.quantity}
                     </span>
                     <button
-                      onClick={() => onChangeQty(line.item_id, 1)}
+                      onClick={() => onChangeQty(line.item_id, 1, unitKey)}
                       aria-label="အရေအတွက် တိုးရန်"
                       className="press grid h-8 w-8 place-items-center rounded-md border border-border hover:bg-accent"
                     >
@@ -146,7 +147,7 @@ export function CartPanel({
                     {fmt(line.quantity * line.unit_price)}
                   </span>
                   <button
-                    onClick={() => onRemove(line.item_id)}
+                    onClick={() => onRemove(line.item_id, unitKey)}
                     aria-label={`${line.name} ကို ဖျက်ရန်`}
                     className="text-muted-foreground transition-colors hover:text-destructive"
                   >
