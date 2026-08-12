@@ -106,7 +106,7 @@ interface PosContextValue {
     category?: string;
     barcode?: string | null;
     qr_value?: string | null;
-    units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[];
+    units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[] | undefined;
   }) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   seedDemoItems: () => Promise<number>;
