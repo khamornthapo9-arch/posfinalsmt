@@ -174,15 +174,9 @@ function AnalyticsPage() {
     };
   }, [sales]);
 
-  const rangeExpenses = useMemo(
-    () =>
-      expenses
-        .filter((e) => {
-          const d = new Date(e.spent_at).getTime();
-          return d >= fromDate.getTime() && d <= toDate.getTime();
-        })
-        .reduce((sum, e) => sum + e.amount, 0),
-    [expenses, fromIso, toIso],
+  const totalExpenses = useMemo(
+    () => rangeExpenses.reduce((sum, e) => sum + Number(e.amount), 0),
+    [rangeExpenses],
   );
 
   const activeDebt = useMemo(
@@ -190,7 +184,7 @@ function AnalyticsPage() {
     [customers],
   );
   const grossProfit = metrics.revenue - metrics.cogs;
-  const netProfit = grossProfit - rangeExpenses;
+  const netProfit = grossProfit - totalExpenses;
 
   const trend = useMemo(() => {
     const buckets = new Map<string, number>();
