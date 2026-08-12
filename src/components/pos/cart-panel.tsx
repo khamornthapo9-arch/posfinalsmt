@@ -43,8 +43,8 @@ interface CartPanelProps {
   needsCreditCustomer: boolean;
   currencySymbol: string;
   payments: PaymentOption[];
-  onChangeQty: (itemId: string, delta: number) => void;
-  onRemove: (itemId: string) => void;
+  onChangeQty: (itemId: string, delta: number, unitName?: string) => void;
+  onRemove: (itemId: string, unitName?: string) => void;
   onNotesChange: (value: string) => void;
   onSelectPayment: (methodId: string) => void;
   onToggleSplit: (methodId: string) => void;
