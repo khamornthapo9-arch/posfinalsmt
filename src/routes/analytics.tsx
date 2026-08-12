@@ -108,22 +108,39 @@ function AnalyticsPage() {
   const fromIso = fromDate.toISOString();
   const toIso = toDate.toISOString();
 
+  const [debtPayments, setDebtPayments] = useState<DebtPaymentRow[]>([]);
+  const [rangeExpenses, setRangeExpenses] = useState<ExpenseRow[]>([]);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
-    void supabase
-      .from("sales")
-      .select(
-        "id,total_amount,payment_method,is_offline_sync,created_at,status,customer_id,customers(name,phone,balance,customer_type),sale_items(quantity,unit_price,items(name,cost_price))",
-      )
-      .gte("created_at", fromIso)
-      .lte("created_at", toIso)
-      .order("created_at")
-      .then(({ data }) => {
-        if (!active) return;
-        setSales((data ?? []) as unknown as SaleRow[]);
-        setLoading(false);
-      });
+    void (async () => {
+      const [{ data: salesData }, { data: debtData }, { data: expenseData }] = await Promise.all([
+        supabase
+          .from("sales")
+          .select(
+            "id,total_amount,payment_method,payment_breakdown,is_offline_sync,created_at,status,customer_id,customers(name,phone,balance,customer_type),sale_items(quantity,unit_price,items(name,cost_price))",
+          )
+          .gte("created_at", fromIso)
+          .lte("created_at", toIso)
+          .order("created_at"),
+        supabase
+          .from("debt_payments")
+          .select("id,amount,method,created_at")
+          .gte("created_at", fromIso)
+          .lte("created_at", toIso),
+        supabase
+          .from("expenses")
+          .select("id,amount,paid_with,spent_at")
+          .gte("spent_at", fromIso)
+          .lte("spent_at", toIso),
+      ]);
+      if (!active) return;
+      setSales((salesData ?? []) as unknown as SaleRow[]);
+      setDebtPayments((debtData ?? []) as unknown as DebtPaymentRow[]);
+      setRangeExpenses((expenseData ?? []) as unknown as ExpenseRow[]);
+      setLoading(false);
+    })();
     return () => {
       active = false;
     };
