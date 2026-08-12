@@ -1,10 +1,8 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
-  AlertTriangle,
   BarChart3,
   Boxes,
   Banknote,
-  CircleDot,
   Loader2,
   LogOut,
   Menu,
@@ -17,7 +15,6 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { usePos } from "@/lib/pos-store";
 import { useAuth } from "@/lib/auth-store";
 import { useRole, ROLE_LABEL } from "@/lib/roles";
 import { useStoreLogo } from "@/lib/use-store-logo";
@@ -42,50 +39,6 @@ const ADVANCED_NAV = [
 /** Cashiers only ever reach the register (and customer credit in advanced mode). */
 export const CASHIER_PATHS = ["/", "/customers"] as const;
 
-function StatusBadge() {
-  const { syncState, pendingCount } = usePos();
-  const base =
-    "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium";
-  if (syncState === "syncing") {
-    return (
-      <span className={cn(base, "border-sky-200 bg-sky-50 text-sky-700")}>
-        <Loader2 className="h-3.5 w-3.5 animate-spin" /> ဖတ်နေသည်
-      </span>
-    );
-  }
-  if (syncState === "offline") {
-    return (
-      <span className={cn(base, "border-amber-200 bg-amber-50 text-amber-700")}>
-        <CircleDot className="h-3.5 w-3.5" /> အင်တာနက်မရှိပါ ({pendingCount})
-      </span>
-    );
-  }
-  return (
-    <span className={cn(base, "border-emerald-200 bg-emerald-50 text-emerald-700")}>
-      <CircleDot className="h-3.5 w-3.5" /> အွန်လိုင်း
-    </span>
-  );
-}
-
-function LowStockBadge() {
-  const { lowStockCount } = usePos();
-  const { isCashier } = useRole();
-  if (isCashier) return null;
-  return (
-    <Link
-      to={"/inventory" as string}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium",
-        lowStockCount > 0
-          ? "border-destructive/30 bg-destructive/5 text-destructive"
-          : "border-border bg-card text-muted-foreground",
-      )}
-    >
-      <AlertTriangle className="h-3.5 w-3.5" />
-      {lowStockCount} လက်ကျန်နည်း
-    </Link>
-  );
-}
 
 function Brand({ collapsed = false }: { collapsed?: boolean }) {
   const logo = useStoreLogo();
@@ -321,10 +274,6 @@ export function PosShell({
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {actions}
-              <div className="hidden items-center gap-2 sm:flex">
-                <LowStockBadge />
-                <StatusBadge />
-              </div>
             </div>
           </div>
         </header>
