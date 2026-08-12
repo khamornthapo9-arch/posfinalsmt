@@ -189,7 +189,14 @@ function InventoryPage() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                    ကုန်ပစ္စည်း ရှာမတွေ့ပါ။
+                    {items.length === 0 ? (
+                      <div className="space-y-2">
+                        <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
+                        <p className="text-xs">"ဥပမာကုန်ပစ္စည်းထည့်မည်" ခလုတ်ကို နှိပ်ပြီး စမ်းသပ်နိုင်ပါသည်။</p>
+                      </div>
+                    ) : (
+                      "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
+                    )}
                   </td>
                 </tr>
               )}
