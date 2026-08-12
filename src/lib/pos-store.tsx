@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
-import { posDb, type CachedItem, type PendingSale, type PendingSaleLine } from "@/lib/pos-db";
+import { posDb, type CachedItem, type ItemUnit, type PendingSale, type PendingSaleLine } from "@/lib/pos-db";
 import { DEMO_CATALOG } from "@/lib/demo-catalog";
 import { CREDIT_METHOD } from "@/lib/accounting-store";
 
