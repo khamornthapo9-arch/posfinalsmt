@@ -1,5 +1,5 @@
 import { useAuth } from "@/lib/auth-store";
-import { money } from "@/lib/pos-utils";
+import { DEFAULT_CURRENCY, money } from "@/lib/pos-utils";
 
 /** Currency + tax settings pulled from the active store record. */
 export function useStoreSettings() {
