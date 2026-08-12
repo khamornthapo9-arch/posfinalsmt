@@ -54,6 +54,7 @@ interface SaleRow {
   id: string;
   total_amount: number;
   payment_method: string;
+  payment_breakdown: { method: string; amount: number }[] | null;
   is_offline_sync: boolean;
   created_at: string;
   status: string;
@@ -69,6 +70,20 @@ interface SaleRow {
     unit_price: number;
     items: { name: string; cost_price: number } | null;
   }[];
+}
+
+interface DebtPaymentRow {
+  id: string;
+  amount: number;
+  method: string;
+  created_at: string;
+}
+
+interface ExpenseRow {
+  id: string;
+  amount: number;
+  paid_with: string;
+  spent_at: string;
 }
 
 function startOf(range: RangeKey) {
