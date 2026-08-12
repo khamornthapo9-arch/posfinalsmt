@@ -13,6 +13,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { PosProvider } from "../lib/pos-store";
 import { AuthProvider } from "../lib/auth-store";
+import { RoleProvider } from "../lib/roles";
+
 import { AccountingProvider } from "../lib/accounting-store";
 import { Toaster } from "../components/ui/sonner";
 
