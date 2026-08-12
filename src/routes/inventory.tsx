@@ -319,8 +319,10 @@ function ProductModal({
     min_stock_threshold: number;
     barcode?: string | null;
     qr_value?: string | null;
+    units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[];
   }) => Promise<void>;
 }) {
+  const { isPro } = useStoreSettings();
   const [form, setForm] = useState<typeof EMPTY>(
     item
       ? {
@@ -334,6 +336,16 @@ function ProductModal({
           qr_value: item.qr_value ?? "",
         }
       : EMPTY,
+  );
+  const [units, setUnits] = useState<{ unit_name: string; conversion: string; price: string; is_default: boolean }[]>(
+    item?.units?.length
+      ? item.units.map((u) => ({
+          unit_name: u.unit_name,
+          conversion: String(u.conversion),
+          price: String(u.price),
+          is_default: Boolean(u.is_default),
+        }))
+      : [],
   );
   const [saving, setSaving] = useState(false);
 
@@ -364,7 +376,7 @@ function ProductModal({
           {field("sku", "SKU နံပါတ်")}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {field("barcode", "ဘားကုဒ် (မထည့်လျှင် SKU သုံးမည်)")}
-            {field("qr_value", "QR တန်ဖိုး (မထည့်လျှင် SKU သုံးမည်)")}
+            {field("qr_value", "QR တန်ဖိုး (မထည့်လျှင် SKU သုံး�မည်)")}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {field("price", "စျေးနှုန်း", "number")}
@@ -372,6 +384,79 @@ function ProductModal({
             {field("stock_quantity", "လက်ကျန်", "number")}
             {field("min_stock_threshold", "သတိပေး ရေတွက်မှု", "number")}
           </div>
+
+          {isPro ? (
+            <div className="rounded-lg border border-border bg-card p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold">ထုပ်ပိုးမှု အရွယ်အစား</span>
+                <button
+                  onClick={() =>
+                    setUnits((prev) => [
+                      ...prev,
+                      { unit_name: "", conversion: "", price: "", is_default: false },
+                    ])
+                  }
+                  className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary"
+                >
+                  <Plus className="h-3 w-3" /> အရွယ်အစား ထည့်မည်
+                </button>
+              </div>
+              <div className="space-y-2">
+                {units.map((u, idx) => (
+                  <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_auto] items-center gap-2">
+                    <input
+                      placeholder="အမည် (ဥပ. ထုပ်)"
+                      value={u.unit_name}
+                      onChange={(e) =>
+                        setUnits((prev) =>
+                          prev.map((x, i) => (i === idx ? { ...x, unit_name: e.target.value } : x)),
+                        )
+                      }
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder="အခြေခံထည့်စဉ်"
+                      value={u.conversion}
+                      onChange={(e) =>
+                        setUnits((prev) =>
+                          prev.map((x, i) => (i === idx ? { ...x, conversion: e.target.value } : x)),
+                        )
+                      }
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none"
+                    />
+                    <input
+                      type="number"
+                      placeholder="စျေးနှုန်း"
+                      value={u.price}
+                      onChange={(e) =>
+                        setUnits((prev) =>
+                          prev.map((x, i) => (i === idx ? { ...x, price: e.target.value } : x)),
+                        )
+                      }
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none"
+                    />
+                    <button
+                      onClick={() => setUnits((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-muted-foreground hover:text-destructive"
+                      aria-label="ဖျက်ရန်"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                {units.length === 0 && (
+                  <p className="text-xs text-muted-foreground">အခြားထုပ်ပိုးမှု အရွယ်အစားများ ထည့်သွင်းနိုင်သည်။</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <Crown className="h-4 w-4 text-amber-500" />
+              ထုပ်ပိုးမှု အရွယ်အစား စီမံခန့်ခွဲရန် Pro Plan လိုအပ်သည်။
+            </div>
+          )}
         </div>
         <button
           disabled={saving || !form.name.trim() || !form.sku.trim()}
@@ -387,6 +472,16 @@ function ProductModal({
               min_stock_threshold: Math.trunc(Number(form.min_stock_threshold) || 0),
               barcode: form.barcode.trim() || null,
               qr_value: form.qr_value.trim() || null,
+              units: isPro
+                ? units
+                    .filter((u) => u.unit_name.trim() && Number(u.conversion) > 0)
+                    .map((u) => ({
+                      unit_name: u.unit_name.trim(),
+                      conversion: Math.trunc(Number(u.conversion) || 1),
+                      price: Number(u.price) || 0,
+                      is_default: u.is_default,
+                    }))
+                : undefined,
             }).finally(() => setSaving(false));
           }}
           className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-transform hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
