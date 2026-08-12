@@ -423,6 +423,38 @@ function RegisterPage() {
             </button>
           </div>
 
+          {lowStockItems.length > 0 && (
+            <div className="mb-3 flex items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+              <p className="min-w-0 flex-1 text-xs font-medium">
+                လက်ကျန်နည်းနေသော ပစ္စည်း {lowStockItems.length} မျိုး ရှိပါသည်။
+              </p>
+              <Link
+                to="/suppliers"
+                className="press shrink-0 rounded-md bg-warning px-3 py-1.5 text-xs font-semibold text-white"
+              >
+                ဝယ်ယူမှု ဖန်တီးမည်
+              </Link>
+            </div>
+          )}
+
+          <div className="mb-3 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            {["အားလုံး", ...categories].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategory(cat)}
+                className={cn(
+                  "press shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
+                  category === cat
+                    ? "border-transparent bg-primary text-primary-foreground"
+                    : "border-border bg-card hover:bg-accent",
+                )}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             {filtered.map((item) => {
               const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
@@ -431,26 +463,45 @@ function RegisterPage() {
                   key={item.id}
                   onClick={() => addToCart(item)}
                   disabled={item.stock_quantity <= 0}
-                  className="flex min-h-[112px] flex-col rounded-lg border border-border bg-card px-4 py-3 text-left shadow-sm transition-colors hover:border-primary/60 disabled:opacity-50"
+                  className="press relative flex min-h-[132px] flex-col overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm transition-colors hover:border-primary/60 disabled:opacity-50"
                 >
-                  <span className="line-clamp-2 text-sm font-medium">{item.name}</span>
-                  <span className="mt-0.5 text-xs text-muted-foreground">{item.sku}</span>
-                  <div className="mt-auto flex items-center justify-between pt-3">
-                    <span className="text-base font-semibold tabular-nums">{fmt(item.price)}</span>
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      loading="lazy"
+                      className="h-20 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-20 w-full items-center justify-center bg-primary/5 text-lg font-bold text-primary">
+                      {item.name.slice(0, 2)}
+                    </div>
+                  )}
+                  {status !== "ok" && (
                     <span
                       className={cn(
-                        "rounded-md px-2 py-0.5 text-[11px] font-medium",
-                        status === "ok" && "bg-emerald-50 text-emerald-700",
-                        status === "low" && "bg-amber-50 text-amber-700",
-                        status === "out" && "bg-destructive/10 text-destructive",
+                        "badge-pop absolute right-2 top-2 rounded-md px-2 py-0.5 text-[10px] font-bold text-white",
+                        status === "low" ? "bg-warning" : "bg-destructive",
                       )}
                     >
-                      {status === "out" ? "ကုန်နေသည်" : `${item.stock_quantity} ကျန်`}
+                      {status === "low" ? "လက်ကျန်နည်း" : "ကုန်နေသည်"}
                     </span>
+                  )}
+                  <div className="flex flex-1 flex-col px-3 py-2">
+                    <span className="line-clamp-2 text-sm font-semibold">{item.name}</span>
+                    <div className="mt-auto flex items-center justify-between pt-2">
+                      <span className="text-base font-bold tabular-nums text-primary">
+                        {fmt(item.price)}
+                      </span>
+                      <span className="text-[11px] font-medium text-muted-foreground">
+                        {item.stock_quantity} ကျန်
+                      </span>
+                    </div>
                   </div>
                 </button>
               );
             })}
+
             {filtered.length === 0 && (
               <div className="col-span-full flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center">
                 {items.length === 0 ? (
