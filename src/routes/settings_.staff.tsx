@@ -70,9 +70,18 @@ function StaffSettingsPage() {
 
   const addStaff = async () => {
     if (!store) return;
-    if (!name.trim()) return toast.error("ဝန်ထမ်း အမည် ထည့်ပါ");
-    if (!/^\d{4,6}$/.test(pin)) return toast.error("PIN သည် ဂဏန်း ၄ လုံးမှ ၆ လုံးအထိ ဖြစ်ရမည်");
-    if (rows.some((r) => r.pin_code === pin)) return toast.error("ဤ PIN ကို အသုံးပြုပြီးဖြစ်သည်");
+    if (!name.trim()) {
+      toast.error("ဝန်ထမ်း အမည် ထည့်ပါ");
+      return;
+    }
+    if (!/^\d{4,6}$/.test(pin)) {
+      toast.error("PIN သည် ဂဏန်း ၄ လုံးမှ ၆ လုံးအထိ ဖြစ်ရမည်");
+      return;
+    }
+    if (rows.some((r) => r.pin_code === pin)) {
+      toast.error("ဤ PIN ကို အသုံးပြုပြီးဖြစ်သည်");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from("store_members").insert({
       store_id: store.id,
@@ -82,7 +91,10 @@ function StaffSettingsPage() {
       is_active: true,
     });
     setSaving(false);
-    if (error) return toast.error("ဝန်ထမ်း ထည့်၍ မရပါ");
+    if (error) {
+      toast.error("ဝန်ထမ်း ထည့်၍ မရပါ");
+      return;
+    }
     toast.success("ဝန်ထမ်း ထည့်သွင်းပြီးပါပြီ");
     setName("");
     setPin("");

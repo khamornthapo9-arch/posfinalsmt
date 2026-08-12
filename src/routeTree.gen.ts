@@ -19,6 +19,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SuppliersRouteImport } from './routes/suppliers'
 import { Route as SettingsPlanRouteImport } from './routes/settings_.plan'
 import { Route as SettingsReceiptRouteImport } from './routes/settings_.receipt'
+import { Route as SettingsStaffRouteImport } from './routes/settings_.staff'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +71,11 @@ const SettingsReceiptRoute = SettingsReceiptRouteImport.update({
   path: '/settings/receipt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsStaffRoute = SettingsStaffRouteImport.update({
+  id: '/settings_/staff',
+  path: '/settings/staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/suppliers': typeof SuppliersRoute
   '/settings/plan': typeof SettingsPlanRoute
   '/settings/receipt': typeof SettingsReceiptRoute
+  '/settings/staff': typeof SettingsStaffRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/suppliers': typeof SuppliersRoute
   '/settings/plan': typeof SettingsPlanRoute
   '/settings/receipt': typeof SettingsReceiptRoute
+  '/settings/staff': typeof SettingsStaffRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/suppliers': typeof SuppliersRoute
   '/settings_/plan': typeof SettingsPlanRoute
   '/settings_/receipt': typeof SettingsReceiptRoute
+  '/settings_/staff': typeof SettingsStaffRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/settings/plan'
     | '/settings/receipt'
+    | '/settings/staff'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/settings/plan'
     | '/settings/receipt'
+    | '/settings/staff'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/suppliers'
     | '/settings_/plan'
     | '/settings_/receipt'
+    | '/settings_/staff'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   SuppliersRoute: typeof SuppliersRoute
   SettingsPlanRoute: typeof SettingsPlanRoute
   SettingsReceiptRoute: typeof SettingsReceiptRoute
+  SettingsStaffRoute: typeof SettingsStaffRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsReceiptRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings_/staff': {
+      id: '/settings_/staff'
+      path: '/settings/staff'
+      fullPath: '/settings/staff'
+      preLoaderRoute: typeof SettingsStaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -246,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuppliersRoute: SuppliersRoute,
   SettingsPlanRoute: SettingsPlanRoute,
   SettingsReceiptRoute: SettingsReceiptRoute,
+  SettingsStaffRoute: SettingsStaffRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
