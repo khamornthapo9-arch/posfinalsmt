@@ -1,14 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Barcode as BarcodeIcon, Crown, PackagePlus, Pencil, Plus, Printer, QrCode, Search, Trash2, X } from "lucide-react";
+import {
+  Barcode as BarcodeIcon,
+  Crown,
+  Download,
+  FileSpreadsheet,
+  Loader2,
+  PackagePlus,
+  Pencil,
+  Plus,
+  Printer,
+  QrCode,
+  Search,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import Barcode from "react-barcode";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAuth } from "@/lib/auth-store";
 import { usePos } from "@/lib/pos-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
-import { money, stockStatus } from "@/lib/pos-utils";
+import { downloadCsv, money, stockStatus } from "@/lib/pos-utils";
+import {
+  SAMPLE_CSV_ROWS,
+  generateSku,
+  itemsToCsvRows,
+  parseItemsCsv,
+  type ParsedItemRow,
+} from "@/lib/item-csv";
 import type { CachedItem, ItemUnit } from "@/lib/pos-db";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +74,8 @@ function InventoryPage() {
   const [editing, setEditing] = useState<CachedItem | "new" | null>(null);
   const [labelItem, setLabelItem] = useState<CachedItem | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const { isPro } = useStoreSettings();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -92,6 +116,18 @@ function InventoryPage() {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => downloadCsv(`items-${new Date().toISOString().slice(0, 10)}.csv`, itemsToCsvRows(items))}
+            className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-accent"
+          >
+            <Download className="h-4 w-4" /> ကုန်ပစ္စည်းများ ထုတ်ယူမည် (CSV)
+          </button>
+          <button
+            onClick={() => setImportOpen(true)}
+            className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-accent"
+          >
+            <Upload className="h-4 w-4" /> CSV ဖြင့် ထည့်သွင်းမည်
+          </button>
           <button
             onClick={() => setEditing("new")}
             className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/90 active:scale-95"
@@ -287,12 +323,44 @@ function InventoryPage() {
           onClose={() => setEditing(null)}
           onSave={async (values) => {
             try {
-              await saveItem(values);
+              await saveItem({
+                ...values,
+                sku: values.sku.trim() || generateSku(items.map((i) => i.sku)),
+              });
               toast.success("ကုန်ပစ္စည်း သိမ်းဆည်းပြီးပါပြီ");
               setEditing(null);
             } catch {
               toast.error("သိမ်းဆည်း၍ မရပါ — SKU နံပါတ် အသုံးပြုပြီးသား ဖြစ်နိုင်ပါသည်");
             }
+          }}
+        />
+      )}
+
+      {importOpen && (
+        <ImportModal
+          items={items}
+          isPro={isPro}
+          onClose={() => setImportOpen(false)}
+          onImport={async (rows) => {
+            const bySku = new Map(items.map((i) => [i.sku, i]));
+            let created = 0;
+            let updated = 0;
+            for (const row of rows) {
+              const existing = bySku.get(row.sku);
+              await saveItem({
+                ...(existing ? { id: existing.id } : {}),
+                sku: row.sku,
+                name: row.name,
+                price: row.price,
+                cost_price: row.cost_price,
+                stock_quantity: row.stock_quantity,
+                min_stock_threshold: existing?.min_stock_threshold ?? 5,
+                ...(row.category ? { category: row.category } : {}),
+              });
+              if (existing) updated += 1;
+              else created += 1;
+            }
+            return { created, updated };
           }}
         />
       )}
@@ -373,10 +441,10 @@ function ProductModal({
         </div>
         <div className="space-y-3">
           {field("name", "အမည်")}
-          {field("sku", "SKU နံပါတ်")}
+          {field("sku", "SKU နံပါတ် (မထည့်လျှင် ၈ လုံး အလိုအလျောက် ထုတ်ပေးမည်)")}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {field("barcode", "ဘားကုဒ် (မထည့်လျှင် SKU သုံးမည်)")}
-            {field("qr_value", "QR တန်ဖိုး (မထည့်လျှင် SKU သုံး�မည်)")}
+            {field("qr_value", "QR တန်ဖိုး (မထည့်လျှင် SKU သုံးမည်)")}
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {field("price", "စျေးနှုန်း", "number")}
@@ -459,7 +527,7 @@ function ProductModal({
           )}
         </div>
         <button
-          disabled={saving || !form.name.trim() || !form.sku.trim()}
+          disabled={saving || !form.name.trim()}
           onClick={() => {
             setSaving(true);
             void onSave({
@@ -633,6 +701,142 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
             ပိတ်မည်
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ImportModal({
+  items,
+  isPro,
+  onClose,
+  onImport,
+}: {
+  items: CachedItem[];
+  isPro: boolean;
+  onClose: () => void;
+  onImport: (rows: ParsedItemRow[]) => Promise<{ created: number; updated: number }>;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [rows, setRows] = useState<ParsedItemRow[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [fileName, setFileName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const handleFile = async (file: File) => {
+    const text = await file.text();
+    const result = parseItemsCsv(text, items.map((i) => i.sku));
+    setRows(result.rows);
+    setErrors(result.errors);
+    setFileName(file.name);
+    if (result.rows.length === 0) toast.error("ထည့်သွင်းနိုင်သည့် စာကြောင်း မတွေ့ပါ");
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-6">
+      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-xl">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <FileSpreadsheet className="h-4 w-4" /> ကုန်ပစ္စည်း အစုလိုက် ထည့်သွင်းခြင်း
+          </h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {!isPro && (
+          <div className="mb-3 flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+            <Crown className="h-4 w-4 text-amber-500" />
+            အစုလိုက် ထည့်သွင်းခြင်းသည် Pro Plan အင်္ဂါရပ် ဖြစ်သည်။
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          ကော်လံများ: Name, SKU, Selling_Price, Cost_Price, Stock_Quantity, Unit_Name, Category။ SKU
+          မထည့်ထားသော စာကြောင်းများအတွက် ၈ လုံး SKU အလိုအလျောက် ထုတ်ပေးမည်။ Excel ဖိုင်ကို CSV အဖြစ်
+          သိမ်းပြီး တင်ပါ။
+        </p>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            onClick={() => downloadCsv("items-template.csv", SAMPLE_CSV_ROWS)}
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+          >
+            <Download className="h-4 w-4" /> နမူနာ CSV ရယူမည်
+          </button>
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+          >
+            <Upload className="h-4 w-4" /> ဖိုင် ရွေးမည်
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".csv,.txt,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleFile(file);
+            }}
+          />
+        </div>
+
+        {fileName && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {fileName} — စာကြောင်း {rows.length} ခု ဖတ်ပြီးပါပြီ
+          </p>
+        )}
+
+        {errors.length > 0 && (
+          <ul className="mt-2 max-h-28 space-y-1 overflow-y-auto rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+            {errors.slice(0, 20).map((err) => (
+              <li key={err}>{err}</li>
+            ))}
+          </ul>
+        )}
+
+        {rows.length > 0 && (
+          <div className="mt-3 max-h-48 overflow-y-auto rounded-lg border border-border">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/50 text-left text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-1.5">အမည်</th>
+                  <th className="px-2 py-1.5">SKU</th>
+                  <th className="px-2 py-1.5 text-right">စျေးနှုန်း</th>
+                  <th className="px-2 py-1.5 text-right">လက်ကျန်</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice(0, 100).map((row) => (
+                  <tr key={row.sku} className="border-t border-border">
+                    <td className="px-2 py-1.5">{row.name}</td>
+                    <td className="px-2 py-1.5 text-muted-foreground">{row.sku}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{money(row.price)}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">{row.stock_quantity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <button
+          disabled={busy || rows.length === 0 || !isPro}
+          onClick={() => {
+            setBusy(true);
+            void onImport(rows)
+              .then(({ created, updated }) => {
+                toast.success(`အသစ် ${created} ခု၊ ပြင်ဆင် ${updated} ခု ထည့်သွင်းပြီးပါပြီ`);
+                onClose();
+              })
+              .catch(() => toast.error("ထည့်သွင်း၍ မရပါ"))
+              .finally(() => setBusy(false));
+          }}
+          className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {busy && <Loader2 className="h-4 w-4 animate-spin" />} ထည့်သွင်းမည်
+        </button>
       </div>
     </div>
   );

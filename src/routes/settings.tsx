@@ -43,7 +43,7 @@ export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
 
-const CURRENCIES = ["$", "€", "£", "¥", "₹", "K"];
+const CURRENCIES = ["Ks", "ကျပ်", "$", "€", "£", "¥", "₹"];
 
 const PLANS = [
   {
@@ -117,7 +117,7 @@ function SettingsPage() {
   useEffect(() => {
     if (!store) return;
     setName(store.name);
-    setSymbol(store.currency_symbol || "$");
+    setSymbol(store.currency_symbol || "Ks");
     setTax(String(store.tax_rate ?? 5));
     setAddress(store.address ?? "");
     setCashierName(store.cashier_name ?? "");
@@ -137,7 +137,7 @@ function SettingsPage() {
     try {
       await updateStore({
         name: name.trim(),
-        currency_symbol: symbol.trim() || "$",
+        currency_symbol: symbol.trim() || "Ks",
         tax_rate: Number(tax) || 0,
         address: address.trim() || null,
         cashier_name: cashierName.trim() || null,
@@ -284,7 +284,7 @@ function SettingsPage() {
                     id="currency"
                     value={symbol}
                     onChange={(e) => setSymbol(e.target.value)}
-                    maxLength={3}
+                    maxLength={6}
                     className={cn(inputClass, "w-20 text-center")}
                   />
                   <div className="flex flex-wrap gap-1">
@@ -328,12 +328,26 @@ function SettingsPage() {
                   placeholder="အမှတ်၊ လမ်း၊ မြို့နယ်"
                   className={inputClass}
                 />
-                <Link
-                  to="/settings/receipt"
-                  className="mt-2 inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
-                >
-                  ပြေစာ ဒီဇိုင်း ပြင်ဆင်ရန်
-                </Link>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Link
+                    to="/settings/receipt"
+                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+                  >
+                    ပြေစာ ဒီဇိုင်း ပြင်ဆင်ရန်
+                  </Link>
+                  <Link
+                    to="/settings/plan"
+                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+                  >
+                    Plan နှင့် Pro အဆင့်မြှင့်ခြင်း
+                  </Link>
+                  <Link
+                    to="/settings/staff"
+                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+                  >
+                    ဝန်ထမ်း စီမံခန့်ခွဲမှု
+                  </Link>
+                </div>
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass} htmlFor="cashier-name">
