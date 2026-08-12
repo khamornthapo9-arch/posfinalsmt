@@ -117,17 +117,23 @@ function RegisterPage() {
     [openTabs, activeTable],
   );
 
-  const addToCart = useCallback((item: CachedItem, qty = 1) => {
+  const addToCart = useCallback((item: CachedItem, unit?: ItemUnit) => {
+    const unitName = unit?.unit_name;
+    const conversion = unit?.conversion ?? 1;
+    const unitPrice = unit?.price ?? item.price;
+    const lineKey = `${item.id}:${unitName ?? "base"}`;
+
     setCart((prev) => {
-      const existing = prev.find((line) => line.item_id === item.id);
-      const nextQty = (existing?.quantity ?? 0) + qty;
-      if (nextQty > item.stock_quantity) {
+      const existing = prev.find((line) => line.item_id === item.id && (line.unit_name ?? "base") === (unitName ?? "base"));
+      const nextQty = (existing?.quantity ?? 0) + 1;
+      const baseQty = nextQty * conversion;
+      if (baseQty > item.stock_quantity) {
         toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
         return prev;
       }
       if (existing) {
         return prev.map((line) =>
-          line.item_id === item.id
+          line.item_id === item.id && (line.unit_name ?? "base") === (unitName ?? "base")
             ? { ...line, quantity: nextQty, stock: item.stock_quantity }
             : line,
         );
@@ -138,8 +144,10 @@ function RegisterPage() {
           item_id: item.id,
           sku: item.sku,
           name: item.name,
-          quantity: qty,
-          unit_price: item.price,
+          quantity: 1,
+          unit_price: unitPrice,
+          unit_name: unitName,
+          conversion,
           stock: item.stock_quantity,
         },
       ];
