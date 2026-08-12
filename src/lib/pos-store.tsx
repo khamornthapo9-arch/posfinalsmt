@@ -22,6 +22,8 @@ export interface OpenTabLine {
   name: string;
   quantity: number;
   unit_price: number;
+  unit_name?: string;
+  conversion?: number;
 }
 
 export interface OpenTab {
