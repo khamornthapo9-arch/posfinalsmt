@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Barcode as BarcodeIcon, PackagePlus, Pencil, Plus, Printer, QrCode, Search, Trash2, X } from "lucide-react";
+import { Barcode as BarcodeIcon, Crown, PackagePlus, Pencil, Plus, Printer, QrCode, Search, Trash2, X } from "lucide-react";
 import Barcode from "react-barcode";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAuth } from "@/lib/auth-store";
 import { usePos } from "@/lib/pos-store";
+import { useStoreSettings } from "@/lib/use-store-settings";
 import { money, stockStatus } from "@/lib/pos-utils";
-import type { CachedItem } from "@/lib/pos-db";
+import type { CachedItem, ItemUnit } from "@/lib/pos-db";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/inventory")({
