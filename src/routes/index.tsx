@@ -562,29 +562,81 @@ function RegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 px-4">
-            {PAYMENTS.map((method) => (
-              <button
-                key={method.id}
-                onClick={() => selectPayment(method.id)}
+          <div className="flex items-center justify-between px-4 pb-2">
+            <span className="text-xs font-medium text-muted-foreground">ငွေခွဲပေးမည်</span>
+            <button
+              role="switch"
+              aria-checked={splitMode}
+              aria-label="ငွေခွဲပေးမည်"
+              onClick={() => {
+                setSplitMode((v) => !v);
+                setSplits({});
+              }}
+              className={cn(
+                "press relative h-6 w-11 rounded-full transition-colors",
+                splitMode ? "bg-primary" : "bg-muted",
+              )}
+            >
+              <span
                 className={cn(
-                  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
-                  payment === method.id
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border hover:bg-accent",
+                  "absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all",
+                  splitMode ? "left-[22px]" : "left-0.5",
                 )}
-              >
-                {method.logo && (
-                  <img
-                    src={method.logo}
-                    alt={`${method.label} logo`}
-                    className="h-5 w-5 rounded-xs bg-white object-contain p-px"
-                  />
-                )}
-                {method.label}
-              </button>
-            ))}
+              />
+            </button>
           </div>
+
+          <div className="grid grid-cols-2 gap-2 px-4">
+            {PAYMENTS.map((method) => {
+              const active = splitMode ? (splits[method.id] ?? 0) > 0 : payment === method.id;
+              return (
+                <div key={method.id} className="space-y-1">
+                  <button
+                    onClick={() => (splitMode ? toggleSplit(method.id) : selectPayment(method.id))}
+                    className={cn(
+                      "press inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
+                      active
+                        ? `${method.tone} text-white border-transparent`
+                        : "border-border hover:bg-accent",
+                    )}
+                  >
+                    {method.logo && (
+                      <img
+                        src={method.logo}
+                        alt={`${method.label} logo`}
+                        className="h-5 w-5 rounded-xs bg-white object-contain p-px"
+                      />
+                    )}
+                    {method.label}
+                  </button>
+                  {splitMode && (
+                    <input
+                      value={splits[method.id] ?? ""}
+                      onChange={(e) =>
+                        setSplits((prev) => ({ ...prev, [method.id]: Number(e.target.value) || 0 }))
+                      }
+                      inputMode="numeric"
+                      placeholder="0"
+                      aria-label={`${method.label} ပမာဏ`}
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-right text-xs tabular-nums outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {splitMode && (
+            <div
+              className={cn(
+                "mx-4 mt-2 flex items-center justify-between rounded-md px-3 py-2 text-sm font-semibold",
+                remaining === 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive",
+              )}
+            >
+              <span>ကျန်ငွေ</span>
+              <span className="tabular-nums">{fmt(remaining)}</span>
+            </div>
+          )}
 
           {payment === CREDIT_METHOD && (
             <div className="mx-4 mt-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs">
@@ -612,28 +664,38 @@ function RegisterPage() {
                 <button
                   onClick={() => void sendToKitchen()}
                   disabled={cart.length === 0 || busy}
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-background text-sm font-semibold hover:bg-accent disabled:opacity-50"
+                  className="press inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-border bg-background text-sm font-semibold hover:bg-accent disabled:opacity-50"
                 >
                   <ChefHat className="h-4 w-4" /> ခေတ္တသိမ်း / မီးဖိုချောင်သို့ပို့ရန်
                 </button>
                 <button
                   onClick={() => void payAndClose()}
                   disabled={cart.length === 0 || busy}
-                  className="h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  className="press h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
                   {busy ? "လုပ်ဆောင်နေသည်…" : `ငွေရှင်းပြီး စားပွဲပိတ်မည် · ${fmt(total)}`}
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => void completeSale()}
-                disabled={cart.length === 0 || busy}
-                className="h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              >
-                {busy ? "လုပ်ဆောင်နေသည်…" : `စာရင်းတွက်မည်· ${fmt(total)}`}
-              </button>
+              <>
+                <button
+                  onClick={() => setHoldNoteOpen(true)}
+                  disabled={cart.length === 0 || busy}
+                  className="press inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-warning bg-warning/10 text-sm font-semibold text-warning hover:bg-warning/20 disabled:opacity-50"
+                >
+                  <PauseCircle className="h-4 w-4" /> ခဏဆိုင်းထားမည်
+                </button>
+                <button
+                  onClick={() => void completeSale()}
+                  disabled={cart.length === 0 || busy || (splitMode && remaining !== 0)}
+                  className="press h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {busy ? "လုပ်ဆောင်နေသည်…" : `စာရင်းတွက်မည်· ${fmt(total)}`}
+                </button>
+              </>
             )}
           </div>
+
         </section>
       </div>
 
