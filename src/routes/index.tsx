@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, History, PauseCircle, Printer, X } from "lucide-react";
+import { ArrowLeft, History, PauseCircle, Plus, Printer, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { ScannerModal } from "@/components/pos/scanner-modal";
