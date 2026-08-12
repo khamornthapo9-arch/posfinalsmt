@@ -218,7 +218,7 @@ function AnalyticsPage() {
   }, [sales]);
 
   const paymentBuckets = useMemo(() => {
-    const buckets: Record<string, number> = {
+    const buckets = {
       cashIn: 0,
       kbzIn: 0,
       waveIn: 0,
