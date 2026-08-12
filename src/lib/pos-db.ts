@@ -8,8 +8,11 @@ export interface CachedItem {
   cost_price: number;
   stock_quantity: number;
   min_stock_threshold: number;
+  category: string;
+  image_url: string | null;
   created_at: string;
 }
+
 
 export interface PendingSaleLine {
   item_id: string;
