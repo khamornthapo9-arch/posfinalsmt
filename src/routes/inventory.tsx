@@ -42,11 +42,12 @@ const EMPTY = {
 };
 
 function InventoryPage() {
-  const { items, saveItem, deleteItem } = usePos();
+  const { items, saveItem, deleteItem, seedDemoItems } = usePos();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [editing, setEditing] = useState<CachedItem | "new" | null>(null);
   const [labelItem, setLabelItem] = useState<CachedItem | null>(null);
+  const [seeding, setSeeding] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
