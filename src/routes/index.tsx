@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
   Boxes,
   Camera,
   ChefHat,
+  History,
   Minus,
+  PauseCircle,
   Plus,
   Printer,
   Search,
@@ -15,9 +18,12 @@ import {
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { ScannerModal } from "@/components/pos/scanner-modal";
-import { usePos } from "@/lib/pos-store";
+import { usePos, type HeldOrder, type OrderSummary, type PaymentSplit } from "@/lib/pos-store";
 import { useAccountingStore, CREDIT_METHOD, type Customer } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
+import { useStoreLogo } from "@/lib/use-store-logo";
+import { useReceiptSettings } from "@/lib/receipt-settings";
+import { useRole } from "@/lib/roles";
 import { stockStatus } from "@/lib/pos-utils";
 import type { CachedItem, PendingSaleLine } from "@/lib/pos-db";
 import { cn } from "@/lib/utils";
@@ -50,6 +56,7 @@ interface Receipt {
   tax: number;
   total: number;
   paymentMethod: string;
+  splits?: PaymentSplit[];
   timestamp: string;
   offline: boolean;
   tableNumber?: number | null;
@@ -67,23 +74,42 @@ interface KitchenTicket {
 }
 
 // Payment options in Myanmar
-const PAYMENTS: { id: string; label: string; logo?: string }[] = [
-  { id: "ငွေသား", label: "ငွေသား" },
-  { id: "kbzpay", label: "KBZ Pay", logo: "/kbzpay.webp" },
-  { id: "wavepay", label: "Wave Pay", logo: "/wavepay.webp" },
-  { id: CREDIT_METHOD, label: CREDIT_METHOD },
+const PAYMENTS: { id: string; label: string; logo?: string; tone: string }[] = [
+  { id: "ငွေသား", label: "ငွေသား", tone: "bg-success" },
+  { id: "kbzpay", label: "KBZ Pay", logo: "/kbzpay.webp", tone: "bg-primary" },
+  { id: "wavepay", label: "Wave Pay", logo: "/wavepay.webp", tone: "bg-warning" },
+  { id: CREDIT_METHOD, label: CREDIT_METHOD, tone: "bg-warning" },
 ];
 const TABLE_COUNT = 12;
 
 function RegisterPage() {
-  const { items, recordSale, openTabs, holdTab, closeTab } = usePos();
+  const {
+    items,
+    categories,
+    lowStockItems,
+    recordSale,
+    openTabs,
+    holdTab,
+    closeTab,
+    heldOrders,
+    holdOrder,
+    deleteHeldOrder,
+    recentOrders,
+    refundOrder,
+  } = usePos();
   const { fmt, taxRate, taxPercent, isRestaurant, store, address, cashierName, phoneNumbers } =
     useStoreSettings();
   const { customers, quickAddCustomer, postSale } = useAccountingStore();
+  const { isOwner } = useRole();
+  const logoUrl = useStoreLogo();
+  const { settings: receiptSettings } = useReceiptSettings();
 
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("အားလုံး");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [payment, setPayment] = useState<string>("ငွေသား");
+  const [splitMode, setSplitMode] = useState(false);
+  const [splits, setSplits] = useState<Record<string, number>>({});
   const [scannerOpen, setScannerOpen] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [ticket, setTicket] = useState<KitchenTicket | null>(null);
@@ -92,6 +118,9 @@ function RegisterPage() {
   const [notes, setNotes] = useState("");
   const [creditCustomer, setCreditCustomer] = useState<Customer | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [holdNoteOpen, setHoldNoteOpen] = useState(false);
+  const [heldOpen, setHeldOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
@@ -103,10 +132,15 @@ function RegisterPage() {
   const addToCart = useCallback((item: CachedItem, qty = 1) => {
     setCart((prev) => {
       const existing = prev.find((line) => line.item_id === item.id);
+      const nextQty = (existing?.quantity ?? 0) + qty;
+      if (nextQty > item.stock_quantity) {
+        toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
+        return prev;
+      }
       if (existing) {
         return prev.map((line) =>
           line.item_id === item.id
-            ? { ...line, quantity: line.quantity + qty, stock: item.stock_quantity }
+            ? { ...line, quantity: nextQty, stock: item.stock_quantity }
             : line,
         );
       }
@@ -161,24 +195,59 @@ function RegisterPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(
-      (item) => item.name.toLowerCase().includes(q) || item.sku.toLowerCase().includes(q),
-    );
-  }, [items, query]);
+    return items.filter((item) => {
+      if (category !== "အားလုံး" && item.category !== category) return false;
+      if (!q) return true;
+      return item.name.toLowerCase().includes(q) || item.sku.toLowerCase().includes(q);
+    });
+  }, [items, query, category]);
 
   const subtotal = cart.reduce((sum, line) => sum + line.quantity * line.unit_price, 0);
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
+  const splitPaid = Object.values(splits).reduce((sum, n) => sum + n, 0);
+  const remaining = Math.round((total - splitPaid) * 100) / 100;
+
+  const toggleSplit = (methodId: string) =>
+    setSplits((prev) => {
+      const next = { ...prev };
+      if (next[methodId]) {
+        delete next[methodId];
+      } else {
+        next[methodId] = Math.max(remaining, 0);
+      }
+      return next;
+    });
 
   const changeQty = (itemId: string, delta: number) =>
     setCart((prev) =>
       prev
-        .map((line) =>
-          line.item_id === itemId ? { ...line, quantity: line.quantity + delta } : line,
-        )
+        .map((line) => {
+          if (line.item_id !== itemId) return line;
+          const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? line.stock;
+          if (delta > 0 && line.quantity + delta > stock) {
+            toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
+            return line;
+          }
+          return { ...line, quantity: line.quantity + delta };
+        })
         .filter((line) => line.quantity > 0),
     );
+
+  const parkOrder = async (note: string) => {
+    if (cart.length === 0) return;
+    try {
+      await holdOrder({
+        lines: cart.map(({ stock: _s, ...line }) => line),
+        total,
+        note,
+      });
+      setCart([]);
+      toast.success("ဘောက်ချာကို ခဏဆိုင်းထားပါပြီ");
+    } catch {
+      toast.error("ခဏဆိုင်း၍ မရပါ");
+    }
+  };
 
   const openTable = (tableNumber: number) => {
     const tab = openTabs.find((t) => t.table_number === tableNumber);
@@ -208,7 +277,7 @@ function RegisterPage() {
       const saved = activeTab?.lines.find((l) => l.item_id === line.item_id)?.quantity ?? 0;
       const needed = line.quantity - saved;
       if (needed > 0 && (!current || current.stock_quantity < needed)) {
-        toast.error(`${line.name} အတွက် ပစ္စည်း လက်ကျန် မလုံလောက်ပါ`);
+        toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
         return false;
       }
     }
@@ -231,6 +300,7 @@ function RegisterPage() {
     setPayment(method);
     setCreditCustomer(null);
   };
+
 
   const completeSale = async () => {
     if (cart.length === 0 || !validateStock()) return;
