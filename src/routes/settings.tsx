@@ -101,6 +101,7 @@ function SettingsPage() {
   const { refreshCatalog, refreshTabs } = usePos();
   const navigate = useNavigate();
   const logoUrl = useStoreLogo();
+  const { isPro } = useStoreSettings();
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (!isOwner || !isActive) {
