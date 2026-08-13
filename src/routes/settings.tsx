@@ -95,10 +95,22 @@ const labelClass = "mb-1.5 block text-xs font-medium text-muted-foreground";
 
 function SettingsPage() {
   const { store, session, updateStore, refreshStore, signOut } = useAuth();
+  const { isOwner, isActive, role } = useRole();
   const { refreshCatalog, refreshTabs } = usePos();
   const navigate = useNavigate();
   const logoUrl = useStoreLogo();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  if (!isOwner || !isActive) {
+    return (
+      <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ">
+        <div className="p-6 text-sm text-muted-foreground">
+          ဤစာမျက်နှာကို ဆိုင်ပိုင်ရှင်သာ ကြည့်ရှုနိုင်ပါသည်။
+        </div>
+      </PosShell>
+    );
+  }
+
 
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("$");
