@@ -156,8 +156,6 @@ export function PosShell({
   const { session, store, loading } = useAuth();
   const {
     role,
-    isCashier,
-    isManager,
     isActive,
     canManageSettings,
     canManageInventory,
