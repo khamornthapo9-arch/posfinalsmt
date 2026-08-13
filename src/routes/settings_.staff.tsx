@@ -73,7 +73,7 @@ function StaffSettingsPage() {
   }, [load]);
 
   const addStaff = async () => {
-    if (!store) return;
+    if (!store || !isPro) return;
     if (!name.trim()) {
       toast.error("ဝန်ထမ်း အမည် ထည့်ပါ");
       return;
@@ -106,6 +106,7 @@ function StaffSettingsPage() {
     setAdding(false);
     void load();
   };
+
 
   const patch = async (id: string, values: Partial<StaffRow>) => {
     const { error } = await supabase.from("store_members").update(values).eq("id", id);
