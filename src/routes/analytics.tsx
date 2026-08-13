@@ -260,6 +260,10 @@ function AnalyticsPage() {
   const netCashOnHand = paymentBuckets.cashIn - paymentBuckets.cashRefunds - paymentBuckets.cashExpenses;
 
   const exportCsv = () => {
+    if (!isPro) {
+      toast.error("Pro Plan သို့ အဆင့်မြှင့်ပါ");
+      return;
+    }
     const rows: (string | number)[][] = [
       [
         "အရောင်း အိုင်ဒီ",
