@@ -380,10 +380,13 @@ function AnalyticsPage() {
           )}
           <button
             onClick={exportCsv}
-            className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+            disabled={!isPro}
+            className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
           >
             <Download className="h-4 w-4" /> CSV ထုတ်ယူမည်
+            {!isPro && <span className="ml-1 text-[10px] text-muted-foreground">(Pro)</span>}
           </button>
+
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
