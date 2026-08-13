@@ -100,7 +100,7 @@ function AnalyticsPage() {
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const { fmt } = useStoreSettings();
+  const { fmt, isPro } = useStoreSettings();
   const { customers, expenses } = useAccountingStore();
 
   const fromDate = range === "custom" ? new Date(`${from}T00:00:00`) : startOf(range);
