@@ -184,7 +184,7 @@ function SettingsPage() {
   };
 
   const uploadLogo = async (file: File) => {
-    if (!session) return;
+    if (!session || !isPro) return;
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "png";
