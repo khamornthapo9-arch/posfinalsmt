@@ -24,21 +24,17 @@ import { cn } from "@/lib/utils";
 const DEFAULT_LOGO = "/smt-pos-logo.png";
 
 const NAV = [
-  { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine },
-  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes },
-  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3 },
-  { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings },
+  { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine, roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
+  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes, roles: ["OWNER", "MANAGER"] as StoreRole[] },
+  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3, roles: ["OWNER", "MANAGER"] as StoreRole[] },
+  { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings, roles: ["OWNER"] as StoreRole[] },
 ] as const;
 
 const ADVANCED_NAV = [
-  { to: "/customers", label: "ဖောက်သည်များ", icon: Users },
-  { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", icon: Truck },
-  { to: "/expenses", label: "အသုံးစရိတ်", icon: Banknote },
+  { to: "/customers", label: "ဖောက်သည်များ", icon: Users, roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
+  { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", icon: Truck, roles: ["OWNER", "MANAGER"] as StoreRole[] },
+  { to: "/expenses", label: "အသုံးစရိတ်", icon: Banknote, roles: ["OWNER", "MANAGER"] as StoreRole[] },
 ] as const;
-
-/** Cashiers only ever reach the register and customer credit. */
-export const CASHIER_PATHS = ["/", "/customers"] as const;
-
 
 function Brand({ collapsed = false }: { collapsed?: boolean }) {
   const logo = useStoreLogo();
@@ -67,12 +63,10 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const { store } = useAuth();
-  const { isCashier } = useRole();
+  const { role, isActive } = useRole();
   const advanced = Boolean(store?.advanced_accounting_mode);
   const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
-  const items = isCashier
-    ? [NAV[0], ADVANCED_NAV[0]]
-    : all;
+  const items = all.filter((item) => item.roles.includes(role) && isActive);
   return (
     <nav className="flex flex-col gap-0.5">
       {items.map((item) => (
