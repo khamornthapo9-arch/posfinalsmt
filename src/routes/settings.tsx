@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
+import { useRole } from "@/lib/roles";
 import { usePos } from "@/lib/pos-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
