@@ -87,8 +87,12 @@ function ReceiptSettingsPage() {
         name: name.trim(),
         address: address.trim() || null,
         phone_numbers: phones,
-        receipt_header: header.trim() || null,
-        receipt_footer: footer.trim() || null,
+        ...(isPro
+          ? {
+              receipt_header: header.trim() || null,
+              receipt_footer: footer.trim() || null,
+            }
+          : {}),
       });
       toast.success("ပြေစာ ပြင်ဆင်ချက် သိမ်းပြီးပါပြီ");
     } catch (error) {
@@ -97,6 +101,7 @@ function ReceiptSettingsPage() {
       setSaving(false);
     }
   };
+
 
   if (!canManageSettings) {
     return (
