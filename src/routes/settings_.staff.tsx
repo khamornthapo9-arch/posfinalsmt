@@ -44,7 +44,8 @@ const ROLES: StoreRole[] = ["OWNER", "MANAGER", "CASHIER"];
 
 function StaffSettingsPage() {
   const { store } = useAuth();
-  const { isOwner, canManageStaff, isPro } = useStoreSettings();
+  const { isOwner, canManageStaff } = useRole();
+  const { isPro } = useStoreSettings();
   const [rows, setRows] = useState<StaffRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -64,6 +65,7 @@ function StaffSettingsPage() {
     setRows((data as StaffRow[] | null) ?? []);
     setLoading(false);
   }, [store]);
+
 
 
   useEffect(() => {
