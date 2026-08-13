@@ -122,7 +122,7 @@ function StaffSettingsPage() {
     }
   };
 
-  if (!isOwner) {
+  if (!canManageStaff) {
     return (
       <PosShell title="ဝန်ထမ်း စီမံခန့်ခွဲမှု">
         <div className="p-6 text-sm text-muted-foreground">
@@ -131,6 +131,7 @@ function StaffSettingsPage() {
       </PosShell>
     );
   }
+
 
   return (
     <PosShell title="ဝန်ထမ်း စီမံခန့်ခွဲမှု" subtitle={store?.name ?? ""}>
