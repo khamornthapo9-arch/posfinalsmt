@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
-import { ROLE_LABEL, type StoreRole } from "@/lib/roles";
+import { ROLE_LABEL, useRole, type StoreRole } from "@/lib/roles";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
 
