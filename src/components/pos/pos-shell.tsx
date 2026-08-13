@@ -154,7 +154,18 @@ export function PosShell({
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { session, store, loading } = useAuth();
-  const { isCashier, loading: roleLoading } = useRole();
+  const {
+    role,
+    isCashier,
+    isManager,
+    isActive,
+    canManageSettings,
+    canManageInventory,
+    canManageAccounting,
+    canManageCustomers,
+    canViewAnalytics,
+    loading: roleLoading,
+  } = useRole();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
@@ -163,10 +174,33 @@ export function PosShell({
   }, [loading, session, store, navigate]);
 
   useEffect(() => {
-    if (loading || roleLoading || !isCashier) return;
-    const allowed = pathname === "/" || pathname.startsWith("/customers");
+    if (loading || roleLoading) return;
+    if (!isActive) {
+      void navigate({ to: "/", replace: true });
+      return;
+    }
+    const allowed =
+      pathname === "/" ||
+      (pathname.startsWith("/customers") && canManageCustomers) ||
+      (pathname.startsWith("/inventory") && canManageInventory) ||
+      (pathname.startsWith("/analytics") && canViewAnalytics) ||
+      (pathname.startsWith("/suppliers") && canManageAccounting) ||
+      (pathname.startsWith("/expenses") && canManageAccounting) ||
+      ((pathname === "/settings" || pathname.startsWith("/settings/")) && canManageSettings);
     if (!allowed) void navigate({ to: "/", replace: true });
-  }, [loading, roleLoading, isCashier, pathname, store, navigate]);
+  }, [
+    loading,
+    roleLoading,
+    isActive,
+    role,
+    pathname,
+    canManageCustomers,
+    canManageInventory,
+    canViewAnalytics,
+    canManageAccounting,
+    canManageSettings,
+    navigate,
+  ]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("pos-sidebar-collapsed");
