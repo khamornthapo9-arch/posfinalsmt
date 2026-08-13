@@ -19,8 +19,10 @@ import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
+import { useRole } from "@/lib/roles";
 import { usePos } from "@/lib/pos-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
+import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings")({
@@ -95,10 +97,23 @@ const labelClass = "mb-1.5 block text-xs font-medium text-muted-foreground";
 
 function SettingsPage() {
   const { store, session, updateStore, refreshStore, signOut } = useAuth();
+  const { isOwner, isActive, role } = useRole();
   const { refreshCatalog, refreshTabs } = usePos();
   const navigate = useNavigate();
   const logoUrl = useStoreLogo();
+  const { isPro } = useStoreSettings();
   const fileRef = useRef<HTMLInputElement>(null);
+
+  if (!isOwner || !isActive) {
+    return (
+      <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ">
+        <div className="p-6 text-sm text-muted-foreground">
+          ဤစာမျက်နှာကို ဆိုင်ပိုင်ရှင်သာ ကြည့်ရှုနိုင်ပါသည်။
+        </div>
+      </PosShell>
+    );
+  }
+
 
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("$");
@@ -169,7 +184,7 @@ function SettingsPage() {
   };
 
   const uploadLogo = async (file: File) => {
-    if (!session) return;
+    if (!session || !isPro) return;
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "png";
@@ -250,8 +265,8 @@ function SettingsPage() {
                 }}
               />
               <button
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
+                onClick={() => isPro && fileRef.current?.click()}
+                disabled={uploading || !isPro}
                 className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
               >
                 {uploading ? (
@@ -259,8 +274,9 @@ function SettingsPage() {
                 ) : (
                   <Upload className="h-3.5 w-3.5" />
                 )}
-                လိုဂို တင်မည်
+                {isPro ? "လိုဂို တင်မည်" : "Pro သို့ အဆင့်မြှင့်ပါ"}
               </button>
+
             </div>
 
             <div className="grid flex-1 gap-3 sm:grid-cols-2">

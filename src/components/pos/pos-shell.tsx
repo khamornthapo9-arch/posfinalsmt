@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-store";
-import { useRole, ROLE_LABEL } from "@/lib/roles";
+import { useRole, ROLE_LABEL, type StoreRole } from "@/lib/roles";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
 
@@ -24,21 +24,17 @@ import { cn } from "@/lib/utils";
 const DEFAULT_LOGO = "/smt-pos-logo.png";
 
 const NAV = [
-  { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine },
-  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes },
-  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3 },
-  { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings },
+  { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine, roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
+  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes, roles: ["OWNER", "MANAGER"] as StoreRole[] },
+  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3, roles: ["OWNER", "MANAGER"] as StoreRole[] },
+  { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings, roles: ["OWNER"] as StoreRole[] },
 ] as const;
 
 const ADVANCED_NAV = [
-  { to: "/customers", label: "ဖောက်သည်များ", icon: Users },
-  { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", icon: Truck },
-  { to: "/expenses", label: "အသုံးစရိတ်", icon: Banknote },
+  { to: "/customers", label: "ဖောက်သည်များ", icon: Users, roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
+  { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", icon: Truck, roles: ["OWNER", "MANAGER"] as StoreRole[] },
+  { to: "/expenses", label: "အသုံးစရိတ်", icon: Banknote, roles: ["OWNER", "MANAGER"] as StoreRole[] },
 ] as const;
-
-/** Cashiers only ever reach the register and customer credit. */
-export const CASHIER_PATHS = ["/", "/customers"] as const;
-
 
 function Brand({ collapsed = false }: { collapsed?: boolean }) {
   const logo = useStoreLogo();
@@ -67,12 +63,10 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const { store } = useAuth();
-  const { isCashier } = useRole();
+  const { role, isActive } = useRole();
   const advanced = Boolean(store?.advanced_accounting_mode);
   const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
-  const items = isCashier
-    ? [NAV[0], ADVANCED_NAV[0]]
-    : all;
+  const items = all.filter((item) => item.roles.includes(role) && isActive);
   return (
     <nav className="flex flex-col gap-0.5">
       {items.map((item) => (
@@ -100,7 +94,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
 
 function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   const { session, signOut } = useAuth();
-  const { role } = useRole();
+  const { role, isActive, loading: roleLoading } = useRole();
   const navigate = useNavigate();
   const email = session?.user.email ?? "";
   const initial = email.charAt(0).toUpperCase() || "U";
@@ -117,7 +111,10 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
       <button
         onClick={handleSignOut}
         aria-label="Sign out"
-        className="mx-auto flex h-9 w-9 items-center justify-center rounded-md bg-sidebar-accent text-sm font-semibold text-sidebar-accent-foreground"
+        className={cn(
+          "mx-auto flex h-9 w-9 items-center justify-center rounded-md text-sm font-semibold",
+          isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "bg-destructive/20 text-destructive",
+        )}
       >
         {initial}
       </button>
@@ -127,12 +124,20 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <div className="rounded-md border border-sidebar-border bg-sidebar-accent/40 px-3 py-2.5">
       <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
+        <div
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold",
+            isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "bg-destructive/20 text-destructive",
+          )}
+        >
           {initial}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-medium text-sidebar-accent-foreground">{email}</p>
-          <p className="text-[11px] text-sidebar-foreground/60">{ROLE_LABEL[role]}</p>
+          <p className="text-[11px] text-sidebar-foreground/60">
+            {roleLoading ? "…" : ROLE_LABEL[role]}
+            {!isActive && !roleLoading && " · ရပ်ဆိုင်းထား"}
+          </p>
         </div>
         <button
           onClick={handleSignOut}
@@ -160,7 +165,16 @@ export function PosShell({
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { session, store, loading } = useAuth();
-  const { isCashier, loading: roleLoading } = useRole();
+  const {
+    role,
+    isActive,
+    canManageSettings,
+    canManageInventory,
+    canManageAccounting,
+    canManageCustomers,
+    canViewAnalytics,
+    loading: roleLoading,
+  } = useRole();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
@@ -169,10 +183,33 @@ export function PosShell({
   }, [loading, session, store, navigate]);
 
   useEffect(() => {
-    if (loading || roleLoading || !isCashier) return;
-    const allowed = pathname === "/" || pathname.startsWith("/customers");
+    if (loading || roleLoading) return;
+    if (!isActive) {
+      void navigate({ to: "/", replace: true });
+      return;
+    }
+    const allowed =
+      pathname === "/" ||
+      (pathname.startsWith("/customers") && canManageCustomers) ||
+      (pathname.startsWith("/inventory") && canManageInventory) ||
+      (pathname.startsWith("/analytics") && canViewAnalytics) ||
+      (pathname.startsWith("/suppliers") && canManageAccounting) ||
+      (pathname.startsWith("/expenses") && canManageAccounting) ||
+      ((pathname === "/settings" || pathname.startsWith("/settings/")) && canManageSettings);
     if (!allowed) void navigate({ to: "/", replace: true });
-  }, [loading, roleLoading, isCashier, pathname, store, navigate]);
+  }, [
+    loading,
+    roleLoading,
+    isActive,
+    role,
+    pathname,
+    canManageCustomers,
+    canManageInventory,
+    canViewAnalytics,
+    canManageAccounting,
+    canManageSettings,
+    navigate,
+  ]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("pos-sidebar-collapsed");

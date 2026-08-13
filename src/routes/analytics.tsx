@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
+import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadCsv } from "@/lib/pos-utils";
@@ -100,7 +101,7 @@ function AnalyticsPage() {
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const { fmt } = useStoreSettings();
+  const { fmt, isPro } = useStoreSettings();
   const { customers, expenses } = useAccountingStore();
 
   const fromDate = range === "custom" ? new Date(`${from}T00:00:00`) : startOf(range);
@@ -260,6 +261,10 @@ function AnalyticsPage() {
   const netCashOnHand = paymentBuckets.cashIn - paymentBuckets.cashRefunds - paymentBuckets.cashExpenses;
 
   const exportCsv = () => {
+    if (!isPro) {
+      toast.error("Pro Plan သို့ အဆင့်မြှင့်ပါ");
+      return;
+    }
     const rows: (string | number)[][] = [
       [
         "အရောင်း အိုင်ဒီ",
@@ -375,10 +380,13 @@ function AnalyticsPage() {
           )}
           <button
             onClick={exportCsv}
-            className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+            disabled={!isPro}
+            className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
           >
             <Download className="h-4 w-4" /> CSV ထုတ်ယူမည်
+            {!isPro && <span className="ml-1 text-[10px] text-muted-foreground">(Pro)</span>}
           </button>
+
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

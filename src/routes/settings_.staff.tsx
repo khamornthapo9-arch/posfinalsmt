@@ -6,6 +6,7 @@ import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
 import { ROLE_LABEL, useRole, type StoreRole } from "@/lib/roles";
+import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings_/staff")({
@@ -43,7 +44,8 @@ const ROLES: StoreRole[] = ["OWNER", "MANAGER", "CASHIER"];
 
 function StaffSettingsPage() {
   const { store } = useAuth();
-  const { isOwner } = useRole();
+  const { isOwner, canManageStaff } = useRole();
+  const { isPro } = useStoreSettings();
   const [rows, setRows] = useState<StaffRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -64,12 +66,14 @@ function StaffSettingsPage() {
     setLoading(false);
   }, [store]);
 
+
+
   useEffect(() => {
     void load();
   }, [load]);
 
   const addStaff = async () => {
-    if (!store) return;
+    if (!store || !isPro) return;
     if (!name.trim()) {
       toast.error("ဝန်ထမ်း အမည် ထည့်ပါ");
       return;
@@ -103,6 +107,7 @@ function StaffSettingsPage() {
     void load();
   };
 
+
   const patch = async (id: string, values: Partial<StaffRow>) => {
     const { error } = await supabase.from("store_members").update(values).eq("id", id);
     if (error) toast.error("ပြင်ဆင်၍ မရပါ");
@@ -118,7 +123,7 @@ function StaffSettingsPage() {
     }
   };
 
-  if (!isOwner) {
+  if (!canManageStaff) {
     return (
       <PosShell title="ဝန်ထမ်း စီမံခန့်ခွဲမှု">
         <div className="p-6 text-sm text-muted-foreground">
@@ -127,6 +132,7 @@ function StaffSettingsPage() {
       </PosShell>
     );
   }
+
 
   return (
     <PosShell title="ဝန်ထမ်း စီမံခန့်ခွဲမှု" subtitle={store?.name ?? ""}>
@@ -140,10 +146,12 @@ function StaffSettingsPage() {
           </Link>
           <button
             onClick={() => setAdding(true)}
-            className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95"
+            disabled={!isPro}
+            className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" /> ဝန်ထမ်း ထည့်မည်
           </button>
+
         </div>
 
         {store && !store.is_pro && (

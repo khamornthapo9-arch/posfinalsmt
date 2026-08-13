@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Plus, Printer, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAuth } from "@/lib/auth-store";
+import { useRole } from "@/lib/roles";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +38,8 @@ const SAMPLE_LINES = [
 
 function ReceiptSettingsPage() {
   const { store, updateStore } = useAuth();
-  const { symbol, taxPercent, fmt } = useStoreSettings();
+  const { symbol, taxPercent, fmt, isPro } = useStoreSettings();
+  const { isOwner, canManageSettings } = useRole();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [phones, setPhones] = useState<string[]>([]);
@@ -52,9 +54,10 @@ function ReceiptSettingsPage() {
     setName(store.name ?? "");
     setAddress(store.address ?? "");
     setPhones(store.phone_numbers ?? []);
-    setHeader(store.receipt_header ?? "");
-    setFooter(store.receipt_footer ?? "");
-  }, [store]);
+    setHeader(isPro ? (store.receipt_header ?? "") : "");
+    setFooter(isPro ? (store.receipt_footer ?? "") : "");
+  }, [store, isPro]);
+
 
   const totals = useMemo(() => {
     const subtotal = SAMPLE_LINES.reduce((sum, l) => sum + l.qty * l.price, 0);
@@ -84,8 +87,12 @@ function ReceiptSettingsPage() {
         name: name.trim(),
         address: address.trim() || null,
         phone_numbers: phones,
-        receipt_header: header.trim() || null,
-        receipt_footer: footer.trim() || null,
+        ...(isPro
+          ? {
+              receipt_header: header.trim() || null,
+              receipt_footer: footer.trim() || null,
+            }
+          : {}),
       });
       toast.success("ပြေစာ ပြင်ဆင်ချက် သိမ်းပြီးပါပြီ");
     } catch (error) {
@@ -95,7 +102,19 @@ function ReceiptSettingsPage() {
     }
   };
 
+
+  if (!canManageSettings) {
+    return (
+      <PosShell title="ပြေစာ ဒီဇိုင်း">
+        <div className="p-6 text-sm text-muted-foreground">
+          ဤစာမျက်နှာကို ဆိုင်ပိုင်ရှင်သာ ကြည့်ရှုနိုင်ပါသည်။
+        </div>
+      </PosShell>
+    );
+  }
+
   return (
+
     <PosShell
       title="ပြေစာ ဒီဇိုင်း"
       subtitle="ပြင်ဆင်လိုက်တာနှင့်အမျှ ညာဘက်တွင် ချက်ချင်း မြင်ရပါမည်"
@@ -174,26 +193,33 @@ function ReceiptSettingsPage() {
           </section>
 
           <section className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-3 text-sm font-semibold">ပြေစာ စာသားများ</h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">ပြေစာ စာသားများ</h2>
+              {!isPro && (
+                <span className="text-xs text-muted-foreground">Pro Plan မှ စမည်</span>
+              )}
+            </div>
             <div className="space-y-3">
               <Field label="ခေါင်းစီး စာသား">
                 <textarea
                   value={header}
-                  onChange={(e) => setHeader(e.target.value)}
+                  onChange={(e) => isPro && setHeader(e.target.value)}
                   rows={2}
                   maxLength={160}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="ကြိုဆိုပါသည်!"
+                  disabled={!isPro}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
+                  placeholder={isPro ? "ကြိုဆိုပါသည်!" : "Pro Plan သို့ အဆင့်မြှင့်ပါ"}
                 />
               </Field>
               <Field label="အောက်ခြေ ကြော်ငြာ စာသား">
                 <textarea
                   value={footer}
-                  onChange={(e) => setFooter(e.target.value)}
+                  onChange={(e) => isPro && setFooter(e.target.value)}
                   rows={3}
                   maxLength={200}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="ကျေးဇူးတင်ပါသည်။ နောက်တစ်ခေါက် ကြွရောက်ပါဦး!"
+                  disabled={!isPro}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
+                  placeholder={isPro ? "ကျေးဇူးတင်ပါသည်။ နောက်တစ်ခေါက် ကြွရောက်ပါဦး!" : "Pro Plan သို့ အဆင့်မြှင့်ပါ"}
                 />
               </Field>
               <div className="flex items-center gap-2">
@@ -215,6 +241,7 @@ function ReceiptSettingsPage() {
               </div>
             </div>
           </section>
+
 
           <div className="flex gap-2">
             <button
