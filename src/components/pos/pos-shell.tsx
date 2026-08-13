@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-store";
-import { useRole, ROLE_LABEL } from "@/lib/roles";
+import { useRole, ROLE_LABEL, type StoreRole } from "@/lib/roles";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
 
