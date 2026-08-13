@@ -188,26 +188,33 @@ function ReceiptSettingsPage() {
           </section>
 
           <section className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-3 text-sm font-semibold">ပြေစာ စာသားများ</h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">ပြေစာ စာသားများ</h2>
+              {!isPro && (
+                <span className="text-xs text-muted-foreground">Pro Plan မှ စမည်</span>
+              )}
+            </div>
             <div className="space-y-3">
               <Field label="ခေါင်းစီး စာသား">
                 <textarea
                   value={header}
-                  onChange={(e) => setHeader(e.target.value)}
+                  onChange={(e) => isPro && setHeader(e.target.value)}
                   rows={2}
                   maxLength={160}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="ကြိုဆိုပါသည်!"
+                  disabled={!isPro}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
+                  placeholder={isPro ? "ကြိုဆိုပါသည်!" : "Pro Plan သို့ အဆင့်မြှင့်ပါ"}
                 />
               </Field>
               <Field label="အောက်ခြေ ကြော်ငြာ စာသား">
                 <textarea
                   value={footer}
-                  onChange={(e) => setFooter(e.target.value)}
+                  onChange={(e) => isPro && setFooter(e.target.value)}
                   rows={3}
                   maxLength={200}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="ကျေးဇူးတင်ပါသည်။ နောက်တစ်ခေါက် ကြွရောက်ပါဦး!"
+                  disabled={!isPro}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
+                  placeholder={isPro ? "ကျေးဇူးတင်ပါသည်။ နောက်တစ်ခေါက် ကြွရောက်ပါဦး!" : "Pro Plan သို့ အဆင့်မြှင့်ပါ"}
                 />
               </Field>
               <div className="flex items-center gap-2">
@@ -229,6 +236,7 @@ function ReceiptSettingsPage() {
               </div>
             </div>
           </section>
+
 
           <div className="flex gap-2">
             <button
