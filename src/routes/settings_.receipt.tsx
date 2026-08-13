@@ -98,7 +98,18 @@ function ReceiptSettingsPage() {
     }
   };
 
+  if (!canManageSettings) {
+    return (
+      <PosShell title="ပြေစာ ဒီဇိုင်း">
+        <div className="p-6 text-sm text-muted-foreground">
+          ဤစာမျက်နှာကို ဆိုင်ပိုင်ရှင်သာ ကြည့်ရှုနိုင်ပါသည်။
+        </div>
+      </PosShell>
+    );
+  }
+
   return (
+
     <PosShell
       title="ပြေစာ ဒီဇိုင်း"
       subtitle="ပြင်ဆင်လိုက်တာနှင့်အမျှ ညာဘက်တွင် ချက်ချင်း မြင်ရပါမည်"
