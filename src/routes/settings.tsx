@@ -22,6 +22,7 @@ import { useAuth } from "@/lib/auth-store";
 import { useRole } from "@/lib/roles";
 import { usePos } from "@/lib/pos-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
+import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/settings")({
