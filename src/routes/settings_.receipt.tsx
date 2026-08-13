@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Plus, Printer, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAuth } from "@/lib/auth-store";
+import { useRole } from "@/lib/roles";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
 
