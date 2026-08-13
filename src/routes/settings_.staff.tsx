@@ -145,10 +145,12 @@ function StaffSettingsPage() {
           </Link>
           <button
             onClick={() => setAdding(true)}
-            className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95"
+            disabled={!isPro}
+            className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" /> ဝန်ထမ်း ထည့်မည်
           </button>
+
         </div>
 
         {store && !store.is_pro && (
