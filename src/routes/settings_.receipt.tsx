@@ -38,7 +38,8 @@ const SAMPLE_LINES = [
 
 function ReceiptSettingsPage() {
   const { store, updateStore } = useAuth();
-  const { symbol, taxPercent, fmt } = useStoreSettings();
+  const { symbol, taxPercent, fmt, isPro } = useStoreSettings();
+  const { isOwner, canManageSettings } = useRole();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [phones, setPhones] = useState<string[]>([]);
@@ -53,9 +54,10 @@ function ReceiptSettingsPage() {
     setName(store.name ?? "");
     setAddress(store.address ?? "");
     setPhones(store.phone_numbers ?? []);
-    setHeader(store.receipt_header ?? "");
-    setFooter(store.receipt_footer ?? "");
-  }, [store]);
+    setHeader(isPro ? (store.receipt_header ?? "") : "");
+    setFooter(isPro ? (store.receipt_footer ?? "") : "");
+  }, [store, isPro]);
+
 
   const totals = useMemo(() => {
     const subtotal = SAMPLE_LINES.reduce((sum, l) => sum + l.qty * l.price, 0);
