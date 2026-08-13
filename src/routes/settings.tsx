@@ -265,8 +265,8 @@ function SettingsPage() {
                 }}
               />
               <button
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
+                onClick={() => isPro && fileRef.current?.click()}
+                disabled={uploading || !isPro}
                 className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
               >
                 {uploading ? (
@@ -274,8 +274,9 @@ function SettingsPage() {
                 ) : (
                   <Upload className="h-3.5 w-3.5" />
                 )}
-                လိုဂို တင်မည်
+                {isPro ? "လိုဂို တင်မည်" : "Pro သို့ အဆင့်မြှင့်ပါ"}
               </button>
+
             </div>
 
             <div className="grid flex-1 gap-3 sm:grid-cols-2">
