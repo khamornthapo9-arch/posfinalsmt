@@ -11,12 +11,15 @@ import {
   ScanLine,
   Settings,
   Truck,
+  UserCog,
   Users,
   X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-store";
 import { useRole, ROLE_LABEL, type StoreRole } from "@/lib/roles";
+import { useSubscription } from "@/lib/subscription";
+import { StaffSwitchModal } from "@/components/pos/staff-switch-modal";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
 
@@ -94,10 +97,13 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
 
 function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   const { session, signOut } = useAuth();
-  const { role, isActive, loading: roleLoading } = useRole();
+  const { role, isActive, activeStaff, loading: roleLoading } = useRole();
+  const { isPro } = useSubscription();
+  const [switching, setSwitching] = useState(false);
   const navigate = useNavigate();
   const email = session?.user.email ?? "";
-  const initial = email.charAt(0).toUpperCase() || "U";
+  const label = activeStaff?.name || email;
+  const initial = label.charAt(0).toUpperCase() || "U";
 
   const handleSignOut = () => {
     void (async () => {
@@ -108,16 +114,19 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
 
   if (collapsed) {
     return (
-      <button
-        onClick={handleSignOut}
-        aria-label="Sign out"
-        className={cn(
-          "mx-auto flex h-9 w-9 items-center justify-center rounded-md text-sm font-semibold",
-          isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "bg-destructive/20 text-destructive",
-        )}
-      >
-        {initial}
-      </button>
+      <>
+        <button
+          onClick={() => (isPro ? setSwitching(true) : handleSignOut())}
+          aria-label={isPro ? "ဝန်ထမ်း ပြောင်းရန်" : "Sign out"}
+          className={cn(
+            "mx-auto flex h-9 w-9 items-center justify-center rounded-md text-sm font-semibold",
+            isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "bg-destructive/20 text-destructive",
+          )}
+        >
+          {initial}
+        </button>
+        {switching && <StaffSwitchModal onClose={() => setSwitching(false)} />}
+      </>
     );
   }
 
@@ -133,12 +142,22 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
           {initial}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-medium text-sidebar-accent-foreground">{email}</p>
+          <p className="truncate text-xs font-medium text-sidebar-accent-foreground">{label}</p>
           <p className="text-[11px] text-sidebar-foreground/60">
             {roleLoading ? "…" : ROLE_LABEL[role]}
             {!isActive && !roleLoading && " · ရပ်ဆိုင်းထား"}
           </p>
         </div>
+        {isPro && (
+          <button
+            onClick={() => setSwitching(true)}
+            aria-label="ဝန်ထမ်း ပြောင်းရန်"
+            title="ဝန်ထမ်း ပြောင်းရန် (PIN)"
+            className="text-sidebar-foreground/60 transition-colors hover:text-sidebar-accent-foreground"
+          >
+            <UserCog className="h-4 w-4" />
+          </button>
+        )}
         <button
           onClick={handleSignOut}
           aria-label="Sign out"
@@ -147,6 +166,7 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
           <LogOut className="h-4 w-4" />
         </button>
       </div>
+      {switching && <StaffSwitchModal onClose={() => setSwitching(false)} />}
     </div>
   );
 }
