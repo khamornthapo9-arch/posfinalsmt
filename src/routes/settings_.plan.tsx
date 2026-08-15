@@ -30,19 +30,23 @@ export const Route = createFileRoute("/settings_/plan")({
 });
 
 const FREE_FEATURES = [
-  "အရောင်းစာရင်း (Register) အပြည့်အစုံ",
-  "ကုန်ပစ္စည်း စာရင်းနှင့် လက်ကျန် စီမံခန့်ခွဲမှု",
-  "အော့ဖ်လိုင်း ရောင်းချမှု",
-  "အခြေခံ ဆန်းစစ်ချက်များ",
-  "QR / ဘားကုဒ် လေဘယ် ပရင့်ထုတ်ခြင်း",
+  "အကန့်အသတ်မရှိ အရောင်းစာရင်း (Register)",
+  "အော့ဖ်လိုင်း အရောင်းနှင့် ပရင့်ထုတ်ခြင်း",
+  "ပြေစာ ခေါင်းစီး / လိုဂို အခြေခံ ပြင်ဆင်ခြင်း",
+  "Excel / CSV ဖြင့် ကုန်ပစ္စည်း အုပ်စုလိုက် ထည့်သွင်းခြင်း",
+  "ဘားကုဒ် နှင့် QR လေဘယ်လ် ပရင့်ထုတ်ခြင်း",
+  "အကောင့် ၁ ခု သာ အသုံးပြုနိုင်ခြင်း (Single Device)",
 ];
 
 const PRO_FEATURES = [
-  "ထုပ်ပိုးမှု အရွယ်အစား (Multi-unit) ရောင်းချခြင်း",
-  "ပြေစာ ခေါင်းစီး / လိုဂို စိတ်ကြိုက်ပြင်ဆင်ခြင်း",
+  "Standard ပါ အချက်များ အားလုံး အပြင် -",
+  "ထုပ်ပိုးမှု အရွယ်အစား (Multi-unit: ဗူး/ဖာ/တွဲ) ရောင်းချခြင်း",
+  "ဝန်ထမ်း အများအပြားအတွက် PIN အကောင့်များနှင့် လုံခြုံရေး စည်းမျဉ်းများ",
+  "အသားတင် အမြတ်အစွန်း (Net Profit) နှင့် EOD အသေးစိတ် အစီရင်ခံစာ",
+  "ကုန်ပစ္စည်း လက်ကျန်နည်း လျှင် သတိပေးသည့် စနစ် (Low Stock Alert)",
+  "ဝယ်သူ / ကုန်သည် အကြွေး စီမံခန့်ခွဲမှု စနစ်",
+  "အသားတင် ပစ္စည်းလက်ကျန် တန်ဖိုး (Total Asset Value) တွက်ချက်ခြင်း",
   "Master CSV အပြည့်အစုံ ထုတ်ယူခြင်း",
-  "Excel / CSV ဖြင့် ကုန်ပစ္စည်း အစုလိုက် ထည့်သွင်းခြင်း",
-  "ဝန်ထမ်း အများအပြား PIN အကောင့်များ",
 ];
 
 const PAYMENT_INFO = [
@@ -113,7 +117,7 @@ function PlanSettingsPage() {
 
           <div className="rounded-xl border-2 border-amber-500/60 bg-card p-4">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <Crown className="h-4 w-4 text-amber-500" /> Pro Plan
+              <Crown className="h-4 w-4 text-amber-500" /> Pro Plan (လုပ်ငန်းသုံး)
             </h2>
             <p className="mt-1 text-2xl font-bold tabular-nums">
               Ks 30,000 <span className="text-xs font-normal text-muted-foreground">/ တစ်လ</span>
