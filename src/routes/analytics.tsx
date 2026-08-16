@@ -231,6 +231,36 @@ function AnalyticsPage() {
   const grossProfit = metrics.revenue - metrics.cogs;
   const netProfit = grossProfit - totalExpenses;
 
+  const [lifetimeNet, setLifetimeNet] = useState(0);
+  useEffect(() => {
+    if (!isPro) return;
+    let active = true;
+    void (async () => {
+      const [{ data: allSales }, { data: allExpenses }] = await Promise.all([
+        supabase.from("sales").select("total_amount,status,sale_items(quantity,items(cost_price))"),
+        supabase.from("expenses").select("amount"),
+      ]);
+      if (!active) return;
+      const rows = (allSales ?? []) as unknown as {
+        total_amount: number;
+        status: string;
+        sale_items: { quantity: number; items: { cost_price: number } | null }[];
+      }[];
+      const completed = rows.filter((r) => r.status !== "REFUNDED");
+      const revenue = completed.reduce((s, r) => s + Number(r.total_amount), 0);
+      const cogs = completed.reduce(
+        (s, r) =>
+          s + r.sale_items.reduce((c, l) => c + l.quantity * Number(l.items?.cost_price ?? 0), 0),
+        0,
+      );
+      const spend = (allExpenses ?? []).reduce((s, e) => s + Number(e.amount), 0);
+      setLifetimeNet(revenue - cogs - spend);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isPro]);
+
   const trend = useMemo(() => {
     const buckets = new Map<string, number>();
     for (const sale of sales.filter((s) => s.status !== "REFUNDED")) {
