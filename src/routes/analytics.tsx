@@ -17,15 +17,18 @@ import {
   HandCoins,
   Package,
   PiggyBank,
+  Printer,
   Receipt,
   TrendingUp,
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
+import { ProLock } from "@/components/pos/pro-lock";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadCsv } from "@/lib/pos-utils";
 import { useStoreSettings } from "@/lib/use-store-settings";
+import { usePos } from "@/lib/pos-store";
 import { useAccountingStore, CREDIT_METHOD, CASH_METHOD } from "@/lib/accounting-store";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +52,18 @@ export const Route = createFileRoute("/analytics")({
   component: AnalyticsPage,
 });
 
-type RangeKey = "today" | "week" | "month" | "custom";
+type RangeKey = "today" | "yesterday" | "week" | "month" | "all" | "custom";
+
+const FREE_RANGES: RangeKey[] = ["today", "yesterday"];
+const PRO_RANGES: RangeKey[] = ["today", "yesterday", "week", "month", "all", "custom"];
+const RANGE_LABEL: Record<RangeKey, string> = {
+  today: "ဒီနေ့",
+  yesterday: "မနေ့က",
+  week: "ဒီတစ်ပတ်",
+  month: "ဒီလ",
+  all: "စုစုပေါင်း",
+  custom: "ရှာရန်",
+};
 
 interface SaleRow {
   id: string;
@@ -90,22 +104,41 @@ interface ExpenseRow {
 function startOf(range: RangeKey) {
   const now = new Date();
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (range === "yesterday") d.setDate(d.getDate() - 1);
   if (range === "week") d.setDate(d.getDate() - 6);
   if (range === "month") d.setDate(d.getDate() - 29);
+  if (range === "all") return new Date(2000, 0, 1);
   return d;
 }
 
+function endOf(range: RangeKey) {
+  if (range === "yesterday") {
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    d.setSeconds(d.getSeconds() - 1);
+    return d;
+  }
+  return new Date();
+}
+
 function AnalyticsPage() {
-  const [range, setRange] = useState<RangeKey>("week");
+  const { fmt, isPro } = useStoreSettings();
+  const [range, setRange] = useState<RangeKey>("today");
   const [from, setFrom] = useState(() => startOf("week").toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const { fmt, isPro } = useStoreSettings();
+  const [eodOpen, setEodOpen] = useState(false);
   const { customers, expenses } = useAccountingStore();
+  const { items } = usePos();
+
+  const ranges = isPro ? PRO_RANGES : FREE_RANGES;
+  useEffect(() => {
+    if (!ranges.includes(range)) setRange("today");
+  }, [ranges, range]);
 
   const fromDate = range === "custom" ? new Date(`${from}T00:00:00`) : startOf(range);
-  const toDate = range === "custom" ? new Date(`${to}T23:59:59`) : new Date();
+  const toDate = range === "custom" ? new Date(`${to}T23:59:59`) : endOf(range);
   const fromIso = fromDate.toISOString();
   const toIso = toDate.toISOString();
 
