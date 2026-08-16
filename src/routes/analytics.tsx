@@ -205,8 +205,19 @@ function AnalyticsPage() {
       transactions: active.length,
       units,
       average: active.length ? revenue / active.length : 0,
+      completedTotal: revenue + refundedTotal,
+      refundedCount: refunded.length,
     };
   }, [sales]);
+
+  /** Gross Sales = all completed sales minus every refunded receipt. */
+  const grossSales = metrics.completedTotal - metrics.refundedTotal;
+
+  /** Total value of stock currently on hand, at buy price. */
+  const inventoryAssetValue = useMemo(
+    () => items.reduce((sum, i) => sum + i.stock_quantity * Number(i.cost_price ?? 0), 0),
+    [items],
+  );
 
   const totalExpenses = useMemo(
     () => rangeExpenses.reduce((sum, e) => sum + Number(e.amount), 0),
