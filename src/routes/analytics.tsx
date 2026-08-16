@@ -334,12 +334,63 @@ function AnalyticsPage() {
 
   const netCashOnHand = paymentBuckets.cashIn - paymentBuckets.cashRefunds - paymentBuckets.cashExpenses;
 
-  const exportCsv = () => {
-    if (!isPro) {
-      toast.error("Pro Plan သို့ အဆင့်မြှင့်ပါ");
-      return;
-    }
+  /** FREE tier: simple receipt list. */
+  const exportDailySummary = () => {
     const rows: (string | number)[][] = [
+      ["Date", "Receipt ID", "Payment Method", "Total Amount"],
+      ...sales
+        .filter((s) => s.status !== "REFUNDED")
+        .map((sale) => [
+          new Date(sale.created_at).toLocaleString("my-MM"),
+          sale.id,
+          sale.payment_method,
+          Number(sale.total_amount).toFixed(2),
+        ]),
+      [],
+      ["Gross Sales", grossSales.toFixed(2)],
+      ["Refunds", metrics.refundedTotal.toFixed(2)],
+    ];
+    downloadCsv("Daily_Sales_Summary.csv", rows);
+  };
+
+  /** PRO tier: line-item level financial report. */
+  const exportMasterFinancial = () => {
+    const rows: (string | number)[][] = [
+      [
+        "Receipt ID",
+        "Date",
+        "Item Name",
+        "Qty",
+        "Selling Price",
+        "Buy Price",
+        "Line Profit",
+        "Payment Channel",
+        "Refund Status",
+      ],
+      ...sales.flatMap((sale) => {
+        const refunded = sale.status === "REFUNDED";
+        return sale.sale_items.map((line) => {
+          const buy = Number(line.items?.cost_price ?? 0);
+          const lineProfit = refunded ? 0 : line.quantity * (Number(line.unit_price) - buy);
+          return [
+            sale.id,
+            new Date(sale.created_at).toLocaleString("my-MM"),
+            line.items?.name ?? "—",
+            line.quantity,
+            Number(line.unit_price).toFixed(2),
+            buy.toFixed(2),
+            lineProfit.toFixed(2),
+            sale.payment_method,
+            refunded ? "REFUNDED" : "COMPLETED",
+          ];
+        });
+      }),
+      [],
+      ["Operating Expenses", totalExpenses.toFixed(2)],
+      ["Net Profit", netProfit.toFixed(2)],
+      [],
+    ];
+    const legacy: (string | number)[][] = [
       [
         "အရောင်း အိုင်ဒီ",
         "ရက်စွဲ",
@@ -376,12 +427,14 @@ function AnalyticsPage() {
       }),
       [],
       ["အကျဉ်းချုပ်"],
-      ["စုစုပေါင်း ဝင်ငွေ", metrics.revenue.toFixed(2)],
+      ["အရောင်း စုစုပေါင်း (ပြန်အမ်း မပါ)", grossSales.toFixed(2)],
       ["ကုန်ကျစရိတ် (COGS)", metrics.cogs.toFixed(2)],
       ["အကြမ်း အမြတ်", grossProfit.toFixed(2)],
       ["အသုံးစရိတ်", totalExpenses.toFixed(2)],
       ["အသားတင် အမြတ်", netProfit.toFixed(2)],
       ["လက်ကျန် အကြွေး စုစုပေါင်း", activeDebt.toFixed(2)],
+      ["ကုန်ပစ္စည်း တန်ဖိုး စုစုပေါင်း", inventoryAssetValue.toFixed(2)],
+      ["တစ်သက်တာ အသားတင် အမြတ်", lifetimeNet.toFixed(2)],
       [],
       ["ငွေပေးချေမှု ခွဲခြမ်းစိတ်ဖြာချက်"],
       ["ငွေသား ဝင်ငွေ", paymentBuckets.cashIn.toFixed(2)],
@@ -393,7 +446,16 @@ function AnalyticsPage() {
       ["ငွေသား အသုံးစရိတ်", paymentBuckets.cashExpenses.toFixed(2)],
       ["လက်ကျန် ငွေသား", netCashOnHand.toFixed(2)],
     ];
-    downloadCsv(`smt-pos-master-${from}-to-${to}.csv`, rows);
+    downloadCsv("Master_Financial_Report.csv", [...rows, ...legacy]);
+  };
+
+  const exportCsv = () => {
+    if (sales.length === 0) {
+      toast.error("ဤအချိန်ကာလတွင် အရောင်းမှတ်တမ်း မရှိပါ");
+      return;
+    }
+    if (isPro) exportMasterFinancial();
+    else exportDailySummary();
   };
 
   const cards = [
