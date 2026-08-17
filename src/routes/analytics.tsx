@@ -466,11 +466,14 @@ function AnalyticsPage() {
   ];
 
   const profitCards = [
-    { label: "လက်ကျန် အကြွေး စုစုပေါင်း", value: fmt(activeDebt), icon: HandCoins },
-    { label: "ပြန်အမ်းငွေ", value: fmt(metrics.refundedTotal), icon: Receipt },
-    { label: "အသုံးစရိတ်", value: fmt(totalExpenses), icon: Wallet },
-    { label: "အကြမ်း အမြတ်", value: fmt(grossProfit), icon: TrendingUp },
-    { label: "အသားတင် အမြတ်", value: fmt(netProfit), icon: PiggyBank },
+    { label: "လက်ကျန် အကြွေး စုစုပေါင်း", value: fmt(activeDebt), icon: HandCoins, pro: false },
+    { label: "ပြန်အမ်းငွေ", value: fmt(metrics.refundedTotal), icon: Receipt, pro: false },
+    { label: "အသုံးစရိတ်", value: fmt(totalExpenses), icon: Wallet, pro: true },
+    { label: "ကုန်ကျစရိတ် (COGS)", value: fmt(metrics.cogs), icon: Wallet, pro: true },
+    { label: "အကြမ်း အမြတ်", value: fmt(grossProfit), icon: TrendingUp, pro: true },
+    { label: "အသားတင် အမြတ်", value: fmt(netProfit), icon: PiggyBank, pro: true },
+    { label: "ကုန်ပစ္စည်း တန်ဖိုး စုစုပေါင်း", value: fmt(inventoryAssetValue), icon: Package, pro: true },
+    { label: "တစ်သက်တာ အသားတင် အမြတ်", value: fmt(lifetimeNet), icon: PiggyBank, pro: true },
   ];
 
   return (
@@ -478,7 +481,7 @@ function AnalyticsPage() {
       <div className="space-y-4 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex gap-1 rounded-lg border border-border p-1">
-            {(["today", "week", "month", "custom"] as RangeKey[]).map((key) => (
+            {ranges.map((key) => (
               <button
                 key={key}
                 onClick={() => setRange(key)}
@@ -487,16 +490,15 @@ function AnalyticsPage() {
                   range === key ? "bg-primary text-primary-foreground" : "text-muted-foreground",
                 )}
               >
-                {key === "today"
-                  ? "ဒီနေ့"
-                  : key === "week"
-                  ? "ဒီတစ်ပတ်"
-                  : key === "month"
-                  ? "ဒီလ"
-                  : "ရှာရန်"}
+                {RANGE_LABEL[key]}
               </button>
             ))}
           </div>
+          {!isPro && (
+            <span className="text-[11px] text-muted-foreground">
+              အချိန်ကာလ ပိုမို ရွေးချယ်ရန် Pro လိုအပ်သည်
+            </span>
+          )}
           {range === "custom" && (
             <div className="flex items-center gap-2">
               <input
@@ -516,12 +518,19 @@ function AnalyticsPage() {
           )}
           <button
             onClick={exportCsv}
-            disabled={!isPro}
             className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
           >
             <Download className="h-4 w-4" /> CSV ထုတ်ယူမည်
-            {!isPro && <span className="ml-1 text-[10px] text-muted-foreground">(Pro)</span>}
+            {!isPro && <span className="ml-1 text-[10px] text-muted-foreground">(အခြေခံ)</span>}
           </button>
+          {isPro && (
+            <button
+              onClick={() => setEodOpen(true)}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+            >
+              <Printer className="h-4 w-4" /> နေ့ချုပ် ပရင့်
+            </button>
+          )}
 
         </div>
 
@@ -537,9 +546,10 @@ function AnalyticsPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {profitCards.map((card) => (
-            <div key={card.label} className="rounded-xl border border-border bg-card p-4">
+            <ProLock key={card.label} locked={card.pro && !isPro}>
+            <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
                 <card.icon className="h-4 w-4 text-muted-foreground" />
@@ -548,8 +558,25 @@ function AnalyticsPage() {
                 {card.value}
               </p>
             </div>
+            </ProLock>
           ))}
         </div>
+
+        {isPro && (
+          <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-card p-4 lg:grid-cols-4">
+            {[
+              { label: "ငွေသား", value: paymentBuckets.cashIn },
+              { label: "KBZ Pay", value: paymentBuckets.kbzIn },
+              { label: "Wave Pay", value: paymentBuckets.waveIn },
+              { label: "အကြွေး ထုတ်ပေးငွေ", value: paymentBuckets.creditIssued },
+            ].map((b) => (
+              <div key={b.label}>
+                <p className="text-xs text-muted-foreground">{b.label}</p>
+                <p className="mt-1 truncate text-lg font-semibold tabular-nums">{fmt(b.value)}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-border bg-card p-4">
@@ -622,6 +649,49 @@ function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {eodOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 print:max-w-none print:border-0">
+            <h2 className="text-center text-sm font-semibold">နေ့ချုပ် အစီရင်ခံစာ</h2>
+            <p className="mb-3 text-center text-[11px] text-muted-foreground">
+              {new Date().toLocaleString("my-MM")}
+            </p>
+            <dl className="space-y-1.5 text-sm">
+              {[
+                ["အရောင်း စုစုပေါင်း", grossSales],
+                ["ပြန်အမ်းငွေ", metrics.refundedTotal],
+                ["ငွေသား", paymentBuckets.cashIn],
+                ["KBZ Pay", paymentBuckets.kbzIn],
+                ["Wave Pay", paymentBuckets.waveIn],
+                ["အကြွေး ထုတ်ပေးငွေ", paymentBuckets.creditIssued],
+                ["ငွေသား အသုံးစရိတ်", paymentBuckets.cashExpenses],
+                ["လက်ကျန် ငွေသား", netCashOnHand],
+                ["အသားတင် အမြတ်", netProfit],
+              ].map(([label, value]) => (
+                <div key={label as string} className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">{label as string}</dt>
+                  <dd className="font-medium tabular-nums">{fmt(Number(value))}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="no-print mt-4 flex gap-2">
+              <button
+                onClick={() => setEodOpen(false)}
+                className="h-10 flex-1 rounded-lg border border-border text-sm font-medium"
+              >
+                ပိတ်မည်
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="h-10 flex-1 rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
+              >
+                ပရင့်ထုတ်မည်
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PosShell>
   );
 }
