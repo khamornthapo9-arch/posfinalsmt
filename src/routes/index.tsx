@@ -11,6 +11,7 @@ import { MobileCheckoutDrawer } from "@/components/pos/mobile-checkout-drawer";
 import { usePos, type HeldOrder, type OrderSummary, type PaymentSplit } from "@/lib/pos-store";
 import { useAccountingStore, CREDIT_METHOD, type Customer } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
+import { FREE_LIMITS } from "@/lib/subscription";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useReceiptSettings } from "@/lib/receipt-settings";
 import { useRole } from "@/lib/roles";
@@ -97,7 +98,7 @@ function RegisterPage() {
     phoneNumbers,
   } = useStoreSettings();
   const { customers, quickAddCustomer, postSale } = useAccountingStore();
-  const { isOwner } = useRole();
+  const { isOwner, canApprove } = useRole();
   const logoUrl = useStoreLogo();
   const { settings: receiptSettings } = useReceiptSettings();
 
@@ -261,12 +262,20 @@ function RegisterPage() {
     );
 
   const toggleSplitMode = () => {
+    if (!isPro) {
+      toast.error("ခွဲ၍ ငွေပေးချေမှုသည် Pro Plan တွင်သာ ရရှိနိုင်ပါသည်");
+      return;
+    }
     setSplitMode((v) => !v);
     setSplits({});
   };
 
   const parkOrder = async (note: string) => {
     if (cart.length === 0) return;
+    if (!isPro && heldOrders.length >= FREE_LIMITS.heldCarts) {
+      toast.error(`Standard အစီအစဉ်တွင် ဆိုင်းငံ့ ဘောက်ချာ ${FREE_LIMITS.heldCarts} ခုသာ ထားနိုင်သည်`);
+      return;
+    }
     try {
       await holdOrder({
         lines: cart.map(({ stock: _s, ...line }) => line),
@@ -315,6 +324,8 @@ function RegisterPage() {
     return true;
   };
 
+  const availablePayments = isPro ? PAYMENTS : PAYMENTS.filter((p) => p.id !== CREDIT_METHOD);
+
   const cogsFor = (lines: CartLine[]) =>
     lines.reduce(
       (sum, line) =>
@@ -323,6 +334,10 @@ function RegisterPage() {
     );
 
   const selectPayment = (method: string) => {
+    if (method === CREDIT_METHOD && !isPro) {
+      toast.error("အကြွေးရောင်းချမှုသည် Pro Plan တွင်သာ ရရှိနိုင်ပါသည်");
+      return;
+    }
     if (method === CREDIT_METHOD) {
       setPayment(CREDIT_METHOD);
       setPickerOpen(true);
@@ -583,7 +598,7 @@ function RegisterPage() {
             creditPortion={creditPortion}
             needsCreditCustomer={needsCreditCustomer}
             currencySymbol={symbol}
-            payments={PAYMENTS}
+            payments={availablePayments}
             onChangeQty={changeQty}
             onRemove={removeFromCart}
             onNotesChange={setNotes}
@@ -647,7 +662,7 @@ function RegisterPage() {
         creditPortion={creditPortion}
         needsCreditCustomer={needsCreditCustomer}
         currencySymbol={symbol}
-        payments={PAYMENTS}
+        payments={availablePayments}
         onChangeQty={changeQty}
         onRemove={removeFromCart}
         onNotesChange={setNotes}
@@ -732,7 +747,7 @@ function RegisterPage() {
         <OrderHistoryDrawer
           orders={recentOrders}
           fmt={fmt}
-          canRefund={isOwner}
+          canRefund={canApprove}
           onClose={() => setHistoryOpen(false)}
           onRefund={async (orderId, reason, note) => {
             try {
