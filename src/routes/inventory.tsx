@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import Barcode from "react-barcode";
 import { toast } from "sonner";
+import { ProBadge } from "@/components/pos/pro-lock";
+import { FREE_LIMITS } from "@/lib/subscription";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAuth } from "@/lib/auth-store";
 import { usePos } from "@/lib/pos-store";
@@ -448,10 +450,15 @@ function ProductModal({
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {field("price", "စျေးနှုန်း", "number")}
-            {field("cost_price", "အရင်းစျေး", "number")}
+            {isPro && field("cost_price", "အရင်းစျေး", "number")}
             {field("stock_quantity", "လက်ကျန်", "number")}
-            {field("min_stock_threshold", "သတိပေး ရေတွက်မှု", "number")}
+            {isPro && field("min_stock_threshold", "သတိပေး ရေတွက်မှု", "number")}
           </div>
+          {!isPro && (
+            <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              အရင်းစျေးနှင့် လက်ကျန် သတိပေးချက်များ <ProBadge />
+            </p>
+          )}
 
           {isPro ? (
             <div className="rounded-lg border border-border bg-card p-3">
