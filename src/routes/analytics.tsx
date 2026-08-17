@@ -649,6 +649,49 @@ function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {eodOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 print:max-w-none print:border-0">
+            <h2 className="text-center text-sm font-semibold">နေ့ချုပ် အစီရင်ခံစာ</h2>
+            <p className="mb-3 text-center text-[11px] text-muted-foreground">
+              {new Date().toLocaleString("my-MM")}
+            </p>
+            <dl className="space-y-1.5 text-sm">
+              {[
+                ["အရောင်း စုစုပေါင်း", grossSales],
+                ["ပြန်အမ်းငွေ", metrics.refundedTotal],
+                ["ငွေသား", paymentBuckets.cashIn],
+                ["KBZ Pay", paymentBuckets.kbzIn],
+                ["Wave Pay", paymentBuckets.waveIn],
+                ["အကြွေး ထုတ်ပေးငွေ", paymentBuckets.creditIssued],
+                ["ငွေသား အသုံးစရိတ်", paymentBuckets.cashExpenses],
+                ["လက်ကျန် ငွေသား", netCashOnHand],
+                ["အသားတင် အမြတ်", netProfit],
+              ].map(([label, value]) => (
+                <div key={label as string} className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">{label as string}</dt>
+                  <dd className="font-medium tabular-nums">{fmt(Number(value))}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="no-print mt-4 flex gap-2">
+              <button
+                onClick={() => setEodOpen(false)}
+                className="h-10 flex-1 rounded-lg border border-border text-sm font-medium"
+              >
+                ပိတ်မည်
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="h-10 flex-1 rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
+              >
+                ပရင့်ထုတ်မည်
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PosShell>
   );
 }
