@@ -11,6 +11,7 @@ import { MobileCheckoutDrawer } from "@/components/pos/mobile-checkout-drawer";
 import { usePos, type HeldOrder, type OrderSummary, type PaymentSplit } from "@/lib/pos-store";
 import { useAccountingStore, CREDIT_METHOD, type Customer } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
+import { ManagerPinModal } from "@/components/pos/manager-pin-modal";
 import { FREE_LIMITS } from "@/lib/subscription";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useReceiptSettings } from "@/lib/receipt-settings";
@@ -98,7 +99,7 @@ function RegisterPage() {
     phoneNumbers,
   } = useStoreSettings();
   const { customers, quickAddCustomer, postSale } = useAccountingStore();
-  const { isOwner, canApprove } = useRole();
+  const { canApprove } = useRole();
   const logoUrl = useStoreLogo();
   const { settings: receiptSettings } = useReceiptSettings();
 
@@ -120,6 +121,7 @@ function RegisterPage() {
   const [heldOpen, setHeldOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState<((ok: boolean) => void) | null>(null);
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
@@ -750,12 +752,32 @@ function RegisterPage() {
           canRefund={canApprove}
           onClose={() => setHistoryOpen(false)}
           onRefund={async (orderId, reason, note) => {
+            if (isPro) {
+              const approved = await new Promise<boolean>((resolve) => {
+                setPendingApproval(() => (ok: boolean) => resolve(ok));
+              });
+              if (!approved) return;
+            }
             try {
               await refundOrder({ orderId, reason, note });
               toast.success("ဘောက်ချာ ပြန်အမ်းပြီးပါပြီ");
             } catch {
               toast.error("ပြန်အမ်း၍ မရပါ");
             }
+          }}
+        />
+      )}
+
+      {pendingApproval && (
+        <ManagerPinModal
+          title="ပြန်အမ်းရန် မန်နေဂျာ PIN"
+          onClose={() => {
+            pendingApproval(false);
+            setPendingApproval(null);
+          }}
+          onApproved={() => {
+            pendingApproval(true);
+            setPendingApproval(null);
           }}
         />
       )}
