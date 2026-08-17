@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { ProLockButton } from "@/components/pos/pro-lock";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAccountingStore } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
@@ -28,8 +29,25 @@ const CATEGORIES = ["ငှားခ", "လျှပ်စစ်", "လစာ", 
 
 function ExpensesPage() {
   const { enabled, expenses, totalExpenses, saveExpense, deleteExpense } = useAccountingStore();
-  const { fmt } = useStoreSettings();
+  const { fmt, isPro } = useStoreSettings();
   const [open, setOpen] = useState(false);
+
+  if (!isPro) {
+    return (
+      <PosShell title="အသုံးစရိတ်">
+        <div className="p-4">
+          <div className="rounded-xl border border-dashed border-border bg-card px-6 py-14 text-center">
+            <p className="text-sm text-muted-foreground">
+              အသုံးစရိတ် မှတ်တမ်းသည် Pro Plan တွင်သာ ရရှိနိုင်ပါသည်။
+            </p>
+            <div className="mt-3 flex justify-center">
+              <ProLockButton label="Pro Plan သို့ အဆင့်မြှင့်ရန်" />
+            </div>
+          </div>
+        </div>
+      </PosShell>
+    );
+  }
 
   if (!enabled) {
     return (

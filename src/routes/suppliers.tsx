@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { HandCoins, PackageCheck, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { FREE_LIMITS } from "@/lib/subscription";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAccountingStore, PURCHASE_RECEIVED, type Supplier } from "@/lib/accounting-store";
 import { usePos } from "@/lib/pos-store";
@@ -39,7 +40,7 @@ function SuppliersPage() {
     paySupplierDebt,
   } = useAccountingStore();
   const { items } = usePos();
-  const { fmt } = useStoreSettings();
+  const { fmt, isPro } = useStoreSettings();
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [paying, setPaying] = useState<Supplier | null>(null);
@@ -177,6 +178,10 @@ function SuppliersPage() {
         <SupplierModal
           onClose={() => setSupplierOpen(false)}
           onSave={async (values) => {
+            if (!isPro && suppliers.length >= FREE_LIMITS.suppliers) {
+              toast.error(`Standard အစီအစဉ်တွင် ကုန်သွင်းသူ ${FREE_LIMITS.suppliers} ဦးသာ သိမ်းနိုင်သည်`);
+              return;
+            }
             await saveSupplier(values);
             setSupplierOpen(false);
             toast.success("ကုန်သွင်းသူကို သိမ်းဆည်းပြီးပါပြီ");
@@ -195,7 +200,7 @@ function SuppliersPage() {
           }}
         />
       )}
-      {paying && (
+      {paying && isPro && (
         <SettleModal
           title={`${paying.name} — ငွေပေးချေခြင်း`}
           balance={paying.balance}

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { HandCoins, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { FREE_LIMITS } from "@/lib/subscription";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAccountingStore, type Customer } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
@@ -35,7 +36,7 @@ export const PAY_METHODS = ["ငွေသား", "kbzpay", "wavepay"];
 function CustomersPage() {
   const { enabled, customers, saveCustomer, deleteCustomer, settleCustomerDebt } =
     useAccountingStore();
-  const { fmt } = useStoreSettings();
+  const { fmt, isPro } = useStoreSettings();
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Customer | "new" | null>(null);
   const [settling, setSettling] = useState<Customer | null>(null);
@@ -150,13 +151,17 @@ function CustomersPage() {
           customer={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
           onSave={async (values) => {
+            if (!isPro && editing === "new" && customers.length >= FREE_LIMITS.customers) {
+              toast.error(`Standard အစီအစဉ်တွင် ဖောက်သည် ${FREE_LIMITS.customers} ဦးသာ သိမ်းနိုင်သည်`);
+              return;
+            }
             await saveCustomer(values);
             setEditing(null);
             toast.success("ဖောက်သည် သိမ်းဆည်းပြီးပါပြီ");
           }}
         />
       )}
-      {settling && (
+      {settling && isPro && (
         <SettleModal
           title={`${settling.name} — ငွေပြန်ဆပ်ခြင်း`}
           balance={settling.balance}

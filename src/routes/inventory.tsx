@@ -324,6 +324,10 @@ function InventoryPage() {
           item={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
           onSave={async (values) => {
+            if (!isPro && editing === "new" && items.length >= FREE_LIMITS.items) {
+              toast.error(`Standard အစီအစဉ်တွင် ကုန်ပစ္စည်း ${FREE_LIMITS.items} မျိုးသာ ထည့်နိုင်သည်။ Pro သို့ အဆင့်မြှင့်ပါ။`);
+              return;
+            }
             try {
               await saveItem({
                 ...values,
