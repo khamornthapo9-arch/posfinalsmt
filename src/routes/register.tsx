@@ -19,7 +19,7 @@ import { useRole } from "@/lib/roles";
 import type { CachedItem, ItemUnit, PendingSaleLine } from "@/lib/pos-db";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/register")({
   ssr: false,
   head: () => ({
     meta: [
