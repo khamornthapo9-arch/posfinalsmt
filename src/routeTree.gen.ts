@@ -15,6 +15,7 @@ import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SuppliersRouteImport } from './routes/suppliers'
 import { Route as SettingsPlanRouteImport } from './routes/settings_.plan'
@@ -51,6 +52,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/settings': typeof SettingsRoute
   '/suppliers': typeof SuppliersRoute
   '/settings/plan': typeof SettingsPlanRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/settings': typeof SettingsRoute
   '/suppliers': typeof SuppliersRoute
   '/settings/plan': typeof SettingsPlanRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/expenses': typeof ExpensesRoute
   '/inventory': typeof InventoryRoute
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/settings': typeof SettingsRoute
   '/suppliers': typeof SuppliersRoute
   '/settings_/plan': typeof SettingsPlanRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/inventory'
     | '/login'
+    | '/register'
     | '/settings'
     | '/suppliers'
     | '/settings/plan'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/inventory'
     | '/login'
+    | '/register'
     | '/settings'
     | '/suppliers'
     | '/settings/plan'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/expenses'
     | '/inventory'
     | '/login'
+    | '/register'
     | '/settings'
     | '/suppliers'
     | '/settings_/plan'
@@ -166,6 +178,7 @@ export interface RootRouteChildren {
   ExpensesRoute: typeof ExpensesRoute
   InventoryRoute: typeof InventoryRoute
   LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
   SettingsRoute: typeof SettingsRoute
   SuppliersRoute: typeof SuppliersRoute
   SettingsPlanRoute: typeof SettingsPlanRoute
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -262,6 +282,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExpensesRoute: ExpensesRoute,
   InventoryRoute: InventoryRoute,
   LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
   SettingsRoute: SettingsRoute,
   SuppliersRoute: SuppliersRoute,
   SettingsPlanRoute: SettingsPlanRoute,
