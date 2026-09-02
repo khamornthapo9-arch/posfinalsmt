@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 const DEFAULT_LOGO = "/smt-pos-logo.png";
 
 const NAV = [
-  { to: "/", label: "အရောင်းစာရင်း", icon: ScanLine, roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
+  { to: "/register", label: "အရောင်းစာရင်း", icon: ScanLine, roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
   { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes, roles: ["OWNER", "MANAGER"] as StoreRole[] },
   { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3, roles: ["OWNER", "MANAGER"] as StoreRole[] },
   { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings, roles: ["OWNER"] as StoreRole[] },
@@ -78,7 +78,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
           to={item.to as string}
           title={item.label}
           onClick={onNavigate}
-          activeOptions={{ exact: item.to === "/" }}
+          activeOptions={{ exact: item.to === "/register" }}
           activeProps={{
             className: "bg-sidebar-accent text-sidebar-accent-foreground",
           }}
@@ -205,18 +205,18 @@ export function PosShell({
   useEffect(() => {
     if (loading || roleLoading) return;
     if (!isActive) {
-      void navigate({ to: "/", replace: true });
+      void navigate({ to: "/register", replace: true });
       return;
     }
     const allowed =
-      pathname === "/" ||
+      pathname === "/register" ||
       (pathname.startsWith("/customers") && canManageCustomers) ||
       (pathname.startsWith("/inventory") && canManageInventory) ||
       (pathname.startsWith("/analytics") && canViewAnalytics) ||
       (pathname.startsWith("/suppliers") && canManageAccounting) ||
       (pathname.startsWith("/expenses") && canManageAccounting) ||
       ((pathname === "/settings" || pathname.startsWith("/settings/")) && canManageSettings);
-    if (!allowed) void navigate({ to: "/", replace: true });
+    if (!allowed) void navigate({ to: "/register", replace: true });
   }, [
     loading,
     roleLoading,
