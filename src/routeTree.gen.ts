@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as ExpensesRouteImport } from './routes/expenses'
@@ -21,6 +22,11 @@ import { Route as SettingsPlanRouteImport } from './routes/settings_.plan'
 import { Route as SettingsReceiptRouteImport } from './routes/settings_.receipt'
 import { Route as SettingsStaffRouteImport } from './routes/settings_.staff'
 
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -78,6 +84,7 @@ const SettingsStaffRoute = SettingsStaffRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/customers': typeof CustomersRoute
   '/expenses': typeof ExpensesRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/settings/staff': typeof SettingsStaffRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/customers': typeof CustomersRoute
   '/expenses': typeof ExpensesRoute
@@ -105,6 +113,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/customers': typeof CustomersRoute
   '/expenses': typeof ExpensesRoute
@@ -120,6 +129,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/analytics'
     | '/customers'
     | '/expenses'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/settings/staff'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/analytics'
     | '/customers'
     | '/expenses'
@@ -146,6 +157,7 @@ export interface FileRouteTypes {
     | '/settings/staff'
   id:
     | '__root__'
+    | '/'
     | '/analytics'
     | '/customers'
     | '/expenses'
@@ -160,6 +172,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AnalyticsRoute: typeof AnalyticsRoute
   CustomersRoute: typeof CustomersRoute
   ExpensesRoute: typeof ExpensesRoute
@@ -175,6 +188,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/analytics': {
       id: '/analytics'
       path: '/analytics'
@@ -256,6 +276,7 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AnalyticsRoute: AnalyticsRoute,
   CustomersRoute: CustomersRoute,
   ExpensesRoute: ExpensesRoute,

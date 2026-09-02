@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import { Loader2, ScanLine } from "lucide-react";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Loader2, MailCheck, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, PENDING_STORE_NAME_KEY } from "@/lib/auth-store";
@@ -9,17 +9,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+type Mode = "signin" | "signup";
+
 export const Route = createFileRoute("/login")({
+  ssr: false,
+  validateSearch: (search: Record<string, unknown>): { mode?: Mode } => ({
+    mode: search['mode'] === "signup" ? "signup" : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "အကောင့်ဝင်ရန် — SMT POS" },
       {
         name: "description",
-        content:
-          "အီးမေးလ် အတည်ပြုကုဒ်ဖြင့် ဝင်ရောက်ပါ။",
+        content: "အီးမေးလ်နှင့် စကားဝှက် သို့မဟုတ် Google ဖြင့် SMT POS သို့ ဝင်ရောက်ပါ။",
       },
       { property: "og:title", content: "အကောင့်ဝင်ရန် — SMT POS" },
-      { property: "og:description", content: "သင့်ဆိုင်အတွက် အီးမေးလ်အတည်ပြုကုဒ်ဖြင့် အကောင့်ဝင်ရန်။" },
+      {
+        property: "og:description",
+        content: "သင့်ဆိုင်အတွက် အီးမေးလ်/စကားဝှက် သို့မဟုတ် Google ဖြင့် အကောင့်ဝင်ရန်။",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -27,214 +35,233 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="mr-2 h-4 w-4" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.58-5.17 3.58-8.81Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.96-1.08 7.94-2.92l-3.88-3c-1.08.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.95H1.28v3.1A12 12 0 0 0 12 24Z"
+      />
+      <path fill="#FBBC05" d="M5.29 14.28a7.2 7.2 0 0 1 0-4.56v-3.1H1.28a12 12 0 0 0 0 10.76l4.01-3.1Z" />
+      <path
+        fill="#EA4335"
+        d="M12 4.77c1.76 0 3.34.61 4.59 1.8l3.43-3.43C17.95 1.18 15.23 0 12 0A12 12 0 0 0 1.28 6.62l4.01 3.1C6.23 6.88 8.88 4.77 12 4.77Z"
+      />
+    </svg>
+  );
+}
+
 function LoginPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const { session, store, loading, refreshStore } = useAuth();
-  const [step, setStep] = useState<"details" | "code">("details");
+  const [mode, setMode] = useState<Mode>(search.mode === "signup" ? "signup" : "signin");
   const [storeName, setStoreName] = useState("");
   const [email, setEmail] = useState("");
-  const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [seconds, setSeconds] = useState(0);
-  const inputs = useRef<Array<HTMLInputElement | null>>([]);
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && session && store) void navigate({ to: "/", replace: true });
+    if (!loading && session && store) void navigate({ to: "/register", replace: true });
   }, [loading, session, store, navigate]);
 
-  useEffect(() => {
-    if (seconds <= 0) return;
-    const t = window.setInterval(() => setSeconds((s) => s - 1), 1000);
-    return () => window.clearInterval(t);
-  }, [seconds]);
-
-  const sendCode = async () => {
-    if (!storeName.trim()) {
-      toast.error("ဆိုင်အမည် ထည့်သွင်းပေးပါ။");
-      return;
-    }
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+  const submit = async () => {
+    const mail = email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(mail)) {
       toast.error("မှန်ကန်သော အီးမေးလ်လိပ်စာ ထည့်သွင်းပေးပါ။");
       return;
     }
-    // Persist the store name first so magic-link sign-in in a new tab still has it.
-    window.localStorage.setItem(PENDING_STORE_NAME_KEY, storeName.trim());
-
-    // Switch to the code screen immediately, regardless of the network call.
-    setStep("code");
-    setSeconds(60);
-    setDigits(Array(6).fill(""));
-    setSending(true);
-    window.setTimeout(() => inputs.current[0]?.focus(), 50);
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: { shouldCreateUser: true },
-    });
-    setSending(false);
-    if (error) {
-      toast.error(error.message);
-      setSeconds(0);
+    if (password.length < 6) {
+      toast.error("စကားဝှက်သည် အနည်းဆုံး ၆ လုံး ရှိရပါမည်။");
       return;
     }
-    toast.success("သင့်အီးမေးလ်သို့ အတည်ပြုလင့် ပို့ပေးလိုက်ပါပြီ။");
-  };
-
-  const setDigit = (index: number, value: string) => {
-    const clean = value.replace(/\D/g, "");
-    if (!clean) {
-      setDigits((d) => d.map((x, i) => (i === index ? "" : x)));
+    if (mode === "signup" && !storeName.trim()) {
+      toast.error("ဆိုင်အမည် ထည့်သွင်းပေးပါ။");
       return;
     }
-    setDigits((d) => {
-      const next = [...d];
-      clean.split("").forEach((ch, offset) => {
-        if (index + offset < 6) next[index + offset] = ch;
-      });
-      return next;
-    });
-    const target = Math.min(index + clean.length, 5);
-    inputs.current[target]?.focus();
-  };
 
-  const verify = async (code: string) => {
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: email.trim().toLowerCase(),
-        token: code,
-        type: "email",
-      });
-      if (error || !data.user) throw error ?? new Error("အတည်ပြုခြင်း မအောင်မြင်ပါ");
-      await refreshStore();
-      toast.success("ပြန်လည်ကြိုဆိုပါသည်");
-      void navigate({ to: "/", replace: true });
+      if (mode === "signup") {
+        window.localStorage.setItem(PENDING_STORE_NAME_KEY, storeName.trim());
+        const { data, error } = await supabase.auth.signUp({
+          email: mail,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/login`,
+            data: { store_name: storeName.trim() },
+          },
+        });
+        if (error) throw error;
+        if (data.session) {
+          await refreshStore();
+          void navigate({ to: "/register", replace: true });
+          return;
+        }
+        setSentTo(mail);
+        toast.success("အတည်ပြုလင့်ခ်ကို သင့်အီးမေးလ်သို့ ပို့ပြီးပါပြီ။");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email: mail, password });
+        if (error) throw error;
+        await refreshStore();
+        toast.success("ပြန်လည်ကြိုဆိုပါသည်");
+        void navigate({ to: "/register", replace: true });
+      }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "အတည်ပြုကုဒ် မမှန်ကန်ပါ။");
-      setDigits(Array(6).fill(""));
-      inputs.current[0]?.focus();
+      toast.error(err instanceof Error ? err.message : "အကောင့်ဝင်ရောက်မှု မအောင်မြင်ပါ။");
     } finally {
       setBusy(false);
     }
   };
 
-  useEffect(() => {
-    const code = digits.join("");
-    if (code.length === 6 && !busy) void verify(code);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [digits]);
+  const signInWithGoogle = async () => {
+    setBusy(true);
+    try {
+      if (storeName.trim()) {
+        window.localStorage.setItem(PENDING_STORE_NAME_KEY, storeName.trim());
+      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/login` },
+      });
+      if (error) throw error;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Google ဖြင့် ဝင်ရောက်မှု မအောင်မြင်ပါ။");
+      setBusy(false);
+    }
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex justify-center">
-          <img
-            src={smtPosLogo}
-            alt="SMT POS"
-            width={72}
-            height={72}
-            className="h-18 w-18 max-h-20 object-contain"
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
-          />
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <ScanLine className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">SMT POS</h1>
-            <p className="text-sm text-muted-foreground">
-              {step === "details" ? "အကောင့်ဝင်ရန် သို့မဟုတ် ဆိုင်အသစ်စတင်ရန်" : "အတည်ပြုကုဒ် ရိုက်ထည့်ပါ"}
-            </p>
-          </div>
+          <Link to="/">
+            <img
+              src={smtPosLogo}
+              alt="SMT POS"
+              width={72}
+              height={72}
+              className="h-18 w-18 max-h-20 object-contain"
+            />
+          </Link>
         </div>
 
-        {step === "details" ? (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="store">ဆိုင်အမည်</Label>
-              <Input
-                id="store"
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                placeholder="ဥပမာ - မြို့မ စတိုး"
-                maxLength={80}
-                className="min-h-11"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">အီးမေးလ်</Label>
-              <Input
-                id="email"
-                type="email"
-                inputMode="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="owner@store.com"
-                maxLength={255}
-                className="min-h-11"
-                onKeyDown={(e) => e.key === "Enter" && void sendCode()}
-              />
-            </div>
-            <Button onClick={() => void sendCode()} disabled={busy || sending} className="min-h-11 w-full">
-              {(busy || sending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              အတည်ပြုကုဒ် ပို့ရန်
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            <p className="text-sm text-muted-foreground">
-              ဤအီးမေးလ်သို့ အတည်ပြုကုဒ် ပို့ပေးလိုက်ပါပြီ <span className="font-medium text-foreground">{email}</span>
-            </p>
-            <div className="flex justify-between gap-2">
-              {digits.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={(el) => {
-                    inputs.current[i] = el;
-                  }}
-                  value={digit}
-                  onChange={(e) => setDigit(i, e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Backspace" && !digits[i] && i > 0) inputs.current[i - 1]?.focus();
-                  }}
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  aria-label={`ဂဏန်း ${i + 1}`}
-                  className="h-14 w-full rounded-lg border border-input bg-background text-center text-xl font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-ring"
-                />
-              ))}
-            </div>
-            {(busy || sending) && (
-              <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> {sending ? "ကုဒ် ပို့နေသည်..." : "အတည်ပြုနေသည်..."}
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+          {sentTo ? (
+            <div className="space-y-4 text-center">
+              <MailCheck className="mx-auto h-10 w-10 text-primary" />
+              <h1 className="text-lg font-semibold tracking-tight">အီးမေးလ် အတည်ပြုပေးပါ</h1>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{sentTo}</span> သို့ အတည်ပြုလင့်ခ်
+                ပို့ပြီးပါပြီ။ လင့်ခ်ကို နှိပ်ပြီးနောက် ဤနေရာမှ ပြန်လည်ဝင်ရောက်နိုင်ပါသည်။
               </p>
-            )}
-            <div className="flex items-center justify-between text-sm">
-              <button
-                type="button"
-                onClick={() => setStep("details")}
-                className="text-muted-foreground underline-offset-4 hover:underline"
+              <Button
+                variant="outline"
+                className="min-h-11 w-full"
+                onClick={() => {
+                  setSentTo(null);
+                  setMode("signin");
+                }}
               >
-                အီးမေးလ် ပြောင်းရန်
-              </button>
-              <button
-                type="button"
-                disabled={seconds > 0 || busy || sending}
-                onClick={() => void sendCode()}
-                className="font-medium text-primary disabled:text-muted-foreground"
-              >
-                {seconds > 0 ? `${seconds} စက္ကန့်အတွင်း ပြန်ပို့မည်` : "ကုဒ် ပြန်ပို့ရန်"}
-              </button>
+                အကောင့်ဝင်ရန် ပြန်သွားမည်
+              </Button>
             </div>
-          </div>
-        )}
-      </div>
+          ) : (
+            <>
+              <div className="mb-6 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <ScanLine className="h-5 w-5" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold tracking-tight">SMT POS</h1>
+                  <p className="text-sm text-muted-foreground">
+                    {mode === "signin" ? "အကောင့်ဝင်ရန်" : "ဆိုင်အသစ် စတင်ရန်"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {mode === "signup" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="store">ဆိုင်အမည်</Label>
+                    <Input
+                      id="store"
+                      value={storeName}
+                      onChange={(e) => setStoreName(e.target.value)}
+                      placeholder="ဥပမာ - မြို့မ စတိုး"
+                      maxLength={80}
+                      className="min-h-11"
+                    />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="email">အီးမေးလ်</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="owner@store.com"
+                    maxLength={255}
+                    className="min-h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">စကားဝှက်</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="min-h-11"
+                    onKeyDown={(e) => e.key === "Enter" && void submit()}
+                  />
+                </div>
+
+                <Button onClick={() => void submit()} disabled={busy} className="min-h-11 w-full">
+                  {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {mode === "signin" ? "အကောင့်ဝင်ရန်" : "အကောင့်ဖွင့်ရန်"}
+                </Button>
+
+                <div className="flex items-center gap-3">
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="text-xs text-muted-foreground">သို့မဟုတ်</span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void signInWithGoogle()}
+                  className="min-h-11 w-full"
+                >
+                  <GoogleIcon /> Google ဖြင့် ဆက်လက်ဆောင်ရွက်ရန်
+                </Button>
+
+                <p className="text-center text-sm text-muted-foreground">
+                  {mode === "signin" ? "အကောင့် မရှိသေးဘူးလား?" : "အကောင့် ရှိပြီးသားလား?"}{" "}
+                  <button
+                    type="button"
+                    onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    {mode === "signin" ? "အကောင့်ဖွင့်ရန်" : "အကောင့်ဝင်ရန်"}
+                  </button>
+                </p>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </main>
   );
