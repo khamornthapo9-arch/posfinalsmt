@@ -115,7 +115,13 @@ function LoginPage() {
         void navigate({ to: "/register", replace: true });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "အကောင့်ဝင်ရောက်မှု မအောင်မြင်ပါ။");
+      const msg = err instanceof Error ? err.message : "";
+      toast.error(
+        /failed to fetch|network/i.test(msg)
+          ? "ကွန်ရက် ချိတ်ဆက်မှု မရပါ။ အင်တာနက်ကို စစ်ဆေးပြီး ထပ်စမ်းကြည့်ပါ။"
+          : msg || "အကောင့်ဝင်ရောက်မှု မအောင်မြင်ပါ။",
+      );
+
     } finally {
       setBusy(false);
     }
