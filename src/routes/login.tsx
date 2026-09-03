@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { Loader2, MailCheck, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { useAuth, PENDING_STORE_NAME_KEY } from "@/lib/auth-store";
+
 import smtPosLogo from "@/assets/smt-pos-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,7 +115,13 @@ function LoginPage() {
         void navigate({ to: "/register", replace: true });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "အကောင့်ဝင်ရောက်မှု မအောင်မြင်ပါ။");
+      const msg = err instanceof Error ? err.message : "";
+      toast.error(
+        /failed to fetch|network/i.test(msg)
+          ? "ကွန်ရက် ချိတ်ဆက်မှု မရပါ။ အင်တာနက်ကို စစ်ဆေးပြီး ထပ်စမ်းကြည့်ပါ။"
+          : msg || "အကောင့်ဝင်ရောက်မှု မအောင်မြင်ပါ။",
+      );
+
     } finally {
       setBusy(false);
     }
@@ -125,16 +133,20 @@ function LoginPage() {
       if (storeName.trim()) {
         window.localStorage.setItem(PENDING_STORE_NAME_KEY, storeName.trim());
       }
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}/login` },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/login`,
       });
-      if (error) throw error;
+      if (result.error) throw result.error;
+      if (result.redirected) return;
+      await refreshStore();
+      void navigate({ to: "/register", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Google ဖြင့် ဝင်ရောက်မှု မအောင်မြင်ပါ။");
+    } finally {
       setBusy(false);
     }
   };
+
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
