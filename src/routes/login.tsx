@@ -125,16 +125,20 @@ function LoginPage() {
       if (storeName.trim()) {
         window.localStorage.setItem(PENDING_STORE_NAME_KEY, storeName.trim());
       }
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}/login` },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: `${window.location.origin}/login`,
       });
-      if (error) throw error;
+      if (result.error) throw result.error;
+      if (result.redirected) return;
+      await refreshStore();
+      void navigate({ to: "/register", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Google ဖြင့် ဝင်ရောက်မှု မအောင်မြင်ပါ။");
+    } finally {
       setBusy(false);
     }
   };
+
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
