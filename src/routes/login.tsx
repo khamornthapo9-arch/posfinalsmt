@@ -68,9 +68,27 @@ function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
+  // Full-page OAuth redirect returns here with tokens in the URL; consume them.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+    const access_token = url.searchParams.get("access_token") ?? hash.get("access_token");
+    const refresh_token = url.searchParams.get("refresh_token") ?? hash.get("refresh_token");
+    if (!access_token || !refresh_token) return;
+    setBusy(true);
+    void (async () => {
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      window.history.replaceState({}, "", url.pathname);
+      if (error) toast.error(error.message);
+      else await refreshStore();
+      setBusy(false);
+    })();
+  }, [refreshStore]);
+
   useEffect(() => {
     if (!loading && session && store) void navigate({ to: "/register", replace: true });
   }, [loading, session, store, navigate]);
+
 
   const submit = async () => {
     const mail = email.trim().toLowerCase();
