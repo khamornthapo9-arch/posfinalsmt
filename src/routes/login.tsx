@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { Loader2, MailCheck, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { useAuth, PENDING_STORE_NAME_KEY } from "@/lib/auth-store";
+
 import smtPosLogo from "@/assets/smt-pos-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
