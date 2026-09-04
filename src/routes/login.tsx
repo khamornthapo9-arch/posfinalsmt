@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, MailCheck, ScanLine } from "lucide-react";
+import { Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, PENDING_STORE_NAME_KEY } from "@/lib/auth-store";
@@ -46,7 +46,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [sentTo, setSentTo] = useState<string | null>(null);
+  
 
   useEffect(() => {
     if (!loading && session && store) void navigate({ to: "/register", replace: true });
