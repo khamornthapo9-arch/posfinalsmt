@@ -80,19 +80,20 @@ function LoginPage() {
         const { data, error } = await supabase.auth.signUp({
           email: mail,
           password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/login`,
-            data: { store_name: storeName.trim() },
-          },
+          options: { data: { store_name: storeName.trim() } },
         });
         if (error) throw error;
-        if (data.session) {
-          await refreshStore();
-          void navigate({ to: "/register", replace: true });
-          return;
+        if (!data.session) {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: mail,
+            password,
+          });
+          if (signInError) throw signInError;
         }
-        setSentTo(mail);
-        toast.success("အတည်ပြုလင့်ခ်ကို သင့်အီးမေးလ်သို့ ပို့ပြီးပါပြီ။");
+        await refreshStore();
+        toast.success("အကောင့် ဖွင့်ပြီးပါပြီ။ ကြိုဆိုပါသည်");
+        void navigate({ to: "/register", replace: true });
+        return;
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: mail, password });
         if (error) throw error;
