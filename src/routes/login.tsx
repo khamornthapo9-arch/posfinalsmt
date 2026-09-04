@@ -129,26 +129,7 @@ function LoginPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-          {sentTo ? (
-            <div className="space-y-4 text-center">
-              <MailCheck className="mx-auto h-10 w-10 text-primary" />
-              <h1 className="text-lg font-semibold tracking-tight">အီးမေးလ် အတည်ပြုပေးပါ</h1>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{sentTo}</span> သို့ အတည်ပြုလင့်ခ်
-                ပို့ပြီးပါပြီ။ လင့်ခ်ကို နှိပ်ပြီးနောက် ဤနေရာမှ ပြန်လည်ဝင်ရောက်နိုင်ပါသည်။
-              </p>
-              <Button
-                variant="outline"
-                className="min-h-11 w-full"
-                onClick={() => {
-                  setSentTo(null);
-                  setMode("signin");
-                }}
-              >
-                အကောင့်ဝင်ရန် ပြန်သွားမည်
-              </Button>
-            </div>
-          ) : (
+          {(() => null)() || (
             <>
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
