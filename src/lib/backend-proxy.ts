@@ -37,8 +37,7 @@ export function installBackendProxy() {
         typeof input === "string" || input instanceof URL
           ? proxied
           : new Request(proxied, input as Request);
-      const response = await originalFetch(request, init);
-      if (response.status !== 404 && response.status < 500) return response;
+      return await originalFetch(request, init);
     } catch {
       /* fall through to direct request */
     }
