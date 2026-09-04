@@ -130,6 +130,8 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+installBackendProxy();
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
