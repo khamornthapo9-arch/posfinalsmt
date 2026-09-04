@@ -10,6 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { installBackendProxy } from "../lib/backend-proxy";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { PosProvider } from "../lib/pos-store";
 import { AuthProvider } from "../lib/auth-store";
