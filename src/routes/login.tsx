@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, MailCheck, ScanLine } from "lucide-react";
+import { Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, PENDING_STORE_NAME_KEY } from "@/lib/auth-store";
@@ -46,7 +46,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [sentTo, setSentTo] = useState<string | null>(null);
+  
 
   useEffect(() => {
     if (!loading && session && store) void navigate({ to: "/register", replace: true });
@@ -80,19 +80,20 @@ function LoginPage() {
         const { data, error } = await supabase.auth.signUp({
           email: mail,
           password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/login`,
-            data: { store_name: storeName.trim() },
-          },
+          options: { data: { store_name: storeName.trim() } },
         });
         if (error) throw error;
-        if (data.session) {
-          await refreshStore();
-          void navigate({ to: "/register", replace: true });
-          return;
+        if (!data.session) {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: mail,
+            password,
+          });
+          if (signInError) throw signInError;
         }
-        setSentTo(mail);
-        toast.success("အတည်ပြုလင့်ခ်ကို သင့်အီးမေးလ်သို့ ပို့ပြီးပါပြီ။");
+        await refreshStore();
+        toast.success("အကောင့် ဖွင့်ပြီးပါပြီ။ ကြိုဆိုပါသည်");
+        void navigate({ to: "/register", replace: true });
+        return;
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: mail, password });
         if (error) throw error;
@@ -128,26 +129,7 @@ function LoginPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-          {sentTo ? (
-            <div className="space-y-4 text-center">
-              <MailCheck className="mx-auto h-10 w-10 text-primary" />
-              <h1 className="text-lg font-semibold tracking-tight">အီးမေးလ် အတည်ပြုပေးပါ</h1>
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{sentTo}</span> သို့ အတည်ပြုလင့်ခ်
-                ပို့ပြီးပါပြီ။ လင့်ခ်ကို နှိပ်ပြီးနောက် ဤနေရာမှ ပြန်လည်ဝင်ရောက်နိုင်ပါသည်။
-              </p>
-              <Button
-                variant="outline"
-                className="min-h-11 w-full"
-                onClick={() => {
-                  setSentTo(null);
-                  setMode("signin");
-                }}
-              >
-                အကောင့်ဝင်ရန် ပြန်သွားမည်
-              </Button>
-            </div>
-          ) : (
+          {(() => null)() || (
             <>
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
