@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Loader2, MailCheck, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { useAuth, PENDING_STORE_NAME_KEY } from "@/lib/auth-store";
 
 import smtPosLogo from "@/assets/smt-pos-logo.png";
@@ -23,12 +22,12 @@ export const Route = createFileRoute("/login")({
       { title: "အကောင့်ဝင်ရန် — SMT POS" },
       {
         name: "description",
-        content: "အီးမေးလ်နှင့် စကားဝှက် သို့မဟုတ် Google ဖြင့် SMT POS သို့ ဝင်ရောက်ပါ။",
+        content: "အီးမေးလ်နှင့် စကားဝှက်ဖြင့် SMT POS သို့ ဝင်ရောက်ပါ။",
       },
       { property: "og:title", content: "အကောင့်ဝင်ရန် — SMT POS" },
       {
         property: "og:description",
-        content: "သင့်ဆိုင်အတွက် အီးမေးလ်/စကားဝှက် သို့မဟုတ် Google ဖြင့် အကောင့်ဝင်ရန်။",
+        content: "သင့်ဆိုင်အတွက် အီးမေးလ်/စကားဝှက်ဖြင့် အကောင့်ဝင်ရန်။",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -36,26 +35,6 @@ export const Route = createFileRoute("/login")({
   }),
   component: LoginPage,
 });
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="mr-2 h-4 w-4" aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.58-5.17 3.58-8.81Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.96-1.08 7.94-2.92l-3.88-3c-1.08.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.95H1.28v3.1A12 12 0 0 0 12 24Z"
-      />
-      <path fill="#FBBC05" d="M5.29 14.28a7.2 7.2 0 0 1 0-4.56v-3.1H1.28a12 12 0 0 0 0 10.76l4.01-3.1Z" />
-      <path
-        fill="#EA4335"
-        d="M12 4.77c1.76 0 3.34.61 4.59 1.8l3.43-3.43C17.95 1.18 15.23 0 12 0A12 12 0 0 0 1.28 6.62l4.01 3.1C6.23 6.88 8.88 4.77 12 4.77Z"
-      />
-    </svg>
-  );
-}
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -65,30 +44,13 @@ function LoginPage() {
   const [storeName, setStoreName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
-
-  // Full-page OAuth redirect returns here with tokens in the URL; consume them.
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
-    const access_token = url.searchParams.get("access_token") ?? hash.get("access_token");
-    const refresh_token = url.searchParams.get("refresh_token") ?? hash.get("refresh_token");
-    if (!access_token || !refresh_token) return;
-    setBusy(true);
-    void (async () => {
-      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-      window.history.replaceState({}, "", url.pathname);
-      if (error) toast.error(error.message);
-      else await refreshStore();
-      setBusy(false);
-    })();
-  }, [refreshStore]);
 
   useEffect(() => {
     if (!loading && session && store) void navigate({ to: "/register", replace: true });
   }, [loading, session, store, navigate]);
-
 
   const submit = async () => {
     const mail = email.trim().toLowerCase();
@@ -96,13 +58,19 @@ function LoginPage() {
       toast.error("မှန်ကန်သော အီးမေးလ်လိပ်စာ ထည့်သွင်းပေးပါ။");
       return;
     }
-    if (password.length < 6) {
-      toast.error("စကားဝှက်သည် အနည်းဆုံး ၆ လုံး ရှိရပါမည်။");
+    if (password.length < 8) {
+      toast.error("စကားဝှက်သည် အနည်းဆုံး ၈ လုံး ရှိရပါမည်။");
       return;
     }
-    if (mode === "signup" && !storeName.trim()) {
-      toast.error("ဆိုင်အမည် ထည့်သွင်းပေးပါ။");
-      return;
+    if (mode === "signup") {
+      if (!storeName.trim()) {
+        toast.error("ဆိုင်အမည် ထည့်သွင်းပေးပါ။");
+        return;
+      }
+      if (password !== confirmPassword) {
+        toast.error("စကားဝှက်နှစ်ခု မတူညီပါ။ ထပ်စစ်ပေးပါ။");
+        return;
+      }
     }
 
     setBusy(true);
@@ -139,32 +107,10 @@ function LoginPage() {
           ? "ကွန်ရက် ချိတ်ဆက်မှု မရပါ။ အင်တာနက်ကို စစ်ဆေးပြီး ထပ်စမ်းကြည့်ပါ။"
           : msg || "အကောင့်ဝင်ရောက်မှု မအောင်မြင်ပါ။",
       );
-
     } finally {
       setBusy(false);
     }
   };
-
-  const signInWithGoogle = async () => {
-    setBusy(true);
-    try {
-      if (storeName.trim()) {
-        window.localStorage.setItem(PENDING_STORE_NAME_KEY, storeName.trim());
-      }
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/login`,
-      });
-      if (result.error) throw result.error;
-      if (result.redirected) return;
-      await refreshStore();
-      void navigate({ to: "/register", replace: true });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Google ဖြင့် ဝင်ရောက်မှု မအောင်မြင်ပါ။");
-    } finally {
-      setBusy(false);
-    }
-  };
-
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
@@ -253,29 +199,27 @@ function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     className="min-h-11"
-                    onKeyDown={(e) => e.key === "Enter" && void submit()}
                   />
                 </div>
+                {mode === "signup" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">စကားဝှက် အတည်ပြုရန်</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="min-h-11"
+                      onKeyDown={(e) => e.key === "Enter" && void submit()}
+                    />
+                  </div>
+                )}
 
                 <Button onClick={() => void submit()} disabled={busy} className="min-h-11 w-full">
                   {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {mode === "signin" ? "အကောင့်ဝင်ရန်" : "အကောင့်ဖွင့်ရန်"}
-                </Button>
-
-                <div className="flex items-center gap-3">
-                  <span className="h-px flex-1 bg-border" />
-                  <span className="text-xs text-muted-foreground">သို့မဟုတ်</span>
-                  <span className="h-px flex-1 bg-border" />
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void signInWithGoogle()}
-                  className="min-h-11 w-full"
-                >
-                  <GoogleIcon /> Google ဖြင့် ဆက်လက်ဆောင်ရွက်ရန်
                 </Button>
 
                 <p className="text-center text-sm text-muted-foreground">
