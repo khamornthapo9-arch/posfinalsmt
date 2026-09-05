@@ -106,7 +106,11 @@ function LoginPage() {
       toast.error(
         /failed to fetch|network/i.test(msg)
           ? "ကွန်ရက် ချိတ်ဆက်မှု မရပါ။ အင်တာနက်ကို စစ်ဆေးပြီး ထပ်စမ်းကြည့်ပါ။"
-          : msg || "အကောင့်ဝင်ရောက်မှု မအောင်မြင်ပါ။",
+          : /weak|easy to guess/i.test(msg)
+            ? "ဤစကားဝှက်သည် အလွန်ရိုးရှင်း/လုံခြုံမှုမရှိပါ။ ပိုခက်ခဲသော စကားဝှက် အသစ်တစ်ခု ရွေးပါ။"
+            : /invalid login|invalid_credentials/i.test(msg)
+              ? "အီးမေးလ် သို့မဟုတ် စကားဝှက် မှားနေပါသည်။"
+              : msg || "အကောင့်ဝင်ရောက်မှု မအောင်မြင်ပါ။",
       );
     } finally {
       setBusy(false);
@@ -129,8 +133,7 @@ function LoginPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-          {(() => null)() || (
-            <>
+          <>
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                   <ScanLine className="h-5 w-5" />
@@ -215,8 +218,7 @@ function LoginPage() {
                   </button>
                 </p>
               </div>
-            </>
-          )}
+          </>
         </div>
       </div>
     </main>
