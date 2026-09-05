@@ -129,7 +129,7 @@ function LoginPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-          {(() => null)() || (
+          {(
             <>
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
