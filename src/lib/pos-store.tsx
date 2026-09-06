@@ -106,6 +106,7 @@ interface PosContextValue {
     category?: string;
     barcode?: string | null;
     qr_value?: string | null;
+    image_url?: string | null;
     units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[] | undefined;
   }) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
@@ -411,6 +412,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         category: input.category?.trim() || DEFAULT_CATEGORY,
         barcode: input.barcode?.trim() || null,
         qr_value: input.qr_value?.trim() || null,
+        ...(input.image_url !== undefined ? { image_url: input.image_url } : {}),
       };
       let itemId = input.id;
       if (itemId) {

@@ -43,9 +43,16 @@ export interface PendingSale {
   lines: PendingSaleLine[];
 }
 
+export interface CachedImage {
+  url: string;
+  blob: Blob;
+  cached_at: number;
+}
+
 class PosDatabase extends Dexie {
   cached_items!: Table<CachedItem, string>;
   pending_sales!: Table<PendingSale, number>;
+  cached_images!: Table<CachedImage, string>;
 
   constructor() {
     super("pos_offline_db");
@@ -107,6 +114,11 @@ class PosDatabase extends Dexie {
             if (!item.units) item.units = [];
           });
       });
+    this.version(6).stores({
+      cached_items: "id, sku, name, category",
+      pending_sales: "++localId, created_at",
+      cached_images: "url, cached_at",
+    });
   }
 }
 

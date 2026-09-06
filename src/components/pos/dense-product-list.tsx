@@ -3,6 +3,19 @@ import { Camera, Plus, Search, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { stockStatus, money } from "@/lib/pos-utils";
 import type { CachedItem, ItemUnit } from "@/lib/pos-db";
+import { useCachedImage } from "@/lib/use-cached-image";
+
+function ProductThumb({ item }: { item: CachedItem }) {
+  const src = useCachedImage(item.image_url);
+  if (!src) {
+    return (
+      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
+        {item.name.slice(0, 2)}
+      </div>
+    );
+  }
+  return <img src={src} alt={item.name} loading="lazy" className="h-12 w-12 shrink-0 rounded-lg object-cover" />;
+}
 
 interface DenseProductListProps {
   items: CachedItem[];
@@ -114,17 +127,7 @@ export function DenseProductList({
                 )}
               >
                 <div className="flex items-center gap-3">
-                  {item.image_url ? (
-                    <img
-                      src={item.image_url}
-                      alt={item.name}
-                      className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-                      {item.name.slice(0, 2)}
-                    </div>
-                  )}
+                  <ProductThumb item={item} />
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{item.name}</p>
