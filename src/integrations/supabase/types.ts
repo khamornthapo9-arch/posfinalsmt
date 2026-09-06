@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcement_targets: {
+        Row: {
+          announcement_id: string
+          created_at: string
+          id: string
+          store_id: string
+        }
+        Insert: {
+          announcement_id: string
+          created_at?: string
+          id?: string
+          store_id: string
+        }
+        Update: {
+          announcement_id?: string
+          created_at?: string
+          id?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_targets_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_targets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          audience: string
+          created_at: string
+          id: string
+          is_active: boolean
+          message: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           balance: number
@@ -379,6 +442,27 @@ export type Database = {
           },
         ]
       }
+      platform_admins: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       purchase_items: {
         Row: {
           created_at: string
@@ -589,6 +673,50 @@ export type Database = {
           },
         ]
       }
+      store_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          note: string | null
+          phone: string | null
+          store_id: string
+          telegram: string | null
+          updated_at: string
+          viber: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          note?: string | null
+          phone?: string | null
+          store_id: string
+          telegram?: string | null
+          updated_at?: string
+          viber?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          note?: string | null
+          phone?: string | null
+          store_id?: string
+          telegram?: string | null
+          updated_at?: string
+          viber?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_contacts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_members: {
         Row: {
           created_at: string
@@ -740,6 +868,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_platform_admin: { Args: never; Returns: boolean }
       is_store_member: { Args: { _store_id: string }; Returns: boolean }
       owns_store: { Args: { _store_id: string }; Returns: boolean }
     }
