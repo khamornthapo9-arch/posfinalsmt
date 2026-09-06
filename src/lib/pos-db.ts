@@ -43,9 +43,16 @@ export interface PendingSale {
   lines: PendingSaleLine[];
 }
 
+export interface CachedImage {
+  url: string;
+  blob: Blob;
+  cached_at: number;
+}
+
 class PosDatabase extends Dexie {
   cached_items!: Table<CachedItem, string>;
   pending_sales!: Table<PendingSale, number>;
+  cached_images!: Table<CachedImage, string>;
 
   constructor() {
     super("pos_offline_db");
