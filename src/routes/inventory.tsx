@@ -16,6 +16,7 @@ import {
   Trash2,
   Upload,
   X,
+  ImagePlus,
 } from "lucide-react";
 import Barcode from "react-barcode";
 import { toast } from "sonner";
@@ -25,6 +26,8 @@ import { PosShell } from "@/components/pos/pos-shell";
 import { useAuth } from "@/lib/auth-store";
 import { usePos } from "@/lib/pos-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
+import { uploadItemImage } from "@/lib/image-store";
+import { useCachedImage } from "@/lib/use-cached-image";
 import { downloadCsv, money, stockStatus } from "@/lib/pos-utils";
 import {
   SAMPLE_CSV_ROWS,
@@ -393,10 +396,16 @@ function ProductModal({
     min_stock_threshold: number;
     barcode?: string | null;
     qr_value?: string | null;
+    image_url?: string | null;
     units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[] | undefined;
   }) => Promise<void>;
 }) {
   const { isPro } = useStoreSettings();
+  const { store } = useAuth();
+  const [imageUrl, setImageUrl] = useState<string | null>(item?.image_url ?? null);
+  const [uploading, setUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const previewSrc = useCachedImage(imageUrl);
   const [form, setForm] = useState<typeof EMPTY>(
     item
       ? {
@@ -446,6 +455,64 @@ function ProductModal({
           </button>
         </div>
         <div className="space-y-3">
+          {isPro ? (
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+              {previewSrc ? (
+                <img src={previewSrc} alt="" className="h-16 w-16 rounded-lg object-cover" />
+              ) : (
+                <div className="grid h-16 w-16 place-items-center rounded-lg bg-muted text-muted-foreground">
+                  <ImagePlus className="h-5 w-5" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold">ကုန်ပစ္စည်း ဓာတ်ပုံ</p>
+                <p className="text-[11px] text-muted-foreground">ပုံကြီးလျှင် အလိုအလျောက် ချုံ့ပေးပါမည်။</p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    disabled={uploading}
+                    onClick={() => imageInputRef.current?.click()}
+                    className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary disabled:opacity-50"
+                  >
+                    {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                    {uploading ? "တင်နေသည်..." : "ဓာတ်ပုံ ရွေးရန်"}
+                  </button>
+                  {imageUrl && (
+                    <button
+                      onClick={() => setImageUrl(null)}
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
+                    >
+                      <Trash2 className="h-3 w-3" /> ဖယ်ရှားရန်
+                    </button>
+                  )}
+                </div>
+              </div>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file || !store?.id) return;
+                  setUploading(true);
+                  try {
+                    setImageUrl(await uploadItemImage(file, store.id));
+                    toast.success("ဓာတ်ပုံ တင်ပြီးပါပြီ");
+                  } catch {
+                    toast.error("ဓာတ်ပုံ တင်၍ မရပါ");
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <Crown className="h-4 w-4 text-amber-500" />
+              ကုန်ပစ္စည်း ဓာတ်ပုံ ထည့်ရန် Pro Plan လိုအပ်သည်။
+            </div>
+          )}
           {field("name", "အမည်")}
           {field("sku", "SKU နံပါတ် (မထည့်လျှင် ၈ လုံး အလိုအလျောက် ထုတ်ပေးမည်)")}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -551,6 +618,7 @@ function ProductModal({
               min_stock_threshold: Math.trunc(Number(form.min_stock_threshold) || 0),
               barcode: form.barcode.trim() || null,
               qr_value: form.qr_value.trim() || null,
+              ...(isPro ? { image_url: imageUrl } : {}),
               units: isPro
                 ? units
                     .filter((u) => u.unit_name.trim() && Number(u.conversion) > 0)
