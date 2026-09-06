@@ -28,6 +28,18 @@ import { usePos } from "@/lib/pos-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { uploadItemImage } from "@/lib/image-store";
 import { useCachedImage } from "@/lib/use-cached-image";
+
+function ItemThumb({ item }: { item: CachedItem }) {
+  const src = useCachedImage(item.image_url);
+  if (!src) {
+    return (
+      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
+        {item.name.slice(0, 2)}
+      </div>
+    );
+  }
+  return <img src={src} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-lg object-cover" />;
+}
 import { downloadCsv, money, stockStatus } from "@/lib/pos-utils";
 import {
   SAMPLE_CSV_ROWS,
@@ -255,7 +267,8 @@ function InventoryPage() {
             const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
             return (
               <div key={item.id} className="rounded-xl border border-border bg-card p-3">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+                  <ItemThumb item={item} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{item.name}</p>
                     <p className="truncate text-xs text-muted-foreground">{item.sku}</p>
