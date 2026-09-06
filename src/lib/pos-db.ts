@@ -114,6 +114,11 @@ class PosDatabase extends Dexie {
             if (!item.units) item.units = [];
           });
       });
+    this.version(6).stores({
+      cached_items: "id, sku, name, category",
+      pending_sales: "++localId, created_at",
+      cached_images: "url, cached_at",
+    });
   }
 }
 
