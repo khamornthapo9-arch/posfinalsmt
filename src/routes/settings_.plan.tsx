@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { ArrowLeft, Check, Crown, Loader2, Phone, Send, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Check, Crown, Loader2, Mail, MessageCircle, Phone, Send } from "lucide-react";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
@@ -15,12 +16,12 @@ export const Route = createFileRoute("/settings_/plan")({
       {
         name: "description",
         content:
-          "Standard နှင့် Pro Plan များကို နှိုင်းယှဉ်ကြည့်ပြီး KBZ Pay သို့မဟုတ် Wave Pay ဖြင့် Pro သို့ အဆင့်မြှင့်ပါ။",
+          "Standard နှင့် Pro Plan များကို နှိုင်းယှဉ်ကြည့်ပြီး စီမံခန့်ခွဲသူထံ ဆက်သွယ်၍ Pro သို့ အဆင့်မြှင့်ပါ။",
       },
       { property: "og:title", content: "Plan နှင့် Pro အဆင့်မြှင့်ခြင်း — SMT POS" },
       {
         property: "og:description",
-        content: "SMT POS Pro Plan ၏ အင်္ဂါရပ်များနှင့် ငွေပေးချေမှု အချက်အလက်များ။",
+        content: "SMT POS Pro Plan ၏ အင်္ဂါရပ်များနှင့် ဆက်သွယ်ရန် အချက်အလက်များ။",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -45,35 +46,60 @@ const PRO_FEATURES = [
   "အသားတင် အမြတ်အစွန်း (Net Profit) နှင့် EOD အသေးစိတ် အစီရင်ခံစာ",
   "ကုန်ပစ္စည်း လက်ကျန်နည်း လျှင် သတိပေးသည့် စနစ် (Low Stock Alert)",
   "ဝယ်သူ / ကုန်သည် အကြွေး စီမံခန့်ခွဲမှု စနစ်",
-  "အသားတင် ပစ္စည်းလက်ကျန် တန်ဖိုး (Total Asset Value) တွက်ချက်ခြင်း",
+  "ကုန်ပစ္စည်း ဓာတ်ပုံ တင်ခြင်း",
   "Master CSV အပြည့်အစုံ ထုတ်ယူခြင်း",
 ];
 
-const PAYMENT_INFO = [
-  { label: "KBZ Pay", value: "09-45xxxxxxx (SMT POS)" },
-  { label: "Wave Pay", value: "09-97xxxxxxx (SMT POS)" },
-  { label: "Viber", value: "09-45xxxxxxx" },
-  { label: "Telegram", value: "@smtpos_support" },
+const ADMIN_CONTACT = [
+  { label: "Telegram", value: "@smtpos_support", icon: Send },
+  { label: "Viber / ဖုန်း", value: "09-45xxxxxxx", icon: Phone },
+  { label: "အီးမေးလ်", value: "khamornthapo9@gmail.com", icon: Mail },
+  { label: "KBZ Pay", value: "09-45xxxxxxx (SMT POS)", icon: MessageCircle },
+  { label: "Wave Pay", value: "09-97xxxxxxx (SMT POS)", icon: MessageCircle },
 ];
 
 function PlanSettingsPage() {
-  const { store, updateStore } = useAuth();
+  const { store } = useAuth();
   const { isPro } = useStoreSettings();
-  const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ phone: "", telegram: "", viber: "", email: "", note: "" });
 
-  const togglePro = async (next: boolean) => {
+  useEffect(() => {
+    if (!store) return;
+    let active = true;
+    void (async () => {
+      const { data } = await supabase
+        .from("store_contacts")
+        .select("phone, telegram, viber, email, note")
+        .eq("store_id", store.id)
+        .maybeSingle();
+      if (active && data) {
+        setForm({
+          phone: data.phone ?? "",
+          telegram: data.telegram ?? "",
+          viber: data.viber ?? "",
+          email: data.email ?? "",
+          note: data.note ?? "",
+        });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [store]);
+
+  const save = async () => {
     if (!store) return;
     setSaving(true);
-    try {
-      await updateStore({ is_pro: next });
-      toast.success(next ? "Pro Plan ဖွင့်ပြီးပါပြီ" : "Standard Plan သို့ ပြန်ပြောင်းပြီးပါပြီ");
-      setOpen(false);
-    } catch {
-      toast.error("Plan ပြောင်း၍ မရပါ");
-    } finally {
-      setSaving(false);
+    const { error } = await supabase
+      .from("store_contacts")
+      .upsert({ store_id: store.id, ...form }, { onConflict: "store_id" });
+    setSaving(false);
+    if (error) {
+      toast.error("သိမ်း၍ မရပါ");
+      return;
     }
+    toast.success("ဆက်သွယ်ရန် အချက်အလက် သိမ်းပြီးပါပြီ");
   };
 
   return (
@@ -130,86 +156,73 @@ function PlanSettingsPage() {
                 </li>
               ))}
             </ul>
-            <button
-              onClick={() => setOpen(true)}
-              className="mt-4 h-11 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 active:scale-[0.98]"
-            >
-              {isPro ? "ငွေပေးချေမှု အချက်အလက် ကြည့်ရန်" : "Pro Plan အဆင့်မြှင့်ရန်"}
-            </button>
           </div>
         </div>
 
-        <div className="flex items-center justify-between rounded-xl border border-dashed border-border bg-muted/30 p-4">
-          <div>
-            <p className="text-sm font-medium">စမ်းသပ်ရန် Pro ဖွင့်ခြင်း</p>
-            <p className="text-xs text-muted-foreground">
-              ငွေလွှဲပြီးကြောင်း အတည်ပြုပြီးမှသာ ဖွင့်ပေးပါ။
-            </p>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold">စီမံခန့်ခွဲသူထံ ဆက်သွယ်ရန် အချက်အလက် ဖြည့်ပါ</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pro Plan ဖွင့်ပေးရန် စီမံခန့်ခွဲသူက ဤအချက်အလက်များဖြင့် ပြန်လည် ဆက်သွယ်ပါမည်။
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {(
+              [
+                ["phone", "ဖုန်းနံပါတ်"],
+                ["telegram", "Telegram"],
+                ["viber", "Viber"],
+                ["email", "အီးမေးလ်"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="text-xs font-medium text-muted-foreground">
+                {label}
+                <input
+                  value={form[key]}
+                  onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
+                  className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+                />
+              </label>
+            ))}
           </div>
-          <button
-            role="switch"
-            aria-checked={isPro}
-            disabled={saving}
-            onClick={() => void togglePro(!isPro)}
-            className={cn(
-              "relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50",
-              isPro ? "bg-primary" : "bg-muted-foreground/30",
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-1 h-5 w-5 rounded-full bg-card transition-all",
-                isPro ? "left-6" : "left-1",
-              )}
+          <label className="mt-2 block text-xs font-medium text-muted-foreground">
+            မှတ်ချက်
+            <textarea
+              value={form.note}
+              rows={2}
+              onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))}
+              className="mt-1 w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground"
             />
+          </label>
+          <button
+            disabled={saving}
+            onClick={() => void save()}
+            className="mt-3 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} သိမ်းမည်
           </button>
         </div>
-      </div>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-sm font-semibold">
-                <Crown className="h-4 w-4 text-amber-500" /> Pro Plan ငွေပေးချေရန်
-              </h2>
-              <button onClick={() => setOpen(false)} aria-label="ပိတ်ရန်" className="text-muted-foreground">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              အောက်ပါ အကောင့်တစ်ခုသို့ Ks 30,000 လွှဲပြီး ငွေလွှဲပြေစာ (screenshot) ကို Viber သို့မဟုတ်
-              Telegram သို့ ပို့ပေးပါ။ ၂၄ နာရီအတွင်း Pro ဖွင့်ပေးပါမည်။
-            </p>
-            <div className="mt-3 space-y-2">
-              {PAYMENT_INFO.map((row) => (
-                <div
-                  key={row.label}
-                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
-                >
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    {row.label === "Telegram" ? (
-                      <Send className="h-4 w-4" />
-                    ) : (
-                      <Phone className="h-4 w-4" />
-                    )}
-                    {row.label}
-                  </span>
-                  <span className="font-medium">{row.value}</span>
-                </div>
-              ))}
-            </div>
-            <button
-              disabled={saving}
-              onClick={() => void togglePro(true)}
-              className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              ငွေလွှဲပြီးပါပြီ — Pro ဖွင့်မည်
-            </button>
+        <div className="rounded-xl border border-border bg-muted/30 p-4">
+          <h2 className="text-sm font-semibold">စီမံခန့်ခွဲသူ ဆက်သွယ်ရန်</h2>
+          <div className="mt-3 space-y-2">
+            {ADMIN_CONTACT.map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-sm"
+              >
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <row.icon className="h-4 w-4" />
+                  {row.label}
+                </span>
+                <span className="font-medium">{row.value}</span>
+              </div>
+            ))}
           </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            ငွေလွှဲပြီးပါက ပြေစာ (screenshot) ကို Telegram သို့မဟုတ် Viber သို့ ပို့ပေးပါ။ ၂၄ နာရီအတွင်း Pro
+            ဖွင့်ပေးပါမည်။
+          </p>
         </div>
-      )}
+      </div>
     </PosShell>
   );
 }
