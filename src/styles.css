@@ -408,3 +408,18 @@
     print-color-adjust: exact;
   }
 }
+
+@keyframes pos-marquee {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-marquee {
+  display: inline-block;
+  min-width: 100%;
+  animation: pos-marquee 18s linear infinite;
+}
