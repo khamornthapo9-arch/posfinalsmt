@@ -67,3 +67,35 @@ export function useCachedImage(url: string | null | undefined): string | null {
 
   return src;
 }
+
+/**
+ * Downloads and stores images in IndexedDB ahead of time so product photos
+ * keep working offline. Runs with a small concurrency limit.
+ */
+export async function prefetchImages(
+  urls: (string | null | undefined)[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<void> {
+  const list = Array.from(new Set(urls.filter((u): u is string => Boolean(u))));
+  if (list.length === 0) {
+    onProgress?.(0, 0);
+    return;
+  }
+  let done = 0;
+  let cursor = 0;
+  const total = list.length;
+  const worker = async () => {
+    while (cursor < total) {
+      const url = list[cursor++]!;
+      try {
+        const already = objectUrls.has(url) || (await posDb.cached_images.get(url));
+        if (!already) await resolve(url);
+      } catch {
+        /* ignore */
+      }
+      done += 1;
+      onProgress?.(done, total);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(3, total) }, worker));
+}
