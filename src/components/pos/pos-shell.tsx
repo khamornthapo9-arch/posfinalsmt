@@ -10,6 +10,7 @@ import {
   PanelLeftOpen,
   ScanLine,
   Settings,
+  ShieldCheck,
   Truck,
   UserCog,
   Users,
@@ -17,6 +18,8 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-store";
+import { usePlatformAdmin } from "@/lib/use-platform-admin";
+import { AnnouncementMarquee } from "@/components/pos/announcement-marquee";
 import { useRole, ROLE_LABEL, type StoreRole } from "@/lib/roles";
 import { useSubscription } from "@/lib/subscription";
 import { StaffSwitchModal } from "@/components/pos/staff-switch-modal";
@@ -67,9 +70,13 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const { store } = useAuth();
   const { role, isActive } = useRole();
+  const { isAdmin } = usePlatformAdmin();
   const advanced = Boolean(store?.advanced_accounting_mode);
   const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
   const items = all.filter((item) => item.roles.includes(role) && isActive);
+  const adminItem = isAdmin
+    ? { to: "/admin", label: "Admin", icon: ShieldCheck, roles: ["OWNER"] as StoreRole[] }
+    : null;
   return (
     <nav className="flex flex-col gap-0.5">
       {items.map((item) => (
@@ -91,6 +98,21 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
           {!collapsed && <span className="truncate">{item.label}</span>}
         </Link>
       ))}
+      {adminItem && (
+        <Link
+          to={adminItem.to}
+          title={adminItem.label}
+          onClick={onNavigate}
+          activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
+          className={cn(
+            "flex min-h-10 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+            collapsed && "justify-center px-0",
+          )}
+        >
+          <adminItem.icon className="h-[18px] w-[18px] shrink-0" />
+          {!collapsed && <span className="truncate">{adminItem.label}</span>}
+        </Link>
+      )}
     </nav>
   );
 }
@@ -210,6 +232,7 @@ export function PosShell({
     }
     const allowed =
       pathname === "/register" ||
+      pathname.startsWith("/admin") ||
       (pathname.startsWith("/customers") && canManageCustomers) ||
       (pathname.startsWith("/inventory") && canManageInventory) ||
       (pathname.startsWith("/analytics") && canViewAnalytics) ||
@@ -333,6 +356,7 @@ export function PosShell({
           </div>
         </header>
 
+        <AnnouncementMarquee />
         <main className="min-w-0 flex-1">{children}</main>
       </div>
     </div>
