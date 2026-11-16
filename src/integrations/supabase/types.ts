@@ -77,6 +77,86 @@ export type Database = {
         }
         Relationships: []
       }
+      branch_secrets: {
+        Row: {
+          branch_id: string
+          failed_attempts: number
+          locked_until: string | null
+          pin_hash: string
+        }
+        Insert: {
+          branch_id: string
+          failed_attempts?: number
+          locked_until?: string | null
+          pin_hash: string
+        }
+        Update: {
+          branch_id?: string
+          failed_attempts?: number
+          locked_until?: string | null
+          pin_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_secrets_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branches: {
+        Row: {
+          auth_user_id: string
+          branch_store_id: string
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          parent_store_id: string
+          updated_at: string
+        }
+        Insert: {
+          auth_user_id: string
+          branch_store_id: string
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_store_id: string
+          updated_at?: string
+        }
+        Update: {
+          auth_user_id?: string
+          branch_store_id?: string
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_branch_store_id_fkey"
+            columns: ["branch_store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branches_parent_store_id_fkey"
+            columns: ["parent_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           balance: number
@@ -774,6 +854,7 @@ export type Database = {
           logo_url: string | null
           name: string
           owner_id: string
+          parent_store_id: string | null
           phone_numbers: string[]
           receipt_footer: string | null
           receipt_header: string | null
@@ -791,6 +872,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           owner_id: string
+          parent_store_id?: string | null
           phone_numbers?: string[]
           receipt_footer?: string | null
           receipt_header?: string | null
@@ -808,12 +890,21 @@ export type Database = {
           logo_url?: string | null
           name?: string
           owner_id?: string
+          parent_store_id?: string | null
           phone_numbers?: string[]
           receipt_footer?: string | null
           receipt_header?: string | null
           tax_rate?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stores_parent_store_id_fkey"
+            columns: ["parent_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppliers: {
         Row: {

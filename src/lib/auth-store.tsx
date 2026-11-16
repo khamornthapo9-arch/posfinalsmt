@@ -18,11 +18,17 @@ export interface StoreRecord {
   phone_numbers: string[];
   receipt_header: string | null;
   receipt_footer: string | null;
+  parent_store_id: string | null;
 }
 
 interface AuthContextValue {
   session: Session | null;
   store: StoreRecord | null;
+  /** All shops this account can open (owner: main + branches). */
+  stores: StoreRecord[];
+  /** True when signed in as a branch device (not the owner). */
+  isBranchDevice: boolean;
+  switchStore: (id: string) => void;
   loading: boolean;
   refreshStore: () => Promise<StoreRecord | null>;
   updateStore: (patch: Partial<Omit<StoreRecord, "id">>) => Promise<void>;
@@ -32,13 +38,17 @@ interface AuthContextValue {
 export const PENDING_STORE_NAME_KEY = "pos-pending-store-name";
 
 const STORE_COLUMNS =
-  "id, name, logo_url, currency_symbol, tax_rate, business_type, advanced_accounting_mode, is_pro, address, cashier_name, phone_numbers, receipt_header, receipt_footer";
+  "id, name, logo_url, currency_symbol, tax_rate, business_type, advanced_accounting_mode, is_pro, address, cashier_name, phone_numbers, receipt_header, receipt_footer, parent_store_id";
+
+export const ACTIVE_STORE_KEY = "pos-active-store-id";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [store, setStore] = useState<StoreRecord | null>(null);
+  const [stores, setStores] = useState<StoreRecord[]>([]);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadStore = useCallback(async (activeSession: Session | null) => {
@@ -46,15 +56,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStore(null);
       return null;
     }
-    const { data } = await supabase
+    setOwnerId(activeSession.user.id);
+    const { data: list } = await supabase
       .from("stores")
       .select(STORE_COLUMNS)
-      .order("created_at")
-      .limit(1)
-      .maybeSingle();
-    if (data) {
-      setStore(data as StoreRecord);
-      return data as StoreRecord;
+      .order("created_at");
+    const all = (list ?? []) as StoreRecord[];
+    if (all.length > 0) {
+      setStores(all);
+      const saved =
+        typeof window !== "undefined" ? window.localStorage.getItem(ACTIVE_STORE_KEY) : null;
+      const pick =
+        all.find((s) => s.id === saved) ?? all.find((s) => !s.parent_store_id) ?? all[0]!;
+      setStore(pick);
+      return pick;
     }
 
     // No store yet (e.g. first sign-in, possibly via magic link in a new tab):
@@ -71,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(PENDING_STORE_NAME_KEY);
     }
+    setStores(created ? [created as StoreRecord] : []);
     setStore((created as StoreRecord) ?? null);
     return (created as StoreRecord) ?? null;
   }, []);
@@ -110,7 +126,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [store],
   );
 
+  const switchStore = useCallback(
+    (id: string) => {
+      const next = stores.find((s) => s.id === id);
+      if (!next) return;
+      window.localStorage.setItem(ACTIVE_STORE_KEY, id);
+      // Reload so cached items/sales from the previous shop are not mixed in.
+      void posDb
+        .transaction("rw", posDb.cached_items, async () => posDb.cached_items.clear())
+        .finally(() => window.location.reload());
+    },
+    [stores],
+  );
+
+  const isBranchDevice = Boolean(
+    session && store?.parent_store_id && !stores.some((s) => !s.parent_store_id),
+  );
+  void ownerId;
+
   const signOut = useCallback(async () => {
+    window.localStorage.removeItem(ACTIVE_STORE_KEY);
     await posDb.transaction("rw", posDb.cached_items, posDb.pending_sales, async () => {
       await posDb.cached_items.clear();
       await posDb.pending_sales.clear();
@@ -118,11 +153,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setSession(null);
     setStore(null);
+    setStores([]);
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ session, store, loading, refreshStore, updateStore, signOut }),
-    [session, store, loading, refreshStore, updateStore, signOut],
+    () => ({
+      session,
+      store,
+      stores,
+      isBranchDevice,
+      switchStore,
+      loading,
+      refreshStore,
+      updateStore,
+      signOut,
+    }),
+    [session, store, stores, isBranchDevice, switchStore, loading, refreshStore, updateStore, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
