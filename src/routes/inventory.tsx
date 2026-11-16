@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
-import { QRCodeCanvas } from "qrcode.react";
+import { lazy, Suspense, useMemo, useRef, useState } from "react";
+
+const QRCodeCanvas = lazy(() => import("@/components/lazy/label-codes").then((m) => ({ default: m.QRCodeCanvas })));
+const Barcode = lazy(() => import("@/components/lazy/label-codes").then((m) => ({ default: m.Barcode })));
 import {
   Barcode as BarcodeIcon,
   Crown,
@@ -18,7 +20,6 @@ import {
   X,
   ImagePlus,
 } from "lucide-react";
-import Barcode from "react-barcode";
 import { toast } from "sonner";
 import { ProBadge } from "@/components/pos/pro-lock";
 import { FREE_LIMITS } from "@/lib/subscription";
@@ -754,6 +755,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
               {show.name && (
                 <p className="w-full truncate text-[9px] font-semibold leading-tight">{item.name}</p>
               )}
+              <Suspense fallback={<div className="h-[54px] w-full animate-pulse bg-muted/40" />}>
               {mode === "qr" ? (
                 <QRCodeCanvas value={codeValue} size={54} level="M" />
               ) : (
@@ -767,6 +769,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
                   displayValue={show.code}
                 />
               )}
+              </Suspense>
               {show.code && mode === "qr" && (
                 <p className="w-full truncate text-[8px]">{codeValue}</p>
               )}

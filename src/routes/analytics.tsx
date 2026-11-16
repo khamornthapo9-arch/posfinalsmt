@@ -1,16 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+
+const RevenueTrendChart = lazy(() => import("@/components/lazy/analytics-charts").then((m) => ({ default: m.RevenueTrendChart })));
+const TopProductsChart = lazy(() => import("@/components/lazy/analytics-charts").then((m) => ({ default: m.TopProductsChart })));
+const chartFallback = <div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />;
 import {
   Download,
   DollarSign,
@@ -587,29 +580,9 @@ function AnalyticsPage() {
                   {loading ? "ရယူနေသည်..." : "ဤရက်စွဲ အကွာအဝေးတွင် အရောင်းမှတ်တမ်း မရှိသေးပါ။"}
                 </p>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="date" fontSize={11} stroke="var(--muted-foreground)" />
-                    <YAxis fontSize={11} stroke="var(--muted-foreground)" />
-                    <Tooltip
-                      formatter={(value: number) => fmt(value)}
-                      contentStyle={{
-                        background: "var(--card)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 8,
-                        color: "var(--foreground)",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="var(--primary)"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <Suspense fallback={chartFallback}>
+                  <RevenueTrendChart data={trend} fmt={fmt} />
+                </Suspense>
               )}
             </div>
           </div>
@@ -622,28 +595,9 @@ function AnalyticsPage() {
                   {loading ? "ရယူနေသည်..." : "ဤရက်စွဲ အကွာအဝေးတွင် ကုန်ပစ္စည်း အရောင်းမှတ်တမ်း မရှိသေးပါ။"}
                 </p>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topProducts} layout="vertical" margin={{ left: 24 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis type="number" fontSize={11} stroke="var(--muted-foreground)" />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={110}
-                      fontSize={11}
-                      stroke="var(--muted-foreground)"
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: "var(--card)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 8,
-                        color: "var(--foreground)",
-                      }}
-                    />
-                    <Bar dataKey="quantity" fill="var(--primary)" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <Suspense fallback={chartFallback}>
+                  <TopProductsChart data={topProducts} />
+                </Suspense>
               )}
             </div>
           </div>
