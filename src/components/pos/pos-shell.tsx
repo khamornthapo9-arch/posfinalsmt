@@ -118,9 +118,9 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
 }
 
 function UserCard({ collapsed = false }: { collapsed?: boolean }) {
-  const { session, signOut } = useAuth();
+  const { session, signOut, stores, store, switchStore } = useAuth();
   const { role, isActive, activeStaff, loading: roleLoading } = useRole();
-  const { isPro } = useSubscription();
+  const isPro = false;
   const [switching, setSwitching] = useState(false);
   const navigate = useNavigate();
   const email = session?.user.email ?? "";
@@ -188,6 +188,21 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
           <LogOut className="h-4 w-4" />
         </button>
       </div>
+      {stores.length > 1 && (
+        <select
+          aria-label="ဆိုင် ပြောင်းရန်"
+          value={store?.id ?? ""}
+          onChange={(e) => switchStore(e.target.value)}
+          className="mt-2 w-full rounded-md border border-sidebar-border bg-sidebar px-2 py-1.5 text-xs text-sidebar-accent-foreground"
+        >
+          {stores.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.parent_store_id ? "ဆိုင်ခွဲ · " : "ပင်မ · "}
+              {s.name}
+            </option>
+          ))}
+        </select>
+      )}
       {switching && <StaffSwitchModal onClose={() => setSwitching(false)} />}
     </div>
   );

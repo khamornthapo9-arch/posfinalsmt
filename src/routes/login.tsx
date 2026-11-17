@@ -9,13 +9,18 @@ import smtPosLogo from "@/assets/smt-pos-logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useServerFn } from "@tanstack/react-start";
+import { branchLogin } from "@/lib/branches.functions";
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "branch";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
-  validateSearch: (search: Record<string, unknown>): { mode?: Mode | undefined } => ({
-    mode: search['mode'] === "signup" ? "signup" : undefined,
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { mode?: Mode | undefined; code?: string | undefined } => ({
+    mode: search['mode'] === "signup" ? "signup" : search['mode'] === "branch" ? "branch" : undefined,
+    code: typeof search['code'] === "string" ? search['code'] : undefined,
   }),
   head: () => ({
     meta: [
@@ -40,7 +45,12 @@ function LoginPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
   const { session, store, loading, refreshStore } = useAuth();
-  const [mode, setMode] = useState<Mode>(search.mode === "signup" ? "signup" : "signin");
+  const [mode, setMode] = useState<Mode>(
+    search.mode ?? (search.code ? "branch" : "signin"),
+  );
+  const [branchCode, setBranchCode] = useState(search.code ?? "");
+  const [branchPin, setBranchPin] = useState("");
+  const loginBranch = useServerFn(branchLogin);
   const [storeName, setStoreName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -51,6 +61,22 @@ function LoginPage() {
   useEffect(() => {
     if (!loading && session && store) void navigate({ to: "/register", replace: true });
   }, [loading, session, store, navigate]);
+
+  const submitBranch = async () => {
+    setBusy(true);
+    try {
+      const tokens = await loginBranch({ data: { code: branchCode, pin: branchPin } });
+      const { error } = await supabase.auth.setSession(tokens);
+      if (error) throw error;
+      await refreshStore();
+      toast.success("ဆိုင်ခွဲသို့ ကြိုဆိုပါသည်");
+      void navigate({ to: "/register", replace: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "ဝင်ရောက်မှု မအောင်မြင်ပါ");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submit = async () => {
     const mail = email.trim().toLowerCase();
@@ -146,6 +172,54 @@ function LoginPage() {
                 </div>
               </div>
 
+              <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
+                <button
+                  type="button"
+                  onClick={() => setMode("signin")}
+                  className={`rounded-md py-2 ${mode !== "branch" ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}
+                >
+                  ပိုင်ရှင်
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("branch")}
+                  className={`rounded-md py-2 ${mode === "branch" ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}
+                >
+                  ဆိုင်ခွဲဝင်ရန်
+                </button>
+              </div>
+              {mode === "branch" ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bcode">ဆိုင်ခွဲ ကုဒ်</Label>
+                    <Input
+                      id="bcode"
+                      value={branchCode}
+                      onChange={(e) => setBranchCode(e.target.value.toUpperCase())}
+                      placeholder="ABC123"
+                      maxLength={12}
+                      className="min-h-11 font-mono tracking-widest"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bpin">PIN</Label>
+                    <Input
+                      id="bpin"
+                      type="password"
+                      inputMode="numeric"
+                      value={branchPin}
+                      onChange={(e) => setBranchPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="••••"
+                      className="min-h-11 tracking-widest"
+                      onKeyDown={(e) => e.key === "Enter" && void submitBranch()}
+                    />
+                  </div>
+                  <Button onClick={() => void submitBranch()} disabled={busy} className="min-h-11 w-full">
+                    {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    ဆိုင်ခွဲ ဝင်ရန်
+                  </Button>
+                </div>
+              ) : (
               <div className="space-y-4">
                 {mode === "signup" && (
                   <div className="space-y-2">
@@ -218,6 +292,7 @@ function LoginPage() {
                   </button>
                 </p>
               </div>
+              )}
           </>
         </div>
       </div>
