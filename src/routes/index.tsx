@@ -47,16 +47,16 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "SMT POS — Modern Retail Point of Sale System" },
+      { title: "SMT POS — ခေတ်သစ် လက်လီအရောင်းနှင့် စတိုးစီမံခန့်ခွဲမှုစနစ်" },
       {
         name: "description",
         content:
-          "High-speed retail point of sale (POS) system. Barcode scanning, offline-ready sales, multi-branch outlet network, inventory tracking, and net profit ledger.",
+          "အင်တာနက်မရှိလည်း အပြည့်အဝရောင်းချနိုင်သော လက်လီ POS စနစ်။ ဘားကုဒ်စကင်၊ ကုန်ပစ္စည်းလက်ကျန်၊ ဆိုင်ခွဲများချိတ်ဆက်မှုနှင့် နေ့စဉ်အသားတင်အမြတ်စာရင်း။",
       },
-      { property: "og:title", content: "SMT POS — Modern Retail Point of Sale System" },
+      { property: "og:title", content: "SMT POS — ခေတ်သစ် လက်လီအရောင်းနှင့် စတိုးစီမံခန့်ခွဲမှုစနစ်" },
       {
         property: "og:description",
-        content: "Offline-first retail POS system with multi-branch synchronization and inventory control.",
+        content: "အော့ဖ်လိုင်းရောင်းချနိုင်သော လက်လီ POS၊ ဆိုင်ခွဲစနစ်၊ ပစ္စည်းဓာတ်ပုံနှင့် အမြတ်စာရင်းစနစ်။",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -69,7 +69,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#FDFDFE] text-[#1E202A] antialiased selection:bg-[#5B51D8] selection:text-white">
       {/* =========================================================
-          1. NAVIGATION BAR (Original Logo Preserved)
+          ၁။ မီနူးဘား (NAVIGATION BAR - မူရင်း Logo ထိန်းသိမ်းထားသည်)
       ========================================================= */}
       <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-8">
@@ -84,7 +84,7 @@ export default function LandingPage() {
                 SMT POS
               </span>
               <span className="text-[10px] font-bold tracking-widest text-[#5B51D8] uppercase mt-0.5">
-               အရောင်းနှင့် စာရင်း
+                လက်လီစတိုး အရောင်းနှင့် စာရင်းစနစ်
               </span>
             </div>
           </Link>
@@ -94,13 +94,13 @@ export default function LandingPage() {
               မူလ
             </a>
             <a href="#features" className="transition-colors hover:text-[#5B51D8]">
-              အချက်အလက်
+              လုပ်ဆောင်ချက်များ
             </a>
             <a href="#pro-capabilities" className="transition-colors hover:text-[#5B51D8]">
-              ပရိုအချက်အလက်
+              ပရိုစနစ်များ
             </a>
             <a href="#plans" className="transition-colors hover:text-[#5B51D8]">
-              နည်းစနစ်
+              အစီအစဉ်များ
             </a>
             <a href="#contact" className="transition-colors hover:text-[#5B51D8]">
               ဆက်သွယ်ရန်
@@ -109,14 +109,14 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-xs font-bold">
-              <Link to="/login">ဝင်ရောက်ရန်</Link>
+              <Link to="/login">အကောင့်ဝင်ရန်</Link>
             </Button>
             <Button
               asChild
               className="h-10 rounded-lg bg-[#5B51D8] px-6 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-[#4D43C4]"
             >
               <Link to="/login" search={{ mode: "signup" }}>
-                အခမဲ့စတင်ရန်
+                အခမဲ့ စတင်ရန်
               </Link>
             </Button>
           </div>
@@ -125,25 +125,26 @@ export default function LandingPage() {
 
       <main>
         {/* =========================================================
-            2. HERO SECTION (100% Retail Focus)
+            ၂။ ပင်မမိတ်ဆက် (HERO SECTION - လက်လီစတိုးသီးသန့်)
         ========================================================= */}
         <section id="hero" className="relative overflow-hidden py-16 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-8">
             <div className="grid items-center gap-12 lg:grid-cols-12">
-              {/* Left Column: Headline & Action */}
+              {/* ဘယ်ဘက်ကော်လံ: ခေါင်းစဉ်နှင့် ခလုတ်များ */}
               <div className="lg:col-span-6 space-y-6">
                 <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
                   <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>ဗားရှင်း ၁.၂၊ ဆိုင်ခွဲနှင့် ဓာတ်ပုံရွေးချယ်စနစ်</span>
+                  <span>ဗားရှင်း ၁.၂ ထွက်ရှိပါပြီ — ဆိုင်ခွဲစနစ်နှင့် ပစ္စည်းဓာတ်ပုံများ ပါဝင်လာပါပြီ</span>
                 </div>
 
                 <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-[54px] lg:leading-[1.15]">
-                  ခေတ်သစ် အရောင်းနှင့် စာရင်းစနစ် အထောက်အကူပြု
+                  ခေတ်သစ် လက်လီအရောင်းနှင့် စတိုးစီမံခန့်ခွဲမှု စနစ်
                 </h1>
 
                 <p className="max-w-xl text-base leading-relaxed text-slate-500 sm:text-lg">
-                  အသေးစားနှင့် အလတ်စား စတိုးဆိုင်၊ မီနီမတ်စ် နှင့် လက်လီလက်ကား အရောင်းဆိုင်များ။
-                  ဘားကုဒ်စနစ်၊ လက်ကျန်စတိုး အချက်ပြစနစ်၊ အကြွေးစာရင်း၊ ဆိုင်ခွဲစီမံမှုနှင့် off line လည်ပတ်နိုင်မှု။ 
+                  စတိုးဆိုင်၊ မီနီမတ်စ်နှင့် လက်လီလက်ကား ဆိုင်များအတွက် အထူးပြုလုပ်ထားပါသည်။
+                  ဘားကုဒ်ဖတ်ပြီး စက္ကန့်ပိုင်းအတွင်း ငွေရှင်းခြင်း၊ လက်ကျန်စာရင်း၊ အကြွေးစာရင်းနှင့်
+                  ဆိုင်ခွဲများချိတ်ဆက်မှု — အင်တာနက်လိုင်းမရှိလည်း အပြည့်အဝ ဆက်လက်ရောင်းချနိုင်ပါသည်။
                 </p>
 
                 <div className="flex flex-wrap items-center gap-4 pt-2">
@@ -153,7 +154,7 @@ export default function LandingPage() {
                     className="h-12 rounded-lg bg-[#5B51D8] px-8 text-xs font-bold uppercase tracking-wider text-white shadow-md hover:bg-[#4D43C4]"
                   >
                     <Link to="/login" search={{ mode: "signup" }}>
-                      အခမဲ့စတင်ရန်
+                      အခမဲ့ အကောင့်ဖွင့်မည်
                     </Link>
                   </Button>
                   <Button
@@ -162,12 +163,12 @@ export default function LandingPage() {
                     size="lg"
                     className="h-12 rounded-lg border-slate-200 px-8 text-xs font-bold uppercase tracking-wider hover:bg-slate-50"
                   >
-                    <Link to="/register">သင့်ဆိုင်ကို စာရင်းသွင်းရန်</Link>
+                    <Link to="/register">အရောင်းကောင်တာ စမ်းသပ်ရန်</Link>
                   </Button>
                 </div>
               </div>
 
-              {/* Right Column: Realistic Retail Terminal Mockup Frame */}
+              {/* ညာဘက်ကော်လံ: အရောင်းစက် Mockup ပြသမှု */}
               <div className="lg:col-span-6 relative flex items-center justify-center">
                 <div className="absolute -top-12 -left-8 h-72 w-72 rounded-full bg-[#A898F3]/30 blur-2xl -z-10" />
                 <div className="absolute -bottom-8 -right-8 h-80 w-80 rounded-full bg-[#75C6F7]/25 blur-2xl -z-10" />
@@ -179,77 +180,77 @@ export default function LandingPage() {
                       <div className="h-3 w-3 rounded-full bg-rose-500" />
                       <div className="h-3 w-3 rounded-full bg-amber-500" />
                       <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                      <span className="text-xs font-bold text-slate-700 ml-2">SMT Cashier Register #01</span>
+                      <span className="text-xs font-bold text-slate-700 ml-2">SMT အရောင်းကောင်တာ #၀၁</span>
                     </div>
                     <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 font-mono">
-                      OFFLINE READY
+                      အော့ဖ်လိုင်း သုံးနိုင်သည်
                     </span>
                   </div>
 
-                  {/* Retail Product Grid & Cart Preview */}
+                  {/* ပစ္စည်းများ ရောင်းချမှု ပုံစံ */}
                   <div className="grid grid-cols-3 gap-2.5">
                     <div className="col-span-2 grid grid-cols-2 gap-2">
                       <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
                         <div className="h-14 w-full rounded bg-slate-200/80 flex items-center justify-center text-[10px] font-mono text-slate-400">
-                          [ Item Photo ]
+                          [ ပစ္စည်းဓာတ်ပုံ ]
                         </div>
-                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">Nescafe 3-in-1 (Pack)</p>
-                        <p className="text-[11px] font-bold text-[#5B51D8]">8,000 Ks</p>
+                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">Nescafe 3-in-1 (၁ ထုပ်)</p>
+                        <p className="text-[11px] font-bold text-[#5B51D8]">၈,၀၀၀ Ks</p>
                       </div>
 
                       <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
                         <div className="h-14 w-full rounded bg-slate-200/80 flex items-center justify-center text-[10px] font-mono text-slate-400">
-                          [ Item Photo ]
+                          [ ပစ္စည်းဓာတ်ပုံ ]
                         </div>
-                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">Cooking Oil 1L</p>
-                        <p className="text-[11px] font-bold text-[#5B51D8]">14,500 Ks</p>
+                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">ဆီသန့် ၁ လီတာ</p>
+                        <p className="text-[11px] font-bold text-[#5B51D8]">၁၄,၅၀၀ Ks</p>
                       </div>
 
                       <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
                         <div className="h-14 w-full rounded bg-slate-200/80 flex items-center justify-center text-[10px] font-mono text-slate-400">
-                          [ Item Photo ]
+                          [ ပစ္စည်းဓာတ်ပုံ ]
                         </div>
-                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">Royal Milk Tea (Pack)</p>
-                        <p className="text-[11px] font-bold text-[#5B51D8]">6,500 Ks</p>
+                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">Royal Milk Tea (၁ ထုပ်)</p>
+                        <p className="text-[11px] font-bold text-[#5B51D8]">၆,၅၀၀ Ks</p>
                       </div>
 
                       <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
                         <div className="h-14 w-full rounded bg-slate-200/80 flex items-center justify-center text-[10px] font-mono text-slate-400">
-                          [ Item Photo ]
+                          [ ပစ္စည်းဓာတ်ပုံ ]
                         </div>
-                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">Premier Coffee (Box)</p>
-                        <p className="text-[11px] font-bold text-[#5B51D8]">12,000 Ks</p>
+                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">Premier ကော်ဖီ (၁ ဖာ)</p>
+                        <p className="text-[11px] font-bold text-[#5B51D8]">၁၂,၀၀၀ Ks</p>
                       </div>
                     </div>
 
-                    {/* Active Cart & Checkout */}
+                    {/* လက်ရှိခြင်းတောင်းနှင့် ငွေရှင်းမှု */}
                     <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 flex flex-col justify-between text-[11px] font-mono">
                       <div>
                         <p className="font-bold text-slate-800 pb-1 border-b border-slate-200">
-                          Active Bill (3 Items)
+                          ခြင်းတောင်း (၃ မျိုး)
                         </p>
                         <div className="space-y-1.5 mt-2 text-[10px] text-slate-600">
                           <div className="flex justify-between">
-                            <span>Nescafe (x2)</span>
-                            <span>16,000 Ks</span>
+                            <span>Nescafe (x၂)</span>
+                            <span>၁၆,၀၀၀ Ks</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Oil 1L (x1)</span>
-                            <span>14,500 Ks</span>
+                            <span>ဆီသန့် ၁L (x၁)</span>
+                            <span>၁၄,၅၀၀ Ks</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Milk Tea (x1)</span>
-                            <span>6,500 Ks</span>
+                            <span>Milk Tea (x၁)</span>
+                            <span>၆,၅၀၀ Ks</span>
                           </div>
                         </div>
                       </div>
                       <div className="pt-2 border-t border-slate-200">
                         <div className="flex justify-between font-bold text-slate-900">
-                          <span>Total</span>
-                          <span className="text-[#5B51D8]">37,000 Ks</span>
+                          <span>စုစုပေါင်း</span>
+                          <span className="text-[#5B51D8]">၃၇,၀၀၀ Ks</span>
                         </div>
                         <div className="mt-2 h-7 rounded bg-[#5B51D8] flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-wider">
-                          Cash / KPay
+                          ငွေသား / KPay
                         </div>
                       </div>
                     </div>
@@ -258,86 +259,86 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Bottom 5 Retail Feature Pills */}
+            {/* အောက်ခြေ အဓိက လက်လီလုပ်ဆောင်ချက် ၅ ခု */}
             <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
               <div className="flex flex-col items-center justify-center rounded-xl bg-white p-5 shadow-sm border border-slate-100 text-center transition-transform hover:-translate-y-1">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#7C3AED] text-white shadow-sm mb-3">
                   <ScanLine className="h-5 w-5 stroke-[2]" />
                 </div>
-                <span className="text-sm font-bold text-slate-900">ဘားကုဒ်ဖတ်ငွေချေစနစ်</span>
+                <span className="text-sm font-bold text-slate-900">ဘားကုဒ်ဖတ် ငွေရှင်းစနစ်</span>
               </div>
 
               <div className="flex flex-col items-center justify-center rounded-xl bg-white p-5 shadow-sm border border-slate-100 text-center transition-transform hover:-translate-y-1">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EA580C] text-white shadow-sm mb-3">
                   <WifiOff className="h-5 w-5 stroke-[2]" />
                 </div>
-                <span className="text-sm font-bold text-slate-900"> Offline ထောက်ပံစနစ်</span>
+                <span className="text-sm font-bold text-slate-900">အင်တာနက်မလို Offline မုဒ်</span>
               </div>
 
               <div className="flex flex-col items-center justify-center rounded-xl bg-white p-5 shadow-sm border border-slate-100 text-center transition-transform hover:-translate-y-1">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0EA5E9] text-white shadow-sm mb-3">
                   <Boxes className="h-5 w-5 stroke-[2]" />
                 </div>
-                <span className="text-sm font-bold text-slate-900">ကုန်ပစ္စည်းနဲ့ အချက်ပေးစနစ်</span>
+                <span className="text-sm font-bold text-slate-900">လက်ကျန်နှင့် သတိပေးချက်</span>
               </div>
 
               <div className="flex flex-col items-center justify-center rounded-xl bg-white p-5 shadow-sm border border-slate-100 text-center transition-transform hover:-translate-y-1">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#16A34A] text-white shadow-sm mb-3">
                   <Building2 className="h-5 w-5 stroke-[2]" />
                 </div>
-                <span className="text-sm font-bold text-slate-900">ဆိုင်ခွဲများ စီမံခြင်းစနစ်</span>
+                <span className="text-sm font-bold text-slate-900">ဆိုင်ခွဲများ စီမံခန့်ခွဲမှု</span>
               </div>
 
               <div className="flex flex-col items-center justify-center rounded-xl bg-white p-5 shadow-sm border border-slate-100 text-center transition-transform hover:-translate-y-1 col-span-2 sm:col-span-1">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#4F46E5] text-white shadow-sm mb-3">
                   <Receipt className="h-5 w-5 stroke-[2]" />
                 </div>
-                <span className="text-sm font-bold text-slate-900">အကြွေးဝယ် အကြွေးရောင်း စနစ်</span>
+                <span className="text-sm font-bold text-slate-900">အကြွေးဝယ်/အကြွေးရောင်း စာရင်း</span>
               </div>
             </div>
           </div>
         </section>
 
         {/* =========================================================
-            3. RETAIL OPERATIONS BANNER (Curved Gradient)
+            ၃။ ခရမ်းရောင် GRADIENT အပိုင်း (OPERATIONS BANNER)
         ========================================================= */}
         <section className="relative overflow-hidden bg-gradient-to-r from-[#9D8AF2] via-[#8572ED] to-[#6E5BE8] py-20 text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-8">
-            {/* Top 5 Retail Operations Pills */}
+            {/* အပေါ်ဘက် Pill ၅ ခု (Syntax အမှန်ပြင်ဆင်ထားသည်) */}
             <div className="mb-14 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#7C3AED] text-white">
                   <Barcode className="h-4 w-4 stroke-[2]" />
                 </div>
-                <span className="text-xs font-bold">ဘားကုဒ်စီမံမှု</span>
+                <span className="text-xs font-bold">ဘားကုဒ်ဈေးနှုန်းတံဆိပ် ထုတ်ခြင်း</span>
               </div>
 
               <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EA580C] text-white">
                   <Package className="h-4 w-4 stroke-[2]" />
                 </div>
-                <span className="text-xs font-bold">ဘူး၊ ဖာ၊ အထုပ် စီမံမှု</span>
+                <span className="text-xs font-bold">ဘူး၊ ဖာ၊ အထုပ် လက်ကားစီမံမှု</span>
               </div>
 
               <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0EA5E9] text-white">
                   <TrendingUp className="h-4 w-4 stroke-[2]" />
                 </div>
-                <span className="text-xs font-bold">အသားတင်အမြတ်တွက်ချက်ခြင်း</span>
+                <span className="text-xs font-bold">အသားတင်အမြတ်ငွေ တွက်ချက်ခြင်း</span>
               </div>
 
               <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#4F46E5] text-white">
                   <Network className="h-4 w-4 stroke-[2]" />
                 </div>
-                <span className="text-xs font-bold"> အချိန်မှီ ကုန်စည်လည်ပတ်မှု</span>
+                <span className="text-xs font-bold">ဆိုင်ခွဲများ အချိန်နှင့်တစ်ပြေးညီ စင့်ခ်လုပ်ခြင်း</span>
               </div>
 
               <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20 col-span-2 sm:col-span-1">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#16A34A] text-white">
                   <FileSpreadsheet className="h-4 w-4 stroke-[2]" />
                 </div>
-                <span className="text-xs font-bold">Excel & CSV ဇယားထုတ်ယူနိုင်ခြင်းpan>
+                <span className="text-xs font-bold">Excel & CSV ဇယားထုတ်ယူနိုင်ခြင်း</span>
               </div>
             </div>
 
@@ -347,25 +348,25 @@ export default function LandingPage() {
                 <div className="w-full max-w-md rounded-2xl border-4 border-white/30 bg-white p-3 shadow-2xl text-slate-800">
                   <div className="h-64 rounded-xl bg-slate-900 p-4 text-white flex flex-col justify-between font-mono text-xs">
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-bold">SMT RETAIL MAIN STORE</span>
-                      <span className="text-emerald-400">ONLINE SYNC</span>
+                      <span className="font-bold">SMT စတိုး ပင်မဆိုင်</span>
+                      <span className="text-emerald-400">အွန်လိုင်း စင့်ခ်လုပ်ပြီး</span>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between bg-slate-800/80 p-2 rounded">
-                        <span>Today Gross Sales:</span>
-                        <span className="text-emerald-400 font-bold">1,842,000 Ks</span>
+                        <span>ယနေ့ စုစုပေါင်းရောင်းရငွေ:</span>
+                        <span className="text-emerald-400 font-bold">၁,၈၄၂,၀၀၀ Ks</span>
                       </div>
                       <div className="flex justify-between bg-slate-800/80 p-2 rounded">
-                        <span>Net Profit:</span>
-                        <span className="text-blue-400 font-bold">+385,000 Ks</span>
+                        <span>အသားတင်အမြတ်:</span>
+                        <span className="text-blue-400 font-bold">+၃၈၅,၀၀၀ Ks</span>
                       </div>
                       <div className="flex justify-between bg-slate-800/80 p-2 rounded">
-                        <span>Low Stock Items:</span>
-                        <span className="text-rose-400 font-bold">3 Items Need Restock</span>
+                        <span>ကုန်နည်းနေသောပစ္စည်း:</span>
+                        <span className="text-rose-400 font-bold">၃ မျိုး ထပ်ဖြည့်ရန်လိုသည်</span>
                       </div>
                     </div>
                     <div className="text-[10px] text-slate-400 text-center">
-                      [ Thermal Receipt & Barcode Scanner Linked ]
+                      [ ဘောက်ချာပရင်တာနှင့် ဘားကုဒ်ဖတ်စက် ချိတ်ဆက်ပြီး ]
                     </div>
                   </div>
                 </div>
@@ -373,11 +374,11 @@ export default function LandingPage() {
 
               <div className="lg:col-span-6 space-y-6">
                 <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
-                  Built for Fast Retail Checkouts
+                  မြန်ဆန်တိကျသော လက်လီငွေရှင်းကောင်တာ
                 </h2>
                 <p className="text-base text-white/90 leading-relaxed sm:text-lg">
-                  Designed from the ground up for high-traffic retail counters. Keep lines moving, 
-                  prevent stock loss, and track accurate daily profits in real-time.
+                  လူစည်ကားသော စတိုးဆိုင်များအတွက် အထူးဒီဇိုင်းဆင်ထားပါသည်။ လူတန်းစီစောင့်ဆိုင်းချိန် မရှိစေဘဲ
+                  ပစ္စည်းမပျောက်ရှစေရန်နှင့် နေ့စဉ်အမြတ်စာရင်းများကို တိကျစွာ သိရှိနိုင်ပါသည်။
                 </p>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-2">
@@ -385,28 +386,28 @@ export default function LandingPage() {
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 text-white">
                       <Zap className="h-4 w-4" />
                     </div>
-                    <span className="text-xs font-bold">Zero Checkout Latency</span>
+                    <span className="text-xs font-bold">စက္ကန့်ပိုင်းအတွင်း ငွေရှင်းနိုင်</span>
                   </div>
 
                   <div className="flex items-center gap-3 rounded-full bg-white px-5 py-3 text-slate-900 shadow-sm">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-600 text-white">
                       <WifiOff className="h-4 w-4" />
                     </div>
-                    <span className="text-xs font-bold">Works Without Internet</span>
+                    <span className="text-xs font-bold">အင်တာနက်မရှိလည်း သုံးနိုင်</span>
                   </div>
 
                   <div className="flex items-center gap-3 rounded-full bg-white px-5 py-3 text-slate-900 shadow-sm">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-white">
                       <Coins className="h-4 w-4" />
                     </div>
-                    <span className="text-xs font-bold">Precise Margin Tracking</span>
+                    <span className="text-xs font-bold">အမြတ်ငွေ အတိအကျသိရှိနိုင်</span>
                   </div>
 
                   <div className="flex items-center gap-3 rounded-full bg-white px-5 py-3 text-slate-900 shadow-sm">
                     <div className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white">
                       <Building2 className="h-4 w-4" />
                     </div>
-                    <span className="text-xs font-bold">Multi-Outlet Ready</span>
+                    <span className="text-xs font-bold">ဆိုင်ခွဲပေါင်းများစွာ ချိတ်ဆက်နိုင်</span>
                   </div>
                 </div>
               </div>
@@ -415,17 +416,17 @@ export default function LandingPage() {
         </section>
 
         {/* =========================================================
-            4. INVENTORY & DISPATCH SECTION (Screenshot 3)
+            ၄။ ကုန်ပစ္စည်းလက်ကျန်နှင့် စာရင်းဇယား (INVENTORY & DISPATCH)
         ========================================================= */}
         <section id="features" className="py-20 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-8">
             <div className="relative mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-5 shadow-xl">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Live Stock & Sales Stream
+                  လက်ကျန်စာရင်းနှင့် အမြတ်ငွေ တိုက်ရိုက်ကြည့်ရှုမှု
                 </span>
                 <span className="rounded bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600">
-                  Total Items: 1,240 SKUs
+                  စုစုပေါင်းပစ္စည်း: ၁,၂၄၀ မျိုး
                 </span>
               </div>
 
@@ -433,48 +434,48 @@ export default function LandingPage() {
                 <table className="w-full text-left font-mono text-xs">
                   <thead>
                     <tr className="border-b border-slate-100 text-slate-400">
-                      <th className="pb-2">SKU / Item</th>
-                      <th className="pb-2">Buy Price</th>
-                      <th className="pb-2">Sell Price</th>
-                      <th className="pb-2 text-center">In Stock</th>
-                      <th className="pb-2 text-right">Unit Profit</th>
-                      <th className="pb-2 text-center">Status</th>
+                      <th className="pb-2">ကုဒ် / ပစ္စည်းအမည်</th>
+                      <th className="pb-2">ဝယ်ဈေး</th>
+                      <th className="pb-2">ရောင်းဈေး</th>
+                      <th className="pb-2 text-center">လက်ကျန်</th>
+                      <th className="pb-2 text-right">အမြတ်</th>
+                      <th className="pb-2 text-center">အခြေအနေ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
                     <tr>
-                      <td className="py-2.5 font-bold">SKU-1042 · Nescafe Pack</td>
-                      <td>6,200 Ks</td>
-                      <td className="font-bold">8,000 Ks</td>
-                      <td className="text-center font-bold">142 Packs</td>
-                      <td className="text-right text-emerald-600 font-bold">+1,800 Ks</td>
+                      <td className="py-2.5 font-bold">SKU-1042 · Nescafe ကော်ဖီထုပ်</td>
+                      <td>၆,၂၀၀ Ks</td>
+                      <td className="font-bold">၈,၀၀၀ Ks</td>
+                      <td className="text-center font-bold">၁၄၂ ထုပ်</td>
+                      <td className="text-right text-emerald-600 font-bold">+၁,၈၀၀ Ks</td>
                       <td className="text-center">
                         <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-                          In Stock
+                          ပစ္စည်းရှိသည်
                         </span>
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-2.5 font-bold">SKU-2091 · Cooking Oil 1L</td>
-                      <td>12,500 Ks</td>
-                      <td className="font-bold">14,500 Ks</td>
-                      <td className="text-center font-bold text-amber-600">4 Left</td>
-                      <td className="text-right text-emerald-600 font-bold">+2,000 Ks</td>
+                      <td className="py-2.5 font-bold">SKU-2091 · ဆီသန့် ၁ လီတာ</td>
+                      <td>၁၂,၅၀၀ Ks</td>
+                      <td className="font-bold">၁၄,၅၀၀ Ks</td>
+                      <td className="text-center font-bold text-amber-600">၄ ဘူးကျန်</td>
+                      <td className="text-right text-emerald-600 font-bold">+၂,၀၀၀ Ks</td>
                       <td className="text-center">
                         <span className="rounded bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-600">
-                          Low Stock
+                          ပစ္စည်းနည်းနေသည်
                         </span>
                       </td>
                     </tr>
                     <tr>
-                      <td className="py-2.5 font-bold">SKU-3112 · Premier Coffee Box</td>
-                      <td>9,800 Ks</td>
-                      <td className="font-bold">12,000 Ks</td>
-                      <td className="text-center font-bold">65 Boxes</td>
-                      <td className="text-right text-emerald-600 font-bold">+2,200 Ks</td>
+                      <td className="py-2.5 font-bold">SKU-3112 · Premier ကော်ဖီဖာ</td>
+                      <td>၉,၈၀၀ Ks</td>
+                      <td className="font-bold">၁၂,၀၀၀ Ks</td>
+                      <td className="text-center font-bold">၆၅ ဖာ</td>
+                      <td className="text-right text-emerald-600 font-bold">+၂,၂၀၀ Ks</td>
                       <td className="text-center">
                         <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-                          In Stock
+                          ပစ္စည်းရှိသည်
                         </span>
                       </td>
                     </tr>
@@ -483,16 +484,16 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* 3 Retail Pillars */}
+            {/* အဓိက လက်လီအင်္ဂါရပ် ၃ ခု */}
             <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#E11D48] text-white mb-4">
                   <ScanLine className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">Instant Barcode Billing</h3>
+                <h3 className="text-base font-bold text-slate-900">ဘားကုဒ်ဖြင့် အမြန်ငွေရှင်းစနစ်</h3>
                 <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                  Scan items with external USB/Bluetooth scanners or mobile camera. Instant price lookup
-                  and receipt printing with zero delay.
+                  USB/Bluetooth ဘားကုဒ်ဖတ်စက် သို့မဟုတ် ဖုန်းကင်မရာဖြင့် ပစ္စည်းထည့်သွင်းပါ။
+                  ဈေးနှုန်းချက်ချင်းတက်လာပြီး ဘောက်ချာချက်ချင်း ထုတ်နိုင်သည်။
                 </p>
               </div>
 
@@ -500,10 +501,10 @@ export default function LandingPage() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#16A34A] text-white mb-4">
                   <Boxes className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">Cost & Margin Tracking</h3>
+                <h3 className="text-base font-bold text-slate-900">ဝယ်ဈေးနှင့် အမြတ်ငွေတွက်ချက်မှု</h3>
                 <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                  Track Buy Prices vs Sell Prices automatically. Know your exact net profit margin on
-                  every receipt without manual bookkeeping.
+                  ဝယ်ဈေးနှင့် ရောင်းဈေးများကို အလိုအလျောက် တွက်ချက်ပေးကာ ဘောက်ချာတစ်ခုချင်းစီ၏
+                  အသားတင်အမြတ်ငွေကို အတိအကျ ကြည့်ရှုနိုင်သည်။
                 </p>
               </div>
 
@@ -511,10 +512,10 @@ export default function LandingPage() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0284C7] text-white mb-4">
                   <Users className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">Customer Credit & Debt</h3>
+                <h3 className="text-base font-bold text-slate-900">ဖောက်သည် အကြွေးစာရင်း</h3>
                 <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                  Manage credit sales, record partial repayments, and keep complete ledger histories
-                  for regular wholesale and retail clients.
+                  အကြွေးရောင်းချမှုများ၊ ပြန်ဆပ်ငွေများနှင့် ဖောက်သည်တစ်ဦးချင်းစီ၏ အကြွေးကျန်စာရင်းများကို
+                  စနစ်တကျ မှတ်တမ်းတင် ထိန်းသိမ်းနိုင်သည်။
                 </p>
               </div>
             </div>
@@ -522,7 +523,7 @@ export default function LandingPage() {
         </section>
 
         {/* =========================================================
-            5. PRO FACTS & WHAT'S NEW SHOWCASE (Screenshot 4)
+            ၅။ ပရိုအချက်အလက်များနှင့် လုံခြုံရေး (PRO CAPABILITIES)
         ========================================================= */}
         <section
           id="pro-capabilities"
@@ -533,62 +534,62 @@ export default function LandingPage() {
               <div className="lg:col-span-6 flex justify-center">
                 <div className="relative w-full max-w-md rounded-2xl border-4 border-white/30 bg-slate-900 p-4 shadow-2xl font-mono text-xs">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-slate-400">
-                    <span>SECURITY & ACCESS CONTROL</span>
-                    <span className="text-emerald-400">4-DIGIT PIN</span>
+                    <span>လုံခြုံရေးနှင့် PIN စနစ်</span>
+                    <span className="text-emerald-400">၄ လုံး PIN</span>
                   </div>
                   <div className="my-6 space-y-2.5">
                     <div className="rounded bg-slate-800 p-3 flex justify-between items-center">
-                      <span>Refund Authorisation</span>
-                      <span className="text-rose-400 font-bold">Manager PIN Required</span>
+                      <span>ပြန်အမ်းငွေ ထုတ်ပေးခြင်း</span>
+                      <span className="text-rose-400 font-bold">မန်နေဂျာ PIN လိုအပ်</span>
                     </div>
                     <div className="rounded bg-slate-800 p-3 flex justify-between items-center">
-                      <span>Custom Price Discount</span>
-                      <span className="text-amber-400 font-bold">Protected Action</span>
+                      <span>အထူးလျှော့ဈေးပေးခြင်း</span>
+                      <span className="text-amber-400 font-bold">ခွင့်ပြုချက် လိုအပ်</span>
                     </div>
                     <div className="rounded bg-slate-800 p-3 flex justify-between items-center">
-                      <span>Branch Terminal Login</span>
-                      <span className="text-emerald-400 font-bold">Branch Code + PIN</span>
+                      <span>ဆိုင်ခွဲအကောင့် ဝင်ရောက်ခြင်း</span>
+                      <span className="text-emerald-400 font-bold">ဆိုင်ခွဲကုဒ် + PIN</span>
                     </div>
                   </div>
                   <p className="text-center text-[10px] text-slate-400">
-                    [ Prevents Unauthorized Cashier Overrides & Leaks ]
+                    [ ငွေကြေးနှင့် စာရင်းများ လုံခြုံစေရန် စနစ်တကျ ကာကွယ်ထားသည် ]
                   </p>
                 </div>
               </div>
 
               <div className="lg:col-span-6 space-y-6">
                 <div className="inline-flex items-center gap-2 rounded bg-white/20 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white">
-                  <Sparkles className="h-3.5 w-3.5" /> What's New in SMT POS Pro
+                  <Sparkles className="h-3.5 w-3.5" /> SMT POS Pro တွင် ပါဝင်လာသော စနစ်သစ်များ
                 </div>
                 <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
-                  Enterprise Tools for Multi-Shop Owners
+                  ဆိုင်ခွဲရှိသော စတိုးကြီးများအတွက် ပရိုစနစ်များ
                 </h2>
 
                 <div className="rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur-md space-y-4 text-xs text-white/90 leading-relaxed">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Building2 className="h-4 w-4" /> Multi-Branch Outlets Network
+                      <Building2 className="h-4 w-4" /> ဆိုင်ခွဲများ ကွန်ရက်ချိတ်ဆက်ခြင်း
                     </h4>
                     <p className="mt-1">
-                      No need to create separate email accounts. Generate a direct Branch Code and 4-digit PIN for each shop. Cashiers sign in instantly.
+                      အီးမေးလ်အသစ် ဖွင့်စရာမလိုဘဲ ဆိုင်ခွဲကုဒ်နှင့် ၄ လုံး PIN ဖြင့် ဆိုင်ခွဲပေါင်းများစွာကို ပင်မအကောင့်တစ်ခုတည်းမှ တိုက်ရိုက် စီမံခန့်ခွဲနိုင်သည်။
                     </p>
                   </div>
 
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <ImageIcon className="h-4 w-4" /> Offline Compressed Photo Catalog
+                      <ImageIcon className="h-4 w-4" /> အော့ဖ်လိုင်း ပစ္စည်းဓာတ်ပုံစနစ်
                     </h4>
                     <p className="mt-1">
-                      Uploaded product photos are compressed to ~150KB and cached directly in device storage (IndexedDB). Photos remain visible even without internet.
+                      တင်ထားသော ဓာတ်ပုံများကို ဖုန်းနှင့် ကွန်ပျူတာအတွင်း (IndexedDB) တွင် အလိုအလျောက် သေးငယ်အောင် ချုံ့သိမ်းပေးပြီး အင်တာနက်မရှိချိန်တွင်ပါ ပုံများ မပျောက်ဘဲ ရောင်းချနိုင်သည်။
                     </p>
                   </div>
 
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Receipt className="h-4 w-4" /> Custom Receipt Branding & Thermal Logo
+                      <Receipt className="h-4 w-4" /> ကိုယ်ပိုင် Logo ပါဝင်သော ဘောက်ချာဒီဇိုင်း
                     </h4>
                     <p className="mt-1">
-                      Add your store logo, phone number, Facebook page, and custom thank-you notes to your thermal printed bills.
+                      ဆိုင်၏ ကိုယ်ပိုင် အမှတ်တံဆိပ် Logo၊ ဖုန်းနံပါတ်၊ လိပ်စာနှင့် အောက်ခြေ အမှာစကားများကို စိတ်ကြိုက် ပြင်ဆင်ထည့်သွင်းနိုင်သည်။
                     </p>
                   </div>
                 </div>
@@ -599,7 +600,7 @@ export default function LandingPage() {
                   className="border-white bg-transparent text-white hover:bg-white hover:text-[#5B51D8]"
                 >
                   <Link to="/login" search={{ mode: "signup" }}>
-                    Upgrade to Pro Plan
+                    Pro အစီအစဉ်သို့ အဆင့်မြှင့်တင်ရန်
                   </Link>
                 </Button>
               </div>
@@ -608,167 +609,167 @@ export default function LandingPage() {
         </section>
 
         {/* =========================================================
-            6. CENTRAL PHONE & 14 RETAIL CAPABILITY PILLS (Screenshot 5)
+            ၆။ ဖုန်းနှင့် အဓိက အင်္ဂါရပ် ၁၄ ခု (14 RETAIL CAPABILITIES)
         ========================================================= */}
         <section id="capabilities" className="py-20 lg:py-24 bg-slate-50/50">
           <div className="mx-auto max-w-7xl px-4 sm:px-8">
             <h2 className="text-center text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              14 Retail Capabilities
+              အဓိက လက်လီလုပ်ဆောင်ချက် ၁၄ ခု
             </h2>
             <p className="mt-2 text-center text-xs text-slate-500 sm:text-sm">
-              Complete tools built specifically for modern retail operations
+              ခေတ်သစ် လက်လီဆိုင်များအတွက် လိုအပ်သော ကိရိယာအားလုံး တစ်နေရာတည်းတွင်
             </p>
 
             <div className="mt-14 grid items-center gap-8 lg:grid-cols-12">
-              {/* Left 7 Pills */}
+              {/* ဘယ်ဘက် Pill ၇ ခု */}
               <div className="lg:col-span-4 space-y-3">
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
                     <ScanLine className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Barcode & QR Code POS</span>
+                  <span className="text-xs font-bold text-slate-800">ဘားကုဒ် & QR ငွေရှင်းစနစ်</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
                     <WifiOff className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">100% Offline-Resilient</span>
+                  <span className="text-xs font-bold text-slate-800">အင်တာနက်မလို Offline စနစ်</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
                     <Boxes className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Low-Stock Instant Alerts</span>
+                  <span className="text-xs font-bold text-slate-800">ကုန်နည်း အချက်ပေးသတိပေးချက်</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
                     <Package className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Wholesale Multi-Unit Pack</span>
+                  <span className="text-xs font-bold text-slate-800">ဘူး၊ ဖာ၊ အထုပ် လက်ကားစီမံမှု</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
                     <Tag className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Barcode Label Generator</span>
+                  <span className="text-xs font-bold text-slate-800">ဘားကုဒ် တံဆိပ်ထုတ်စနစ်</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
                     <CreditCard className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">KBZPay / WavePay QR Bills</span>
+                  <span className="text-xs font-bold text-slate-800">KBZPay / WavePay QR ငွေချေစနစ်</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
                     <Users className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Customer Credit Ledger</span>
+                  <span className="text-xs font-bold text-slate-800">ဖောက်သည် အကြွေးစာရင်း</span>
                 </div>
               </div>
 
-              {/* Center Mobile Screen */}
+              {/* အလယ် ဖုန်းမျက်နှာပြင် */}
               <div className="lg:col-span-4 flex justify-center">
                 <div className="w-full max-w-[280px] rounded-[36px] border-8 border-slate-900 bg-white p-3 shadow-2xl">
                   <div className="mx-auto h-4 w-28 rounded-full bg-slate-900 mb-3" />
                   <div className="space-y-2.5 text-xs font-mono">
                     <div className="flex items-center justify-between border-b pb-1 text-[10px] text-slate-500">
-                      <span>Retail Cashier Mobile</span>
+                      <span>လက်လီ အရောင်းကောင်တာ</span>
                       <span>13:21</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-1 text-[9px] text-center">
                       <div className="bg-emerald-100 text-emerald-800 rounded py-1 font-bold">
-                        Today Bills: 48
+                        ယနေ့ဘောက်ချာ: ၄၈
                       </div>
                       <div className="bg-blue-100 text-blue-800 rounded py-1 font-bold">
-                        Sales: 1.2M Ks
+                        ရောင်းအား: ၁.၂M Ks
                       </div>
                     </div>
 
                     <div className="rounded-lg border border-slate-200 p-2 text-[10px]">
                       <div className="flex justify-between items-center mb-1">
                         <span className="font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded">
-                          #1084
+                          #၁၀၈၄
                         </span>
-                        <span className="text-emerald-600 font-bold">✓ Paid (KBZPay)</span>
+                        <span className="text-emerald-600 font-bold">✓ ရှင်းပြီး (KBZPay)</span>
                       </div>
                       <div className="flex justify-between text-slate-600">
-                        <span>Items: 3</span>
-                        <span className="font-bold text-slate-900">29,000 Ks</span>
+                        <span>ပစ္စည်း: ၃ မျိုး</span>
+                        <span className="font-bold text-slate-900">၂၉,၀၀၀ Ks</span>
                       </div>
                     </div>
 
                     <div className="rounded-lg border border-slate-200 p-2 text-[10px]">
                       <div className="flex justify-between items-center mb-1">
                         <span className="font-bold bg-amber-600 text-white px-1.5 py-0.2 rounded">
-                          #1083
+                          #၁၀၈၃
                         </span>
-                        <span className="text-amber-600 font-bold">Credit (U Kyaw)</span>
+                        <span className="text-amber-600 font-bold">အကြွေး (ဦးကျော်)</span>
                       </div>
                       <div className="flex justify-between text-slate-600">
-                        <span>Items: 5</span>
-                        <span className="font-bold text-slate-900">45,000 Ks</span>
+                        <span>ပစ္စည်း: ၅ မျိုး</span>
+                        <span className="font-bold text-slate-900">၄၅,၀၀၀ Ks</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right 7 Pills */}
+              {/* ညာဘက် Pill ၇ ခု */}
               <div className="lg:col-span-4 space-y-3">
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
                     <Building2 className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Multi-Branch Outlets</span>
+                  <span className="text-xs font-bold text-slate-800">ဆိုင်ခွဲများ စီမံခန့်ခွဲမှု</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
                     <KeyRound className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Manager 4-Digit Security PIN</span>
+                  <span className="text-xs font-bold text-slate-800">မန်နေဂျာ ၄ လုံး လျှို့ဝှက် PIN</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
                     <ImageIcon className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Auto-Compressed Photo Catalog</span>
+                  <span className="text-xs font-bold text-slate-800">အော့ဖ်လိုင်း ဓာတ်ပုံသိမ်းဆည်းမှု</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
                     <Coins className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Operating Expenses Tracking</span>
+                  <span className="text-xs font-bold text-slate-800">ဆိုင်သုံးစရိတ် စာရင်းမှတ်ခြင်း</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white">
                     <FileSpreadsheet className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">EOD Printable Day-End Close</span>
+                  <span className="text-xs font-bold text-slate-800">နေ့ချုပ်စာရင်း ပရင့်ထုတ်ခြင်း</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
                     <TrendingUp className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Real-Time Net Profit Reports</span>
+                  <span className="text-xs font-bold text-slate-800">အသားတင်အမြတ်ငွေ အစီရင်ခံစာ</span>
                 </div>
 
                 <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 shadow-sm border border-slate-100">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white">
                     <Receipt className="h-3.5 w-3.5" />
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Custom Thermal Receipt Logo</span>
+                  <span className="text-xs font-bold text-slate-800">စိတ်ကြိုက် ဆိုင် Logo ဘောက်ချာ</span>
                 </div>
               </div>
             </div>
@@ -776,73 +777,73 @@ export default function LandingPage() {
         </section>
 
         {/* =========================================================
-            7. SMT POS PLANS (FREE VS PRO)
+            ၇။ စျေးနှုန်းနှင့် အစီအစဉ်များ (FREE VS PRO PLANS)
         ========================================================= */}
         <section id="plans" className="py-20 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-8 text-center">
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              Transparent Retail Plans
+              သင့်ဆိုင်နှင့် ကိုက်ညီသော အစီအစဉ်များ
             </h2>
             <p className="mt-2 text-xs text-slate-500 sm:text-sm">
-              Start with our Free Starter plan, upgrade to Pro when your business expands
+              အခမဲ့ စတင်သုံးစွဲနိုင်ပြီး ဆိုင်ခွဲများ တိုးချဲ့လိုပါက Pro သို့ အဆင့်မြှင့်တင်နိုင်ပါသည်
             </p>
 
             <div className="mt-12 grid gap-8 sm:grid-cols-2 max-w-4xl mx-auto text-left">
-              {/* Free Plan */}
+              {/* အခမဲ့ အစီအစဉ် */}
               <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
                 <div className="bg-slate-900 p-6 text-white text-center">
                   <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                    Starter
+                    စတင်သူများအတွက်
                   </span>
-                  <div className="text-4xl font-extrabold mt-1">Free</div>
-                  <p className="text-xs text-slate-400 mt-1">For single-terminal retail shops</p>
+                  <div className="text-4xl font-extrabold mt-1">အခမဲ့ (Free)</div>
+                  <p className="text-xs text-slate-400 mt-1">ဆိုင်ငယ်တစ်ဆိုင်အတွက် သင့်တော်သည်</p>
                 </div>
                 <div className="p-6 space-y-3.5 text-xs text-slate-600">
-                  <p className="flex items-center gap-2">✓ Up to 300 Inventory Products</p>
-                  <p className="flex items-center gap-2">✓ Full Offline Register & Barcode POS</p>
-                  <p className="flex items-center gap-2">✓ Up to 20 Customers & Suppliers</p>
-                  <p className="flex items-center gap-2">✓ 1 Held Cart at Cashier</p>
-                  <p className="flex items-center gap-2">✓ Daily Sales Summary Report</p>
-                  <p className="flex items-center gap-2">✓ Standard Thermal Bill Printing</p>
+                  <p className="flex items-center gap-2">✓ ကုန်ပစ္စည်း ၃၀၀ အထိ သိမ်းဆည်းနိုင်</p>
+                  <p className="flex items-center gap-2">✓ အင်တာနက်မလိုဘဲ အော့ဖ်လိုင်း ရောင်းချနိုင်</p>
+                  <p className="flex items-center gap-2">✓ ဖောက်သည်နှင့် ကုန်သွင်းသူ ၂၀ ဦး</p>
+                  <p className="flex items-center gap-2">✓ အရောင်းကောင်တာ ခြင်းတောင်း ၁ ခု ခေတ္တထိန်းနိုင်</p>
+                  <p className="flex items-center gap-2">✓ နေ့စဉ် အရောင်းအကျဉ်းချုပ် အစီရင်ခံစာ</p>
+                  <p className="flex items-center gap-2">✓ စံသတ်မှတ်ချက် ဘောက်ချာထုတ်ယူမှု</p>
 
                   <Button asChild variant="outline" className="w-full mt-6 text-xs font-bold">
                     <Link to="/login" search={{ mode: "signup" }}>
-                      Get Started Free
+                      အခမဲ့ စတင်အသုံးပြုမည်
                     </Link>
                   </Button>
                 </div>
               </div>
 
-              {/* Pro Plan */}
+              {/* ပရို အစီအစဉ် */}
               <div className="rounded-2xl border-2 border-[#5B51D8] bg-white overflow-hidden shadow-md relative">
                 <span className="absolute top-3 right-3 rounded bg-amber-400 px-2.5 py-0.5 text-[10px] font-black uppercase text-slate-900">
-                  Recommended
+                  အကြံပြုထားသည်
                 </span>
                 <div className="bg-[#5B51D8] p-6 text-white text-center">
                   <span className="text-xs font-bold uppercase tracking-widest text-white/80">
-                    Pro Business
+                    ပရို စီးပွားရေးအစီအစဉ်
                   </span>
-                  <div className="text-4xl font-extrabold mt-1">Admin Activated</div>
-                  <p className="text-xs text-white/80 mt-1">For growing multi-outlet businesses</p>
+                  <div className="text-4xl font-extrabold mt-1">Admin အဆင့်မြှင့်တင်ရန်</div>
+                  <p className="text-xs text-white/80 mt-1">ဆိုင်ခွဲရှိသော စတိုးကြီးများအတွက်</p>
                 </div>
                 <div className="p-6 space-y-3.5 text-xs text-slate-600">
                   <p className="flex items-center gap-2 font-bold text-slate-900">
-                    ✓ Multi-Branch Outlets Network (Branch Code + PIN)
+                    ✓ ဆိုင်ခွဲများ ကွန်ရက်ချိတ်ဆက်ခြင်း (ဆိုင်ခွဲကုဒ် + PIN)
                   </p>
                   <p className="flex items-center gap-2 font-bold text-slate-900">
-                    ✓ Unlimited Inventory Products & Stock
+                    ✓ ကုန်ပစ္စည်း အရေအတွက် အကန့်အသတ်မရှိ
                   </p>
                   <p className="flex items-center gap-2 font-bold text-slate-900">
-                    ✓ Offline Compressed Product Photo Catalog
+                    ✓ အော့ဖ်လိုင်း ပစ္စည်းဓာတ်ပုံ သိမ်းဆည်းမှုစနစ်
                   </p>
-                  <p className="flex items-center gap-2">✓ Unlimited Customer Debt & Credit Records</p>
-                  <p className="flex items-center gap-2">✓ Operating Expenses & Net Profit Analytics</p>
-                  <p className="flex items-center gap-2">✓ Printable Day-End (EOD) & Master CSV Export</p>
-                  <p className="flex items-center gap-2">✓ Custom Store Logo on Thermal Receipts</p>
+                  <p className="flex items-center gap-2">✓ ဖောက်သည်နှင့် အကြွေးစာရင်း အကန့်အသတ်မရှိ</p>
+                  <p className="flex items-center gap-2">✓ ဆိုင်သုံးစရိတ်နှင့် အသားတင်အမြတ် စာရင်းများ</p>
+                  <p className="flex items-center gap-2">✓ နေ့ချုပ်စာရင်း (EOD) ပရင့်ထုတ်ခြင်းနှင့် CSV ထုတ်ယူမှု</p>
+                  <p className="flex items-center gap-2">✓ စိတ်ကြိုက် ဆိုင် Logo ပါ ဘောက်ချာဒီဇိုင်း</p>
 
                   <Button asChild className="w-full mt-6 bg-[#5B51D8] text-white text-xs font-bold hover:bg-[#4D43C4]">
                     <Link to="/settings/plan">
-                      View Pro Activation
+                      ပရိုအချက်အလက် ကြည့်ရှုရန်
                     </Link>
                   </Button>
                 </div>
@@ -852,7 +853,7 @@ export default function LandingPage() {
         </section>
 
         {/* =========================================================
-            8. CONTACT & SUPPORT SECTION (Screenshot 7)
+            ၈။ ဆက်သွယ်ရန် (CONTACT & SUPPORT)
         ========================================================= */}
         <section id="contact" className="border-t border-slate-200 bg-slate-50/60 py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-8">
@@ -860,10 +861,10 @@ export default function LandingPage() {
               <div className="lg:col-span-5 space-y-6">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-widest text-[#5B51D8]">
-                    Support & Onboarding
+                    ကူညီထောက်ပံ့မှုနှင့် စုံစမ်းရန်
                   </span>
                   <h3 className="text-2xl font-extrabold text-slate-900 mt-1">
-                    Direct Contact Information
+                    တိုက်ရိုက် ဆက်သွယ်ရန်
                   </h3>
                 </div>
 
@@ -873,8 +874,8 @@ export default function LandingPage() {
                       <Phone className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">Phone & Telegram / Viber</p>
-                      <p className="text-slate-500 mt-0.5">+95 9 123 456 789 (Direct Hotline)</p>
+                      <p className="font-bold text-slate-900">ဖုန်း / Telegram / Viber</p>
+                      <p className="text-slate-500 mt-0.5">၀၉ ၁၂၃ ၄၅၆ ၇၈၉ (တိုက်ရိုက်လိုင်း)</p>
                     </div>
                   </div>
 
@@ -883,7 +884,7 @@ export default function LandingPage() {
                       <Mail className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">Email Support</p>
+                      <p className="font-bold text-slate-900">အီးမေးလ်</p>
                       <p className="text-slate-500 mt-0.5">support@smtpos.com</p>
                     </div>
                   </div>
@@ -893,8 +894,8 @@ export default function LandingPage() {
                       <CreditCard className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">Supported Digital Payments</p>
-                      <p className="text-slate-500 mt-0.5">KBZPay, WavePay, AYA Pay, CB Pay & Cash</p>
+                      <p className="font-bold text-slate-900">ငွေပေးချေမှု နည်းလမ်းများ</p>
+                      <p className="text-slate-500 mt-0.5">KBZPay, WavePay, AYA Pay, CB Pay နှင့် ငွေသား</p>
                     </div>
                   </div>
                 </div>
@@ -902,42 +903,42 @@ export default function LandingPage() {
 
               <div className="lg:col-span-7 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
                 <span className="text-xs font-bold uppercase tracking-widest text-[#5B51D8]">
-                  Inquiry
+                  မေးမြန်းရန်
                 </span>
                 <h3 className="text-2xl font-extrabold text-slate-900 mt-1 mb-6">
-                  Have Questions or Need Pro Activation?
+                  သိရှိလိုသည်များကို မေးမြန်းနိုင်ပါသည်
                 </h3>
 
                 <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
                   <div>
-                    <label className="text-xs font-bold text-slate-700">Your store name</label>
+                    <label className="text-xs font-bold text-slate-700">သင့်ဆိုင်အမည်</label>
                     <input
                       type="text"
                       className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-xs focus:border-[#5B51D8] focus:outline-none"
-                      placeholder="e.g. Shwe Mandalay Mini Mart"
+                      placeholder="ဥပမာ — ရွှေမန္တလေး မီနီမတ်စ်"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-700">Phone or Telegram / Viber</label>
+                    <label className="text-xs font-bold text-slate-700">ဖုန်း သို့မဟုတ် Viber/Telegram</label>
                     <input
                       type="text"
                       className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-xs focus:border-[#5B51D8] focus:outline-none"
-                      placeholder="09..."
+                      placeholder="၀၉..."
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-700">Your message</label>
+                    <label className="text-xs font-bold text-slate-700">မေးမြန်းလိုသောအကြောင်းအရာ</label>
                     <textarea
                       rows={3}
                       className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-xs focus:border-[#5B51D8] focus:outline-none"
-                      placeholder="Tell us what you'd like to ask..."
+                      placeholder="သိရှိလိုသော အချက်အလက်များကို ရေးသားပေးပါ..."
                     />
                   </div>
 
                   <Button className="h-10 rounded-lg bg-[#5B51D8] px-6 text-xs font-bold uppercase text-white hover:bg-[#4D43C4]">
-                    Send Message
+                    မက်ဆေ့ခ်ျ ပို့မည်
                   </Button>
                 </form>
               </div>
@@ -947,20 +948,20 @@ export default function LandingPage() {
       </main>
 
       {/* =========================================================
-          9. CLEAN FOOTER (Original Logo Preserved)
+          ၉။ စာမျက်နှာ အောက်ခြေ (FOOTER - မူရင်း Logo ပါဝင်သည်)
       ========================================================= */}
       <footer className="border-t border-slate-200 py-8 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-8 text-xs text-slate-500">
           <div className="flex items-center gap-2.5">
             <img src={smtPosLogo} alt="SMT POS" className="h-6 w-6 rounded object-contain" />
-            <p>© {new Date().getFullYear()} SMT POS. Modern Retail Operating System.</p>
+            <p>© {new Date().getFullYear()} SMT POS. ခေတ်သစ် လက်လီအရောင်းနှင့် စတိုးစီမံခန့်ခွဲမှုစနစ်။</p>
           </div>
           <div className="flex items-center gap-6 font-medium">
             <Link to="/login" className="hover:text-slate-900">
-              Sign In
+              အကောင့်ဝင်ရန်
             </Link>
             <Link to="/register" className="hover:text-slate-900 font-bold text-[#5B51D8]">
-              Cashier Register
+              အရောင်းကောင်တာဖွင့်မည်
             </Link>
           </div>
         </div>
