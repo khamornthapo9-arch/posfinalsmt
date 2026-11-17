@@ -238,7 +238,7 @@ function SettingsPage() {
   const isRestaurant = store?.business_type === "RESTAURANT";
 
   return (
-    <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ" subtitle="အမှတ်တံဆိပ်၊ အခွန်၊ လုပ်ငန်းမုဒ်နှင့် အကောင့်">
+    <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ">
       <div className="mx-auto max-w-3xl space-y-4 p-4">
         <Section
           title="ဆိုင် အချက်အလက်နှင့် အမှတ်တံဆိပ်"
@@ -429,15 +429,11 @@ function SettingsPage() {
 
         <Section
           title="အသုံးပြုမည့် မော်ဂျူးများ"
-          description="လိုအပ်သော မော်ဂျူးများကိုသာ ဖွင့်၍ အသုံးပြုနိုင်ပါသည်။"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-sm font-medium">
                 အဆင့်မြင့် စာရင်းကိုင် မုဒ် (အကြွေး၊ ဝယ်ယူမှုနှင့် အသုံးစရိတ်)
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                ဖောက်သည် အကြွေးစာရင်း၊ ကုန်သွင်းသူ ဝယ်ယူမှုနှင့် အသုံးစရိတ် မှတ်တမ်းများ ပွင့်လာပါမည်။
               </p>
             </div>
             <button
@@ -463,7 +459,6 @@ function SettingsPage() {
 
         <Section
           title="လုပ်ငန်း အမျိုးအစား"
-          description="အရောင်းဆိုင် မုဒ်သည် ပစ္စည်းများကို တိုက်ရိုက် ရောင်းချသည်။ စားသောက်ဆိုင် မုဒ်သည် စားပွဲနေရာချထားမှုနှင့် မီးဖိုချောင် တိုကင်စနစ် ပါဝင်သည်။"
         >
           <div className="grid gap-3 sm:grid-cols-2">
             {[

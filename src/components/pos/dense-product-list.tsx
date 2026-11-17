@@ -68,7 +68,7 @@ export function DenseProductList({
             <input
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="အမည် (သို့) SKU ဖြင့် ရှာပါ၊ သို့မဟုတ် ဘားကုဒ် ဖတ်ပါ"
+              placeholder="ရှာဖွေရန်..."
               className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
@@ -132,19 +132,15 @@ export function DenseProductList({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{item.name}</p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <span className="tabular-nums">{item.sku}</span>
-                      <span>·</span>
                       <span
                         className={cn(
-                          "rounded-md px-1.5 py-0.5 text-[10px] font-medium",
-                          status === "ok" && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
-                          status === "low" && "bg-amber-500/15 text-amber-600 dark:text-amber-300",
-                          status === "out" && "bg-destructive/15 text-destructive",
+                          "tabular-nums",
+                          status === "low" && "font-medium text-amber-600 dark:text-amber-300",
+                          status === "out" && "font-medium text-destructive",
                         )}
                       >
-                        {status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
+                        {status === "out" ? "ပစ္စည်းပြတ်" : `${item.stock_quantity} ကျန်`}
                       </span>
-                      <span className="tabular-nums">{item.stock_quantity} ကျန်</span>
                     </div>
                   </div>
 
