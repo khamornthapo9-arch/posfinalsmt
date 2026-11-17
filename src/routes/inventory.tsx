@@ -599,8 +599,6 @@ function ProductModal({
                     </button>
                   </div>
                 ))}
-                {units.length === 0 && (
-                )}
               </div>
             </div>
           ) : (
