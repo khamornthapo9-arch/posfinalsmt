@@ -190,7 +190,6 @@ export function DenseProductList({
               {items.length === 0 ? (
                 <>
                   <p className="text-sm text-muted-foreground">ကုန်ပစ္စည်း စာရင်းမရှိသေးပါ။</p>
-                  <p className="text-xs text-muted-foreground">ကုန်ပစ္စည်းစာရင်းသို့ သွားပြီး ပစ္စည်းထည့်သွင်းပါ။</p>
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">ရှာဖွေမှုနှင့် ကိုက်ညီသော ပစ္စည်းမရှိပါ။</p>

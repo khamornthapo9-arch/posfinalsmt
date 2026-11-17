@@ -105,7 +105,6 @@ export function CartPanel({
         {cart.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center px-4 text-center">
             <p className="text-sm font-medium text-muted-foreground">ဈေးဝယ်ခြင်းတောင်း လွတ်နေပါသည်</p>
-            <p className="mt-1 text-xs text-muted-foreground">ပစ္စည်းတစ်ခုကို နှိပ်ပါ သို့မဟုတ် စကင်န်ဖတ်ပါ</p>
           </div>
         ) : (
           <div className="divide-y divide-border">

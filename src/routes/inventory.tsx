@@ -21,7 +21,6 @@ import {
   ImagePlus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { ProBadge } from "@/components/pos/pro-lock";
 import { FREE_LIMITS } from "@/lib/subscription";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAuth } from "@/lib/auth-store";
@@ -480,7 +479,6 @@ function ProductModal({
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold">ကုန်ပစ္စည်း ဓာတ်ပုံ</p>
-                <p className="text-[11px] text-muted-foreground">ပုံကြီးလျှင် အလိုအလျောက် ချုံ့ပေးပါမည်။</p>
                 <div className="mt-2 flex gap-2">
                   <button
                     disabled={uploading}
@@ -539,11 +537,6 @@ function ProductModal({
             {field("stock_quantity", "လက်ကျန်", "number")}
             {isPro && field("min_stock_threshold", "သတိပေး ရေတွက်မှု", "number")}
           </div>
-          {!isPro && (
-            <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              အရင်းစျေးနှင့် လက်ကျန် သတိပေးချက်များ <ProBadge />
-            </p>
-          )}
 
           {isPro ? (
             <div className="rounded-lg border border-border bg-card p-3">
@@ -607,7 +600,6 @@ function ProductModal({
                   </div>
                 ))}
                 {units.length === 0 && (
-                  <p className="text-xs text-muted-foreground">အခြားထုပ်ပိုးမှု အရွယ်အစားများ ထည့်သွင်းနိုင်သည်။</p>
                 )}
               </div>
             </div>
