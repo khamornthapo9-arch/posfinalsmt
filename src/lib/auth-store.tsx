@@ -38,7 +38,7 @@ interface AuthContextValue {
 export const PENDING_STORE_NAME_KEY = "pos-pending-store-name";
 
 const STORE_COLUMNS =
-  "id, name, logo_url, currency_symbol, tax_rate, business_type, advanced_accounting_mode, is_pro, address, cashier_name, phone_numbers, receipt_header, receipt_footer, parent_store_id";
+  "id, name, logo_url, currency_symbol, tax_rate, business_type, advanced_accounting_mode, is_pro, address, cashier_name, phone_numbers, receipt_header, receipt_footer, parent_store_id, telegram_chat_id, telegram_username, telegram_notify_enabled";
 
 export const ACTIVE_STORE_KEY = "pos-active-store-id";
 
