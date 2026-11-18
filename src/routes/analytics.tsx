@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 const RevenueTrendChart = lazy(() => import("@/components/lazy/analytics-charts").then((m) => ({ default: m.RevenueTrendChart })));
 const TopProductsChart = lazy(() => import("@/components/lazy/analytics-charts").then((m) => ({ default: m.TopProductsChart })));
 const chartFallback = <div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />;
+
 import {
   DollarSign,
   HandCoins,
@@ -11,8 +12,10 @@ import {
   PiggyBank,
   Printer,
   Receipt,
+  Send,
   TrendingUp,
   Wallet,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -24,6 +27,7 @@ import { useStoreSettings } from "@/lib/use-store-settings";
 import { usePos } from "@/lib/pos-store";
 import { useAccountingStore, CREDIT_METHOD, CASH_METHOD } from "@/lib/accounting-store";
 import { cn } from "@/lib/utils";
+import { sendStoreTelegramReport } from "@/lib/telegram-report.functions";
 
 export const Route = createFileRoute("/analytics")({
   ssr: false,
@@ -34,8 +38,7 @@ export const Route = createFileRoute("/analytics")({
       { title: "အရောင်း စာရင်းဇယား Analysis — Counter Point of Sale" },
       {
         name: "description",
-        content:
-          "ကုန်ပစ္စည်းများကို စစ်ဆေးရန်နှင့် CSV ထုတ်ယူရန်။",
+        content: "ကုန်ပစ္စည်းများကို စစ်ဆေးရန်နှင့် CSV ထုတ်ယူရန်။",
       },
       { property: "og:title", content: "အရောင်း စာရင်းဇယား Analysis — Counter Point of Sale" },
       {
@@ -60,507 +63,304 @@ const RANGE_LABEL: Record<RangeKey, string> = {
   custom: "ရှာရန်",
 };
 
-interface SaleRow {
-  id: string;
-  total_amount: number;
-  payment_method: string;
-  payment_breakdown: { method: string; amount: number }[] | null;
-  is_offline_sync: boolean;
-  created_at: string;
-  status: string;
-  customer_id: string | null;
-  customers: {
-    name: string;
-    phone: string | null;
-    balance: number;
-    customer_type: string;
-  } | null;
-  sale_items: {
-    quantity: number;
-    unit_price: number;
-    items: { name: string; cost_price: number } | null;
-  }[];
-}
-
-interface DebtPaymentRow {
-  id: string;
-  amount: number;
-  method: string;
-  created_at: string;
-}
-
-interface ExpenseRow {
-  id: string;
-  amount: number;
-  paid_with: string;
-  spent_at: string;
-}
-
-function startOf(range: RangeKey) {
-  const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (range === "yesterday") d.setDate(d.getDate() - 1);
-  if (range === "week") d.setDate(d.getDate() - 6);
-  if (range === "month") d.setDate(d.getDate() - 29);
-  if (range === "all") return new Date(2000, 0, 1);
-  return d;
-}
-
-function endOf(range: RangeKey) {
-  if (range === "yesterday") {
-    const now = new Date();
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    d.setSeconds(d.getSeconds() - 1);
-    return d;
-  }
-  return new Date();
-}
-
 function AnalyticsPage() {
-  const { fmt, isPro } = useStoreSettings();
+  const { isPro, fmt, symbol, store } = useStoreSettings();
+  const { items } = usePos();
+  const { ledger } = useAccountingStore();
+
   const [range, setRange] = useState<RangeKey>("today");
-  const [from, setFrom] = useState(() => startOf("week").toISOString().slice(0, 10));
-  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
-  const [sales, setSales] = useState<SaleRow[]>([]);
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [eodOpen, setEodOpen] = useState(false);
-  const { customers, expenses } = useAccountingStore();
-  const { items } = usePos();
+  const [sendingTelegram, setSendingTelegram] = useState(false);
 
-  const ranges = isPro ? PRO_RANGES : FREE_RANGES;
-  useEffect(() => {
-    if (!ranges.includes(range)) setRange("today");
-  }, [ranges, range]);
-
-  const fromDate = range === "custom" ? new Date(`${from}T00:00:00`) : startOf(range);
-  const toDate = range === "custom" ? new Date(`${to}T23:59:59`) : endOf(range);
-  const fromIso = fromDate.toISOString();
-  const toIso = toDate.toISOString();
-
-  const [debtPayments, setDebtPayments] = useState<DebtPaymentRow[]>([]);
-  const [rangeExpenses, setRangeExpenses] = useState<ExpenseRow[]>([]);
-
+  // Fetch sales transactions
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    void (async () => {
-      const [{ data: salesData }, { data: debtData }, { data: expenseData }] = await Promise.all([
-        supabase
-          .from("sales")
-          .select(
-            "id,total_amount,payment_method,payment_breakdown,is_offline_sync,created_at,status,customer_id,customers(name,phone,balance,customer_type),sale_items(quantity,unit_price,items(name,cost_price))",
-          )
-          .gte("created_at", fromIso)
-          .lte("created_at", toIso)
-          .order("created_at"),
-        supabase
-          .from("debt_payments")
-          .select("id,amount,method,created_at")
-          .gte("created_at", fromIso)
-          .lte("created_at", toIso),
-        supabase
-          .from("expenses")
-          .select("id,amount,paid_with,spent_at")
-          .gte("spent_at", fromIso)
-          .lte("spent_at", toIso),
-      ]);
-      if (!active) return;
-      setSales((salesData ?? []) as unknown as SaleRow[]);
-      setDebtPayments((debtData ?? []) as unknown as DebtPaymentRow[]);
-      setRangeExpenses((expenseData ?? []) as unknown as ExpenseRow[]);
-      setLoading(false);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [fromIso, toIso]);
+    (async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("sales_transactions")
+          .select("*, transaction_items(*)")
+          .order("created_at", { ascending: false });
 
-  const metrics = useMemo(() => {
-    const active = sales.filter((s) => s.status !== "REFUNDED");
-    const refunded = sales.filter((s) => s.status === "REFUNDED");
-    const revenue = active.reduce((sum, s) => sum + Number(s.total_amount), 0);
-    const refundedTotal = refunded.reduce((sum, s) => sum + Number(s.total_amount), 0);
-    const units = active.reduce(
-      (sum, s) => sum + s.sale_items.reduce((q, line) => q + line.quantity, 0),
-      0,
-    );
-    const cogs = active.reduce(
-      (sum, s) =>
-        sum +
-        s.sale_items.reduce(
-          (c, line) => c + line.quantity * Number(line.items?.cost_price ?? 0),
-          0,
-        ),
-      0,
-    );
-    return {
-      revenue,
-      refundedTotal,
-      cogs,
-      transactions: active.length,
-      units,
-      average: active.length ? revenue / active.length : 0,
-      completedTotal: revenue + refundedTotal,
-      refundedCount: refunded.length,
-    };
-  }, [sales]);
-
-  /** Gross Sales = all completed sales minus every refunded receipt. */
-  const grossSales = metrics.completedTotal - metrics.refundedTotal;
-
-  /** Total value of stock currently on hand, at buy price. */
-  const inventoryAssetValue = useMemo(
-    () => items.reduce((sum, i) => sum + i.stock_quantity * Number(i.cost_price ?? 0), 0),
-    [items],
-  );
-
-  const totalExpenses = useMemo(
-    () => rangeExpenses.reduce((sum, e) => sum + Number(e.amount), 0),
-    [rangeExpenses],
-  );
-
-  const activeDebt = useMemo(
-    () => customers.reduce((sum, c) => sum + Math.max(c.balance, 0), 0),
-    [customers],
-  );
-  const grossProfit = metrics.revenue - metrics.cogs;
-  const netProfit = grossProfit - totalExpenses;
-
-  const [lifetimeNet, setLifetimeNet] = useState(0);
-  useEffect(() => {
-    if (!isPro) return;
-    let active = true;
-    void (async () => {
-      const [{ data: allSales }, { data: allExpenses }] = await Promise.all([
-        supabase.from("sales").select("total_amount,status,sale_items(quantity,items(cost_price))"),
-        supabase.from("expenses").select("amount"),
-      ]);
-      if (!active) return;
-      const rows = (allSales ?? []) as unknown as {
-        total_amount: number;
-        status: string;
-        sale_items: { quantity: number; items: { cost_price: number } | null }[];
-      }[];
-      const completed = rows.filter((r) => r.status !== "REFUNDED");
-      const revenue = completed.reduce((s, r) => s + Number(r.total_amount), 0);
-      const cogs = completed.reduce(
-        (s, r) =>
-          s + r.sale_items.reduce((c, l) => c + l.quantity * Number(l.items?.cost_price ?? 0), 0),
-        0,
-      );
-      const spend = (allExpenses ?? []).reduce((s, e) => s + Number(e.amount), 0);
-      setLifetimeNet(revenue - cogs - spend);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [isPro]);
-
-  const trend = useMemo(() => {
-    const buckets = new Map<string, number>();
-    for (const sale of sales.filter((s) => s.status !== "REFUNDED")) {
-      const key = new Date(sale.created_at).toISOString().slice(0, 10);
-      buckets.set(key, (buckets.get(key) ?? 0) + Number(sale.total_amount));
-    }
-    return [...buckets.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, revenue]) => ({
-        date: new Date(`${date}T00:00:00`).toLocaleDateString("my-MM", {
-          month: "short",
-          day: "numeric",
-        }),
-        revenue: Number(revenue.toFixed(2)),
-      }));
-  }, [sales]);
-
-  const topProducts = useMemo(() => {
-    const totals = new Map<string, number>();
-    for (const sale of sales.filter((s) => s.status !== "REFUNDED")) {
-      for (const line of sale.sale_items) {
-        const name = line.items?.name ?? "မသိရှိသော ပစ္စည်း";
-        totals.set(name, (totals.get(name) ?? 0) + line.quantity);
+        if (!error && active) {
+          setTransactions(data || []);
+        }
+      } catch (err) {
+        console.error("Sales fetch error:", err);
+      } finally {
+        if (active) setLoading(false);
       }
-    }
-    return [...totals.entries()]
-      .map(([name, quantity]) => ({ name, quantity }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5);
-  }, [sales]);
-
-  const paymentBuckets = useMemo(() => {
-    const buckets = {
-      cashIn: 0,
-      kbzIn: 0,
-      waveIn: 0,
-      creditIssued: 0,
-      cashRefunds: 0,
-      cashExpenses: 0,
+    })();
+    return () => {
+      active = false;
     };
-    for (const sale of sales) {
-      const breakdown = sale.payment_breakdown?.length ? sale.payment_breakdown : [{ method: sale.payment_method, amount: sale.total_amount }];
-      for (const split of breakdown) {
-        const method = split.method.toLowerCase();
-        const amount = Number(split.amount || 0);
-        if (method === CASH_METHOD.toLowerCase()) {
-          if (sale.status === "REFUNDED") buckets.cashRefunds += amount;
-          else buckets.cashIn += amount;
-        } else if (method === CREDIT_METHOD.toLowerCase()) {
-          if (sale.status !== "REFUNDED") buckets.creditIssued += amount;
-        } else if (method.includes("kbz")) {
-          if (sale.status !== "REFUNDED") buckets.kbzIn += amount;
-        } else if (method.includes("wave")) {
-          if (sale.status !== "REFUNDED") buckets.waveIn += amount;
+  }, []);
+
+  // Filter range
+  const filtered = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    return transactions.filter((t) => {
+      const created = new Date(t.created_at).getTime();
+
+      if (range === "today") return created >= startOfToday;
+      if (range === "yesterday") {
+        const startOfYesterday = startOfToday - 86400000;
+        return created >= startOfYesterday && created < startOfToday;
+      }
+      if (range === "week") {
+        const startOfWeek = startOfToday - 7 * 86400000;
+        return created >= startOfWeek;
+      }
+      if (range === "month") {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        return created >= startOfMonth;
+      }
+      if (range === "custom" && customStart && customEnd) {
+        const s = new Date(customStart).getTime();
+        const e = new Date(customEnd).getTime() + 86400000;
+        return created >= s && created <= e;
+      }
+      return true;
+    });
+  }, [transactions, range, customStart, customEnd]);
+
+  // Aggregate metrics
+  const totals = useMemo(() => {
+    let grossSales = 0;
+    let refunds = 0;
+    let costOfGoods = 0;
+    let ordersCount = 0;
+
+    for (const t of filtered) {
+      if (t.is_refund) {
+        refunds += Number(t.total || 0);
+      } else {
+        grossSales += Number(t.total || 0);
+        ordersCount += 1;
+        // Cost of goods from items
+        for (const item of t.transaction_items || []) {
+          const matchedItem = items.find((i) => i.id === item.item_id);
+          const buyPrice = matchedItem?.buy_price || 0;
+          costOfGoods += buyPrice * (item.quantity || 1);
         }
       }
     }
-    for (const dp of debtPayments) {
-      const amount = Number(dp.amount);
-      if (amount > 0 && dp.method.toLowerCase() === CASH_METHOD.toLowerCase()) {
-        buckets.cashIn += amount;
+
+    const netSales = grossSales - refunds;
+    const netProfit = Math.max(0, netSales - costOfGoods);
+
+    return {
+      grossSales,
+      refunds,
+      netSales,
+      costOfGoods,
+      netProfit,
+      ordersCount,
+    };
+  }, [filtered, items]);
+
+  // Payment Breakdown
+  const paymentBuckets = useMemo(() => {
+    let cashIn = 0;
+    let kbzIn = 0;
+    let waveIn = 0;
+    let creditIssued = 0;
+
+    for (const t of filtered) {
+      if (t.is_refund) continue;
+      const amt = Number(t.total || 0);
+      const method = String(t.payment_method || "").toLowerCase();
+
+      if (method.includes("kbz") || method.includes("kpay")) {
+        kbzIn += amt;
+      } else if (method.includes("wave")) {
+        waveIn += amt;
+      } else if (method.includes("credit") || method.includes("အကြွေး")) {
+        creditIssued += amt;
+      } else {
+        cashIn += amt;
       }
     }
-    for (const e of rangeExpenses) {
-      if (e.paid_with.toLowerCase() === CASH_METHOD.toLowerCase()) {
-        buckets.cashExpenses += Number(e.amount);
+
+    return { cashIn, kbzIn, waveIn, creditIssued };
+  }, [filtered]);
+
+  // Send to Telegram
+  const handleSendTelegram = async () => {
+    if (!store) return;
+    setSendingTelegram(true);
+    try {
+      const res = await sendStoreTelegramReport({
+        data: {
+          storeId: store.id,
+          storeName: store.name,
+          currencySymbol: symbol,
+          dateStr: new Date().toLocaleDateString("en-GB"),
+          grossSales: totals.grossSales,
+          refunds: totals.refunds,
+          netSales: totals.netSales,
+          estimatedProfit: totals.netProfit,
+          ordersCount: totals.ordersCount,
+          cashIn: paymentBuckets.cashIn,
+          kbzIn: paymentBuckets.kbzIn,
+          waveIn: paymentBuckets.waveIn,
+          creditIssued: paymentBuckets.creditIssued,
+          closedBy: "ကောင်တာ စာရင်းပိတ်",
+          isTest: false,
+        },
+      });
+
+      if (res.success) {
+        toast.success("Telegram သို့ နေ့ချုပ်စာရင်း ပို့ပြီးပါပြီ! ✅");
+      } else {
+        toast.error("ပို့၍မရပါ: " + res.error);
       }
+    } catch (e: any) {
+      toast.error("ချိတ်ဆက်မှု မအောင်မြင်ပါ: " + e?.message);
+    } finally {
+      setSendingTelegram(false);
     }
-    return buckets;
-  }, [sales, debtPayments, rangeExpenses]);
-
-  const netCashOnHand = paymentBuckets.cashIn - paymentBuckets.cashRefunds - paymentBuckets.cashExpenses;
-
-  /** FREE tier: simple receipt list. */
-  const exportDailySummary = () => {
-    const rows: (string | number)[][] = [
-      ["Date", "Receipt ID", "Payment Method", "Total Amount"],
-      ...sales
-        .filter((s) => s.status !== "REFUNDED")
-        .map((sale) => [
-          new Date(sale.created_at).toLocaleString("my-MM"),
-          sale.id,
-          sale.payment_method,
-          Number(sale.total_amount).toFixed(2),
-        ]),
-      [],
-      ["Gross Sales", grossSales.toFixed(2)],
-      ["Refunds", metrics.refundedTotal.toFixed(2)],
-    ];
-    downloadCsv("Daily_Sales_Summary.csv", rows);
-  };
-
-  /** PRO tier: line-item level financial report. */
-  const exportMasterFinancial = () => {
-    const rows: (string | number)[][] = [
-      [
-        "Receipt ID",
-        "Date",
-        "Item Name",
-        "Qty",
-        "Selling Price",
-        "Buy Price",
-        "Line Profit",
-        "Payment Channel",
-        "Refund Status",
-      ],
-      ...sales.flatMap((sale) => {
-        const refunded = sale.status === "REFUNDED";
-        return sale.sale_items.map((line) => {
-          const buy = Number(line.items?.cost_price ?? 0);
-          const lineProfit = refunded ? 0 : line.quantity * (Number(line.unit_price) - buy);
-          return [
-            sale.id,
-            new Date(sale.created_at).toLocaleString("my-MM"),
-            line.items?.name ?? "—",
-            line.quantity,
-            Number(line.unit_price).toFixed(2),
-            buy.toFixed(2),
-            lineProfit.toFixed(2),
-            sale.payment_method,
-            refunded ? "REFUNDED" : "COMPLETED",
-          ];
-        });
-      }),
-      [],
-      ["Operating Expenses", totalExpenses.toFixed(2)],
-      ["Net Profit", netProfit.toFixed(2)],
-      [],
-    ];
-    const legacy: (string | number)[][] = [
-      [
-        "အရောင်း အိုင်ဒီ",
-        "ရက်စွဲ",
-        "ငွေပေးချေမှု နည်းလမ်း",
-        "အခြေအနေ",
-        "ဖောက်သည် အမျိုးအစား",
-        "ဖောက်သည် အမည်",
-        "ဖုန်း",
-        "အကြွေး လက်ကျန်",
-        "အော့ဖ်လိုင်း စင့်ခ်လုပ်မှု",
-        "အရေအတွက်",
-        "စုစုပေါင်း",
-      ],
-      ...sales.map((sale) => {
-        const credit = sale.payment_method === CREDIT_METHOD;
-        const customer = sale.customers;
-        return [
-          sale.id,
-          new Date(sale.created_at).toLocaleString("my-MM"),
-          sale.payment_method,
-          sale.status,
-          credit
-            ? customer?.customer_type === "QUICK"
-              ? "Quick-Added"
-              : "Registered"
-            : "—",
-          credit ? customer?.name ?? "—" : "—",
-          credit ? customer?.phone ?? "—" : "—",
-          credit ? Number(customer?.balance ?? 0).toFixed(2) : "0.00",
-          sale.is_offline_sync ? "ဟုတ်ပါသည်" : "မဟုတ်ပါ",
-          sale.sale_items.reduce((q, line) => q + line.quantity, 0),
-          Number(sale.total_amount).toFixed(2),
-        ];
-      }),
-      [],
-      ["အကျဉ်းချုပ်"],
-      ["အရောင်း စုစုပေါင်း (ပြန်အမ်း မပါ)", grossSales.toFixed(2)],
-      ["ကုန်ကျစရိတ် (COGS)", metrics.cogs.toFixed(2)],
-      ["အကြမ်း အမြတ်", grossProfit.toFixed(2)],
-      ["အသုံးစရိတ်", totalExpenses.toFixed(2)],
-      ["အသားတင် အမြတ်", netProfit.toFixed(2)],
-      ["လက်ကျန် အကြွေး စုစုပေါင်း", activeDebt.toFixed(2)],
-      ["ကုန်ပစ္စည်း တန်ဖိုး စုစုပေါင်း", inventoryAssetValue.toFixed(2)],
-      ["တစ်သက်တာ အသားတင် အမြတ်", lifetimeNet.toFixed(2)],
-      [],
-      ["ငွေပေးချေမှု ခွဲခြမ်းစိတ်ဖြာချက်"],
-      ["ငွေသား ဝင်ငွေ", paymentBuckets.cashIn.toFixed(2)],
-      ["KBZ Pay ဝင်ငွေ", paymentBuckets.kbzIn.toFixed(2)],
-      ["Wave Pay ဝင်ငွေ", paymentBuckets.waveIn.toFixed(2)],
-      ["အကြွေး ထုတ်ပေးထားသော ငွေ", paymentBuckets.creditIssued.toFixed(2)],
-      ["အကြွေး ပြန်ဆပ်ငွေ", debtPayments.reduce((sum, dp) => sum + Math.max(Number(dp.amount), 0), 0).toFixed(2)],
-      ["ပြန်အမ်းငွေ", metrics.refundedTotal.toFixed(2)],
-      ["ငွေသား အသုံးစရိတ်", paymentBuckets.cashExpenses.toFixed(2)],
-      ["လက်ကျန် ငွေသား", netCashOnHand.toFixed(2)],
-    ];
-    downloadCsv("Master_Financial_Report.csv", [...rows, ...legacy]);
   };
 
   const exportCsv = () => {
-    if (sales.length === 0) {
-      toast.error("ဤအချိန်ကာလတွင် အရောင်းမှတ်တမ်း မရှိပါ");
-      return;
-    }
-    if (isPro) exportMasterFinancial();
-    else exportDailySummary();
+    const rows = filtered.map((t) => ({
+      ID: t.id,
+      Date: new Date(t.created_at).toLocaleString(),
+      Total: t.total,
+      Refund: t.is_refund ? "Yes" : "No",
+      Payment: t.payment_method || "Cash",
+    }));
+    downloadCsv(rows, `sales-${range}-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success("CSV ထုတ်ယူပြီးပါပြီ");
   };
 
+  const ranges = isPro ? PRO_RANGES : FREE_RANGES;
+
   const cards = [
-    { label: "စုစုပေါင်း ဝင်ငွေ", value: fmt(metrics.revenue), icon: DollarSign },
-    { label: "အရောင်းပြေစာ အရေအတွက်", value: String(metrics.transactions), icon: Receipt },
-    { label: "ရောင်းရသော ပစ္စည်းအရေအတွက်", value: String(metrics.units), icon: Package },
-    { label: "ပျမ်းမျှ ဝယ်ယူမှု ပမာဏ", value: fmt(metrics.average), icon: TrendingUp },
+    { label: "စုစုပေါင်း အရောင်း", value: fmt(totals.grossSales), icon: DollarSign },
+    { label: "အသားတင် အရောင်း", value: fmt(totals.netSales), icon: TrendingUp },
+    { label: "ပြန်အမ်းငွေ", value: `-${fmt(totals.refunds)}`, icon: HandCoins },
+    { label: "အော်ဒါ စုစုပေါင်း", value: `${totals.ordersCount} စောင်`, icon: Receipt },
   ];
 
   const profitCards = [
-    { label: "လက်ကျန် အကြွေး စုစုပေါင်း", value: fmt(activeDebt), icon: HandCoins, pro: false },
-    { label: "ပြန်အမ်းငွေ", value: fmt(metrics.refundedTotal), icon: Receipt, pro: false },
-    { label: "အသုံးစရိတ်", value: fmt(totalExpenses), icon: Wallet, pro: true },
-    { label: "ကုန်ကျစရိတ် (COGS)", value: fmt(metrics.cogs), icon: Wallet, pro: true },
-    { label: "အကြမ်း အမြတ်", value: fmt(grossProfit), icon: TrendingUp, pro: true },
-    { label: "အသားတင် အမြတ်", value: fmt(netProfit), icon: PiggyBank, pro: true },
-    { label: "ကုန်ပစ္စည်း တန်ဖိုး စုစုပေါင်း", value: fmt(inventoryAssetValue), icon: Package, pro: true },
-    { label: "တစ်သက်တာ အသားတင် အမြတ်", value: fmt(lifetimeNet), icon: PiggyBank, pro: true },
+    { label: "ခန့်မှန်း အသားတင်အမြတ်", value: fmt(totals.netProfit), icon: PiggyBank, pro: true },
+    { label: "ကုန်ကျစရိတ် (COGS)", value: fmt(totals.costOfGoods), icon: Package, pro: true },
   ];
+
+  const telegramChatId = (store as any)?.telegram_chat_id;
 
   return (
     <PosShell title="အရောင်း စာရင်းဇယား Analysis">
-      <div className="space-y-4 p-3 sm:p-4">
+      <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1 rounded-lg border border-border p-1">
-            {ranges.map((key) => (
-              <Button variant="ghost"
-                key={key}
-                onClick={() => setRange(key)}
-                className={cn(
-                  "min-h-9 rounded-md px-3 text-xs font-medium capitalize",
-                  range === key ? "bg-primary text-primary-foreground" : "text-muted-foreground",
-                )}
-              >
-                {RANGE_LABEL[key]}
-              </Button>
-            ))}
-          </div>
-          {!isPro && (
-            <span className="text-[11px] text-muted-foreground">
-              အချိန်ကာလ ပိုမို ရွေးချယ်ရန် Pro လိုအပ်သည်
-            </span>
-          )}
-          {range === "custom" && (
+          {ranges.map((r) => (
+            <button
+              key={r}
+              onClick={() => setRange(r)}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                range === r
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border bg-card text-muted-foreground hover:bg-accent",
+              )}
+            >
+              {RANGE_LABEL[r]}
+            </button>
+          ))}
+
+          {range === "custom" && isPro && (
             <div className="flex items-center gap-2">
               <input
                 type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
                 className="h-9 rounded-lg border border-input bg-card px-2 text-sm"
               />
-              <span className="text-xs text-muted-foreground">မှ</span>
+              <span className="text-muted-foreground">-</span>
               <input
                 type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
                 className="h-9 rounded-lg border border-input bg-card px-2 text-sm"
               />
             </div>
           )}
-          <Button variant="ghost"
-            onClick={exportCsv}
-            className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
-          >
-            CSV ထုတ်ယူမည်
-            {!isPro && <span className="ml-1 text-[10px] text-muted-foreground">(အခြေခံ)</span>}
-          </Button>
-          {isPro && (
-            <Button variant="ghost"
-              onClick={() => setEodOpen(true)}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
-            >
-              <Printer className="h-4 w-4" /> နေ့ချုပ် ပရင့်
-            </Button>
-          )}
 
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={exportCsv}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium hover:bg-accent"
+            >
+              CSV ထုတ်ယူမည်
+            </Button>
+
+            {/* Telegram နေ့ချုပ်ပို့မည် Button */}
+            {telegramChatId && (
+              <Button
+                variant="outline"
+                onClick={() => void handleSendTelegram()}
+                disabled={sendingTelegram}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-500 hover:bg-sky-500/20 text-xs font-medium"
+              >
+                {sendingTelegram ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                Telegram နေ့ချုပ်ပို့မည်
+              </Button>
+            )}
+
+            {isPro && (
+              <Button
+                variant="outline"
+                onClick={() => setEodOpen(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium hover:bg-accent"
+              >
+                <Printer className="h-3.5 w-3.5" /> နေ့ချုပ် ပရင့်
+              </Button>
+            )}
+          </div>
         </div>
 
+        {/* Main Metric Cards */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {cards.map((card) => (
             <div key={card.label} className="report-metric rounded-lg border border-border bg-card p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
-
-              </div>
+              <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
               <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">{card.value}</p>
             </div>
           ))}
         </div>
 
+        {/* Profit Cards */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {profitCards.map((card) => (
             <ProLock key={card.label} locked={card.pro && !isPro}>
-            <div className="report-metric rounded-lg border border-border bg-card p-4">
-              <div className="flex items-center justify-between">
+              <div className="report-metric rounded-lg border border-border bg-card p-4">
                 <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
-
+                <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">
+                  {card.value}
+                </p>
               </div>
-              <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">
-                {card.value}
-              </p>
-            </div>
             </ProLock>
           ))}
         </div>
 
+        {/* Payment Channels Split */}
         {isPro && (
           <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-card p-4 lg:grid-cols-4">
             {[
-              { label: "ငွေသား", value: paymentBuckets.cashIn },
+              { label: "ငွေသား (Cash)", value: paymentBuckets.cashIn },
               { label: "KBZ Pay", value: paymentBuckets.kbzIn },
               { label: "Wave Pay", value: paymentBuckets.waveIn },
               { label: "အကြွေး ထုတ်ပေးငွေ", value: paymentBuckets.creditIssued },
@@ -573,81 +373,29 @@ function AnalyticsPage() {
           </div>
         )}
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-4 text-sm font-semibold">ဝင်ငွေ အခြေအနေ</h2>
-            <div className="h-60 lg:h-64">
-              {trend.length === 0 ? (
-                <p className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
-                  {loading ? "ရယူနေသည်..." : "ဤရက်စွဲ အကွာအဝေးတွင် အရောင်းမှတ်တမ်း မရှိသေးပါ။"}
-                </p>
-              ) : (
+        {/* Lazy Charts */}
+        {isPro && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-4 text-sm font-semibold">အရောင်း ဝင်ငွေ လားရာ</h3>
+              <div className="h-64">
                 <Suspense fallback={chartFallback}>
-                  <RevenueTrendChart data={trend} fmt={fmt} />
+                  <RevenueTrendChart transactions={filtered} />
                 </Suspense>
-              )}
+              </div>
             </div>
-          </div>
 
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h2 className="mb-4 text-sm font-semibold">အရောင်းရဆုံး ၅ မျိုး</h2>
-            <div className="h-60 lg:h-64">
-              {topProducts.length === 0 ? (
-                <p className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
-                  {loading ? "ရယူနေသည်..." : "ဤရက်စွဲ အကွာအဝေးတွင် ကုန်ပစ္စည်း အရောင်းမှတ်တမ်း မရှိသေးပါ။"}
-                </p>
-              ) : (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="mb-4 text-sm font-semibold">အရောင်းရဆုံး ပစ္စည်းများ</h3>
+              <div className="h-64">
                 <Suspense fallback={chartFallback}>
-                  <TopProductsChart data={topProducts} />
+                  <TopProductsChart transactions={filtered} />
                 </Suspense>
-              )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
-
-      {eodOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
-          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-5 print:max-w-none print:border-0">
-            <h2 className="text-center text-sm font-semibold">နေ့ချုပ် အစီရင်ခံစာ</h2>
-            <p className="mb-3 text-center text-[11px] text-muted-foreground">
-              {new Date().toLocaleString("my-MM")}
-            </p>
-            <dl className="space-y-1.5 text-sm">
-              {[
-                ["အရောင်း စုစုပေါင်း", grossSales],
-                ["ပြန်အမ်းငွေ", metrics.refundedTotal],
-                ["ငွေသား", paymentBuckets.cashIn],
-                ["KBZ Pay", paymentBuckets.kbzIn],
-                ["Wave Pay", paymentBuckets.waveIn],
-                ["အကြွေး ထုတ်ပေးငွေ", paymentBuckets.creditIssued],
-                ["ငွေသား အသုံးစရိတ်", paymentBuckets.cashExpenses],
-                ["လက်ကျန် ငွေသား", netCashOnHand],
-                ["အသားတင် အမြတ်", netProfit],
-              ].map(([label, value]) => (
-                <div key={label as string} className="flex justify-between gap-3">
-                  <dt className="text-muted-foreground">{label as string}</dt>
-                  <dd className="font-medium tabular-nums">{fmt(Number(value))}</dd>
-                </div>
-              ))}
-            </dl>
-            <div className="no-print mt-4 flex gap-2">
-              <Button variant="ghost"
-                onClick={() => setEodOpen(false)}
-                className="h-10 flex-1 rounded-lg border border-border text-sm font-medium"
-              >
-                ပိတ်မည်
-              </Button>
-              <Button variant="ghost"
-                onClick={() => window.print()}
-                className="h-10 flex-1 rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
-              >
-                ပရင့်ထုတ်မည်
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </PosShell>
   );
 }
