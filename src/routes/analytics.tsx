@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
-const RevenueTrendChart = lazy(() => import("@/components/lazy/analytics-charts").then((m) => ({ default: m.RevenueTrendChart })));
-const TopProductsChart = lazy(() => import("@/components/lazy/analytics-charts").then((m) => ({ default: m.TopProductsChart })));
+const RevenueTrendChart = lazy(() =>
+  import("@/components/lazy/analytics-charts").then((m) => ({ default: m.RevenueTrendChart })),
+);
+const TopProductsChart = lazy(() =>
+  import("@/components/lazy/analytics-charts").then((m) => ({ default: m.TopProductsChart })),
+);
 const chartFallback = <div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />;
 
 import {
@@ -76,18 +80,23 @@ function AnalyticsPage() {
   const [eodOpen, setEodOpen] = useState(false);
   const [sendingTelegram, setSendingTelegram] = useState(false);
 
-  // Fetch sales transactions
+  // Fetch sales transactions for active store
   useEffect(() => {
     let active = true;
     (async () => {
       setLoading(true);
       try {
-        
-       const { data, error } = await supabase
-  .from("sales")
-  .select("*, sale_items(*)")
-  .order("created_at", { ascending: false });
-        
+        let query = supabase
+          .from("sales")
+          .select("*, sale_items(*)")
+          .order("created_at", { ascending: false });
+
+        if (store?.id) {
+          query = query.eq("store_id", store.id);
+        }
+
+        const { data, error } = await query;
+
         if (!error && active) {
           setTransactions(data || []);
         }
@@ -100,7 +109,7 @@ function AnalyticsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [store?.id]);
 
   // Filter range
   const filtered = useMemo(() => {
@@ -139,7 +148,7 @@ function AnalyticsPage() {
     let costOfGoods = 0;
     let ordersCount = 0;
 
-        for (const t of filtered) {
+    for (const t of filtered) {
       const isRefund = t.status === "REFUNDED" || t.is_refund;
       const amount = Number(t.total_amount ?? t.total ?? 0);
 
@@ -148,6 +157,7 @@ function AnalyticsPage() {
       } else {
         grossSales += amount;
         ordersCount += 1;
+
         // Cost of goods from items
         const lineItems = t.sale_items || t.transaction_items || [];
         for (const item of lineItems) {
@@ -179,8 +189,10 @@ function AnalyticsPage() {
     let creditIssued = 0;
 
     for (const t of filtered) {
-      if (t.is_refund) continue;
-      const amt = Number(t.total || 0);
+      const isRefund = t.status === "REFUNDED" || t.is_refund;
+      if (isRefund) continue;
+
+      const amt = Number(t.total_amount ?? t.total ?? 0);
       const method = String(t.payment_method || "").toLowerCase();
 
       if (method.includes("kbz") || method.includes("kpay")) {
@@ -196,6 +208,36 @@ function AnalyticsPage() {
 
     return { cashIn, kbzIn, waveIn, creditIssued };
   }, [filtered]);
+
+  // Chart data formatting
+  const trendData = useMemo(() => {
+    const byDate: Record<string, number> = {};
+    for (const t of filtered) {
+      const isRefund = t.status === "REFUNDED" || t.is_refund;
+      if (isRefund) continue;
+      const d = new Date(t.created_at).toLocaleDateString("en-GB", { month: "short", day: "numeric" });
+      byDate[d] = (byDate[d] || 0) + Number(t.total_amount ?? t.total ?? 0);
+    }
+    return Object.entries(byDate).map(([date, revenue]) => ({ date, revenue }));
+  }, [filtered]);
+
+  const topProductsData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const t of filtered) {
+      const isRefund = t.status === "REFUNDED" || t.is_refund;
+      if (isRefund) continue;
+      const lineItems = t.sale_items || t.transaction_items || [];
+      for (const item of lineItems) {
+        const matchedItem = items.find((i) => i.id === item.item_id);
+        const name = matchedItem?.name || "ပစ္စည်း";
+        counts[name] = (counts[name] || 0) + Number(item.quantity || 1);
+      }
+    }
+    return Object.entries(counts)
+      .map(([name, quantity]) => ({ name, quantity }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+  }, [filtered, items]);
 
   // Send to Telegram
   const handleSendTelegram = async () => {
@@ -238,8 +280,8 @@ function AnalyticsPage() {
     const rows = filtered.map((t) => ({
       ID: t.id,
       Date: new Date(t.created_at).toLocaleString(),
-      Total: t.total,
-      Refund: t.is_refund ? "Yes" : "No",
+      Total: t.total_amount ?? t.total ?? 0,
+      Refund: (t.status === "REFUNDED" || t.is_refund) ? "Yes" : "No",
       Payment: t.payment_method || "Cash",
     }));
     downloadCsv(rows, `sales-${range}-${new Date().toISOString().slice(0, 10)}.csv`);
@@ -385,7 +427,7 @@ function AnalyticsPage() {
               <h3 className="mb-4 text-sm font-semibold">အရောင်း ဝင်ငွေ လားရာ</h3>
               <div className="h-64">
                 <Suspense fallback={chartFallback}>
-                  <RevenueTrendChart transactions={filtered} />
+                  <RevenueTrendChart data={trendData} fmt={fmt} />
                 </Suspense>
               </div>
             </div>
@@ -394,7 +436,7 @@ function AnalyticsPage() {
               <h3 className="mb-4 text-sm font-semibold">အရောင်းရဆုံး ပစ္စည်းများ</h3>
               <div className="h-64">
                 <Suspense fallback={chartFallback}>
-                  <TopProductsChart transactions={filtered} />
+                  <TopProductsChart data={topProductsData} />
                 </Suspense>
               </div>
             </div>
