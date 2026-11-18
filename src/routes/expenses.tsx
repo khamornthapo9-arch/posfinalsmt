@@ -13,6 +13,8 @@ export const Route = createFileRoute("/expenses")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "အသုံးစရိတ် မှတ်တမ်း — SMT POS" },
       { name: "description", content: "ဆိုင်၏ လည်ပတ်မှု အသုံးစရိတ်များကို မှတ်တမ်းတင်ပြီး အမြတ်တွက်ချက်မှုတွင် ထည့်သွင်းပါ။" },
       { property: "og:title", content: "အသုံးစရိတ် မှတ်တမ်း — SMT POS" },

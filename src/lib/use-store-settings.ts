@@ -1,5 +1,6 @@
 import { useAuth } from "@/lib/auth-store";
 import { DEFAULT_CURRENCY, money } from "@/lib/pos-utils";
+import { usesRestaurantMode } from "@/lib/retail-mode";
 
 /** Currency + tax settings pulled from the active store record. */
 export function useStoreSettings() {
@@ -11,7 +12,7 @@ export function useStoreSettings() {
     symbol,
     taxRate,
     taxPercent: store?.tax_rate ?? 5,
-    isRestaurant: store?.business_type === "RESTAURANT",
+    isRestaurant: usesRestaurantMode(store?.business_type),
     advanced: Boolean(store?.advanced_accounting_mode),
     isPro: Boolean(store?.is_pro),
     address: store?.address ?? "",

@@ -23,16 +23,18 @@ export const Route = createFileRoute("/register")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "POS Register — SMT POS" },
       {
         name: "description",
         content:
-          "Ring up sales fast with barcode and QR scanning, table service tabs, tax totals and offline checkout that syncs automatically.",
+          "Retail checkout with barcode and QR scanning, tax totals, receipts and offline sales.",
       },
       { property: "og:title", content: "POS Register — SMT POS" },
       {
         property: "og:description",
-        content: "Offline-capable checkout register with scanning, tables, tax and receipts.",
+        content: "Offline-capable retail checkout with scanning, tax and receipts.",
       },
     ],
   }),

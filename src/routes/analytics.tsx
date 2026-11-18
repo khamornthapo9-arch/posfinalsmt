@@ -5,7 +5,6 @@ const RevenueTrendChart = lazy(() => import("@/components/lazy/analytics-charts"
 const TopProductsChart = lazy(() => import("@/components/lazy/analytics-charts").then((m) => ({ default: m.TopProductsChart })));
 const chartFallback = <div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />;
 import {
-  Download,
   DollarSign,
   HandCoins,
   Package,
@@ -15,6 +14,7 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { ProLock } from "@/components/pos/pro-lock";
@@ -29,6 +29,8 @@ export const Route = createFileRoute("/analytics")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "အရောင်း စာရင်းဇယား Analysis — Counter Point of Sale" },
       {
         name: "description",
@@ -475,7 +477,7 @@ function AnalyticsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex gap-1 rounded-lg border border-border p-1">
             {ranges.map((key) => (
-              <button
+              <Button variant="ghost"
                 key={key}
                 onClick={() => setRange(key)}
                 className={cn(
@@ -484,7 +486,7 @@ function AnalyticsPage() {
                 )}
               >
                 {RANGE_LABEL[key]}
-              </button>
+              </Button>
             ))}
           </div>
           {!isPro && (
@@ -509,30 +511,30 @@ function AnalyticsPage() {
               />
             </div>
           )}
-          <button
+          <Button variant="ghost"
             onClick={exportCsv}
             className="ml-auto inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
           >
-            <Download className="h-4 w-4" /> CSV ထုတ်ယူမည်
+            CSV ထုတ်ယူမည်
             {!isPro && <span className="ml-1 text-[10px] text-muted-foreground">(အခြေခံ)</span>}
-          </button>
+          </Button>
           {isPro && (
-            <button
+            <Button variant="ghost"
               onClick={() => setEodOpen(true)}
               className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
             >
               <Printer className="h-4 w-4" /> နေ့ချုပ် ပရင့်
-            </button>
+            </Button>
           )}
 
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {cards.map((card) => (
-            <div key={card.label} className="rounded-xl border border-border bg-card p-4">
+            <div key={card.label} className="report-metric rounded-lg border border-border bg-card p-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
-                <card.icon className="h-4 w-4 text-muted-foreground" />
+
               </div>
               <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">{card.value}</p>
             </div>
@@ -542,10 +544,10 @@ function AnalyticsPage() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {profitCards.map((card) => (
             <ProLock key={card.label} locked={card.pro && !isPro}>
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="report-metric rounded-lg border border-border bg-card p-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
-                <card.icon className="h-4 w-4 text-muted-foreground" />
+
               </div>
               <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">
                 {card.value}
@@ -630,18 +632,18 @@ function AnalyticsPage() {
               ))}
             </dl>
             <div className="no-print mt-4 flex gap-2">
-              <button
+              <Button variant="ghost"
                 onClick={() => setEodOpen(false)}
                 className="h-10 flex-1 rounded-lg border border-border text-sm font-medium"
               >
                 ပိတ်မည်
-              </button>
-              <button
+              </Button>
+              <Button variant="ghost"
                 onClick={() => window.print()}
                 className="h-10 flex-1 rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
               >
                 ပရင့်ထုတ်မည်
-              </button>
+              </Button>
             </div>
           </div>
         </div>

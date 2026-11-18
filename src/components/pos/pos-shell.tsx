@@ -1,19 +1,11 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
-  BarChart3,
-  Boxes,
-  Banknote,
   Loader2,
   LogOut,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  ScanLine,
-  Settings,
-  ShieldCheck,
-  Truck,
   UserCog,
-  Users,
   X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -30,16 +22,16 @@ import { cn } from "@/lib/utils";
 const DEFAULT_LOGO = "/smt-pos-logo.png";
 
 const NAV = [
-  { to: "/register", label: "အရောင်းစာရင်း", icon: ScanLine, roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
-  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", icon: Boxes, roles: ["OWNER", "MANAGER"] as StoreRole[] },
-  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", icon: BarChart3, roles: ["OWNER", "MANAGER"] as StoreRole[] },
-  { to: "/settings", label: "ပြုပြင်ခြင်း", icon: Settings, roles: ["OWNER"] as StoreRole[] },
+  { to: "/register", label: "အရောင်းစာရင်း", tone: "sales", roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
+  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", tone: "inventory", roles: ["OWNER", "MANAGER"] as StoreRole[] },
+  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", tone: "reports", roles: ["OWNER", "MANAGER"] as StoreRole[] },
+  { to: "/settings", label: "ပြုပြင်ခြင်း", tone: "settings", roles: ["OWNER"] as StoreRole[] },
 ] as const;
 
 const ADVANCED_NAV = [
-  { to: "/customers", label: "ဖောက်သည်များ", icon: Users, roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
-  { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", icon: Truck, roles: ["OWNER", "MANAGER"] as StoreRole[] },
-  { to: "/expenses", label: "အသုံးစရိတ်", icon: Banknote, roles: ["OWNER", "MANAGER"] as StoreRole[] },
+  { to: "/customers", label: "ဖောက်သည်များ", tone: "customers", roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
+  { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", tone: "suppliers", roles: ["OWNER", "MANAGER"] as StoreRole[] },
+  { to: "/expenses", label: "အသုံးစရိတ်", tone: "expenses", roles: ["OWNER", "MANAGER"] as StoreRole[] },
 ] as const;
 
 function Brand({ collapsed = false }: { collapsed?: boolean }) {
@@ -75,42 +67,43 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
   const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
   const items = all.filter((item) => item.roles.includes(role) && isActive);
   const adminItem = isAdmin
-    ? { to: "/admin", label: "Admin", icon: ShieldCheck, roles: ["OWNER"] as StoreRole[] }
+    ? { to: "/admin", label: "Admin", tone: "admin", roles: ["OWNER"] as StoreRole[] }
     : null;
   return (
     <nav className="flex flex-col gap-0.5">
-      {items.map((item) => (
+      {items.map((item, index) => (
         <Link
           key={item.to}
           to={item.to as string}
           title={item.label}
+          data-tone={item.tone}
           onClick={onNavigate}
           activeOptions={{ exact: item.to === "/register" }}
           activeProps={{
             className: "bg-sidebar-accent text-sidebar-accent-foreground",
+            "data-active": "true",
           }}
           className={cn(
-            "flex min-h-10 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
             collapsed && "justify-center px-0",
           )}
         >
-          <item.icon className="h-[18px] w-[18px] shrink-0" />
-          {!collapsed && <span className="truncate">{item.label}</span>}
+          <span className="truncate">{collapsed ? String(index + 1).padStart(2, "0") : item.label}</span>
         </Link>
       ))}
       {adminItem && (
         <Link
           to={adminItem.to}
           title={adminItem.label}
+          data-tone={adminItem.tone}
           onClick={onNavigate}
-          activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground" }}
+          activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground", "data-active": "true" }}
           className={cn(
-            "flex min-h-10 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
             collapsed && "justify-center px-0",
           )}
         >
-          <adminItem.icon className="h-[18px] w-[18px] shrink-0" />
-          {!collapsed && <span className="truncate">{adminItem.label}</span>}
+          <span className="truncate">{collapsed ? "A" : adminItem.label}</span>
         </Link>
       )}
     </nav>

@@ -70,6 +70,14 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-nav-sales: var(--nav-sales);
+  --color-nav-inventory: var(--nav-inventory);
+  --color-nav-reports: var(--nav-reports);
+  --color-nav-settings: var(--nav-settings);
+  --color-nav-customers: var(--nav-customers);
+  --color-nav-suppliers: var(--nav-suppliers);
+  --color-nav-expenses: var(--nav-expenses);
+  --color-nav-admin: var(--nav-admin);
 }
 
 :root {
@@ -123,9 +131,25 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(0.279 0.041 260.031);
   --sidebar-ring: oklch(0.585 0.233 277.117);
+  --nav-sales: oklch(0.83 0.12 160);
+  --nav-inventory: oklch(0.83 0.12 85);
+  --nav-reports: oklch(0.82 0.1 235);
+  --nav-settings: oklch(0.83 0.1 305);
+  --nav-customers: oklch(0.82 0.12 15);
+  --nav-suppliers: oklch(0.83 0.11 195);
+  --nav-expenses: oklch(0.84 0.11 55);
+  --nav-admin: oklch(0.84 0.1 115);
 }
 
 .dark {
+  --nav-sales: oklch(0.86 0.12 160);
+  --nav-inventory: oklch(0.86 0.12 85);
+  --nav-reports: oklch(0.85 0.1 235);
+  --nav-settings: oklch(0.86 0.1 305);
+  --nav-customers: oklch(0.85 0.12 15);
+  --nav-suppliers: oklch(0.86 0.11 195);
+  --nav-expenses: oklch(0.87 0.11 55);
+  --nav-admin: oklch(0.87 0.1 115);
   /* Night-shift slate #0F172A */
   --background: oklch(0.208 0.042 265.755);
   --foreground: oklch(0.984 0.003 247.858);
@@ -423,3 +447,22 @@
   min-width: 100%;
   animation: pos-marquee 18s linear infinite;
 }
+
+.pos-nav-tab { color: var(--tab-color); border-left: 3px solid var(--tab-color); }
+.pos-nav-tab[data-tone="sales"] { --tab-color: var(--nav-sales); }
+.pos-nav-tab[data-tone="inventory"] { --tab-color: var(--nav-inventory); }
+.pos-nav-tab[data-tone="reports"] { --tab-color: var(--nav-reports); }
+.pos-nav-tab[data-tone="settings"] { --tab-color: var(--nav-settings); }
+.pos-nav-tab[data-tone="customers"] { --tab-color: var(--nav-customers); }
+.pos-nav-tab[data-tone="suppliers"] { --tab-color: var(--nav-suppliers); }
+.pos-nav-tab[data-tone="expenses"] { --tab-color: var(--nav-expenses); }
+.pos-nav-tab[data-tone="admin"] { --tab-color: var(--nav-admin); }
+.pos-nav-tab:hover, .pos-nav-tab[data-active="true"] {
+  color: var(--tab-color);
+  background: color-mix(in oklch, var(--tab-color) 16%, var(--sidebar));
+}
+.pos-nav-tab[data-active="true"] { font-weight: 700; }
+.report-metric { border-top: 3px solid var(--info); }
+.report-metric:nth-child(4n + 2) { border-top-color: var(--success); }
+.report-metric:nth-child(4n + 3) { border-top-color: var(--warning); }
+.report-metric:nth-child(4n + 4) { border-top-color: var(--destructive); }

@@ -11,8 +11,6 @@ import {
   Plus,
   Send,
   Store,
-  Upload,
-  UtensilsCrossed,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +27,8 @@ export const Route = createFileRoute("/settings")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "ဆိုင် ပြင်ဆင်ချက်များ — SMT POS" },
       {
         name: "description",
@@ -59,7 +59,7 @@ const PLANS = [
     name: "Pro Casher",
     price: "$19",
     period: "တစ်လ",
-    features: ["အကန့်အသတ်မရှိ ကုန်ပစ္စည်းများ", "စားသောက်ဆိုင် မုဒ်", "မီးဖိုချောင် တိုကင်များ", "CSV ထုတ်ယူမှုများ"],
+    features: ["အကန့်အသတ်မရှိ ကုန်ပစ္စည်းများ", "ဆိုင်ခွဲများ", "အသေးစိတ် အမြတ်စာရင်း", "CSV ထုတ်ယူမှုများ"],
     current: false,
   },
   {
@@ -127,7 +127,6 @@ function SettingsPage() {
   const [email, setEmail] = useState("");
   const [savingEmail, setSavingEmail] = useState(false);
   const [plansOpen, setPlansOpen] = useState(false);
-  const [modeTarget, setModeTarget] = useState<string | null>(null);
 
   useEffect(() => {
     if (!store) return;
@@ -217,26 +216,6 @@ function SettingsPage() {
     }
   };
 
-  const switchMode = async (nextMode: string) => {
-    if (!store) return;
-    const saleIds = await supabase.from("sales").select("id").eq("store_id", store.id);
-    const ids = (saleIds.data ?? []).map((row) => row.id);
-    if (ids.length > 0) {
-      await supabase.from("sale_items").delete().in("sale_id", ids);
-      await supabase.from("sales").delete().eq("store_id", store.id);
-    }
-    await supabase.from("items").delete().eq("store_id", store.id);
-    await updateStore({ business_type: nextMode });
-    await refreshStore();
-    await refreshCatalog();
-    await refreshTabs();
-    toast.success(
-      nextMode === "RESTAURANT" ? "စားသောက်ဆိုင် မုဒ်သို့ ပြောင်းလဲပြီးပါပြီ" : "အရောင်းဆိုင် မုဒ်သို့ ပြောင်းလဲပြီးပါပြီ",
-    );
-  };
-
-  const isRestaurant = store?.business_type === "RESTAURANT";
-
   return (
     <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ">
       <div className="mx-auto max-w-3xl space-y-4 p-4">
@@ -269,11 +248,7 @@ function SettingsPage() {
                 disabled={uploading || !isPro}
                 className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
               >
-                {uploading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Upload className="h-3.5 w-3.5" />
-                )}
+                {uploading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 {isPro ? "လိုဂို တင်မည်" : "Pro သို့ အဆင့်မြှင့်ပါ"}
               </button>
 
@@ -457,46 +432,6 @@ function SettingsPage() {
           </div>
         </Section>
 
-        <Section
-          title="လုပ်ငန်း အမျိုးအစား"
-        >
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[
-              { key: "RETAIL", label: "အရောင်းဆိုင် မုဒ်", icon: Store, copy: "မြန်ဆန်သော ကောင်တာ ငွေချေစနစ်" },
-              {
-                key: "RESTAURANT",
-                label: "စားသောက်ဆိုင် / ကဖေး မုဒ်",
-                icon: UtensilsCrossed,
-                copy: "စားပွဲများ၊ မပြီးသေးသော ဘေလ်များ၊ မီးဖိုချောင် တိုကင်များ",
-              },
-            ].map((mode) => {
-              const active = (store?.business_type ?? "RETAIL") === mode.key;
-              return (
-                <button
-                  key={mode.key}
-                  onClick={() => !active && setModeTarget(mode.key)}
-                  className={cn(
-                    "flex items-start gap-3 rounded-md border px-4 py-3 text-left transition-colors",
-                    active ? "border-primary bg-primary/5" : "border-border hover:bg-accent",
-                  )}
-                >
-                  <mode.icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-2 text-sm font-medium">
-                      {mode.label}
-                      {active && <Check className="h-4 w-4 text-primary" />}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">{mode.copy}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            လက်ရှိတွင် {isRestaurant ? "စားသောက်ဆိုင် / ကဖေး" : "အရောင်းဆိုင်"} မုဒ်ဖြင့် အသုံးပြုနေပါသည်။
-          </p>
-        </Section>
-
         <Section title="အကောင့်" description="ဤဆိုင်ပိုင်ရှင်၏ ဝင်ရောက်ရန် အီးမေးလ်။">
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
@@ -562,16 +497,6 @@ function SettingsPage() {
       </div>
 
       {plansOpen && <PlansModal onClose={() => setPlansOpen(false)} />}
-      {modeTarget && (
-        <ModeSwitchModal
-          target={modeTarget}
-          onClose={() => setModeTarget(null)}
-          onConfirm={async () => {
-            await switchMode(modeTarget);
-            setModeTarget(null);
-          }}
-        />
-      )}
     </PosShell>
   );
 }
@@ -625,55 +550,3 @@ function PlansModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ModeSwitchModal({
-  target,
-  onClose,
-  onConfirm,
-}: {
-  target: string;
-  onClose: () => void;
-  onConfirm: () => Promise<void>;
-}) {
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
-      <div className="w-full max-w-lg rounded-lg border border-destructive/40 bg-card shadow-lg">
-        <div className="border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold text-destructive">
-            {target === "RESTAURANT" ? "စားသောက်ဆိုင် / ကဖေး" : "အရောင်းဆိုင်"} မုဒ်သို့ ပြောင်းလဲမည်
-          </h2>
-        </div>
-        <div className="space-y-3 p-4">
-          <p className="rounded-md bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-            သတိပေးချက်- လုပ်ငန်းမုဒ် ပြောင်းလဲခြင်းသည် က်ရှိ ဆိုင်၏ ကုန်ပစ္စည်းနှင့် အရောင်းစာရင်းများကို ပြန်လည် စာရင်းဖျက်ပါမည်။ ဒေတာများကို ဖျက်ပြီး မုဒ်ပြောင်းရန် CONFIRM ဟု ရိုက်ထည့်ပါ။
-          </p>
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="CONFIRM"
-            className={inputClass}
-          />
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={onClose}
-              className="h-10 rounded-md border border-border px-4 text-sm font-medium hover:bg-accent"
-            >
-              မလုပ်တော့ပါ
-            </button>
-            <button
-              disabled={text !== "CONFIRM" || busy}
-              onClick={() => {
-                setBusy(true);
-                void onConfirm().finally(() => setBusy(false));
-              }}
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-destructive px-4 text-sm font-medium text-destructive-foreground disabled:opacity-50"
-            >
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />} ဒေတာများဖျက်၍ ပြောင်းမည်
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}

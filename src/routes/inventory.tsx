@@ -6,7 +6,6 @@ const Barcode = lazy(() => import("@/components/lazy/label-codes").then((m) => (
 import {
   Barcode as BarcodeIcon,
   Crown,
-  Download,
   FileSpreadsheet,
   Loader2,
   PackagePlus,
@@ -16,10 +15,10 @@ import {
   QrCode,
   Search,
   Trash2,
-  Upload,
   X,
   ImagePlus,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { FREE_LIMITS } from "@/lib/subscription";
 import { PosShell } from "@/components/pos/pos-shell";
@@ -29,17 +28,6 @@ import { useStoreSettings } from "@/lib/use-store-settings";
 import { uploadItemImage } from "@/lib/image-store";
 import { useCachedImage } from "@/lib/use-cached-image";
 
-function ItemThumb({ item }: { item: CachedItem }) {
-  const src = useCachedImage(item.image_url);
-  if (!src) {
-    return (
-      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
-        {item.name.slice(0, 2)}
-      </div>
-    );
-  }
-  return <img src={src} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-lg object-cover" />;
-}
 import { downloadCsv, money, stockStatus } from "@/lib/pos-utils";
 import {
   SAMPLE_CSV_ROWS,
@@ -55,6 +43,8 @@ export const Route = createFileRoute("/inventory")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "ကုန်ပစ္စည်းစာရင်းနှင့် လေဘယ်များ — Counter Point of Sale" },
       {
         name: "description",
@@ -121,7 +111,7 @@ function InventoryPage() {
           </div>
           <div className="flex gap-1 rounded-lg border border-border p-1">
             {(["all", "low", "out"] as Filter[]).map((f) => (
-              <button
+              <Button variant="ghost"
                 key={f}
                 onClick={() => setFilter(f)}
                 className={cn(
@@ -130,29 +120,29 @@ function InventoryPage() {
                 )}
               >
                 {f === "all" ? "အားလုံး" : f === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
-              </button>
+              </Button>
             ))}
           </div>
-          <button
+          <Button variant="ghost"
             onClick={() => downloadCsv(`items-${new Date().toISOString().slice(0, 10)}.csv`, itemsToCsvRows(items))}
             className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-accent"
           >
-            <Download className="h-4 w-4" /> ကုန်ပစ္စည်းများ ထုတ်ယူမည် (CSV)
-          </button>
-          <button
+            ကုန်ပစ္စည်းများ ထုတ်ယူမည် (CSV)
+          </Button>
+          <Button variant="ghost"
             onClick={() => setImportOpen(true)}
             className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-accent"
           >
-            <Upload className="h-4 w-4" /> CSV ဖြင့် ထည့်သွင်းမည်
-          </button>
-          <button
+            CSV ဖြင့် ထည့်သွင်းမည်
+          </Button>
+          <Button variant="ghost"
             onClick={() => setEditing("new")}
             className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/90 active:scale-95"
           >
-            <Plus className="h-4 w-4" /> ကုန်ပစ္စည်းသစ်ထည့်မည်
-          </button>
+            ကုန်ပစ္စည်းသစ်ထည့်မည်
+          </Button>
           {items.length === 0 && (
-            <button
+            <Button variant="ghost"
               onClick={() => {
                 setSeeding(true);
                 void seedDemoItems()
@@ -173,7 +163,7 @@ function InventoryPage() {
                   <PackagePlus className="h-4 w-4" /> ဥပမာကုန်ပစ္စည်းထည့်မည်
                 </>
               )}
-            </button>
+            </Button>
           )}
         </div>
 
@@ -213,21 +203,21 @@ function InventoryPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
-                        <button
+                        <Button variant="ghost"
                           onClick={() => setLabelItem(item)}
                           aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
                           className="flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent"
                         >
                           <QrCode className="h-4 w-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button variant="ghost"
                           onClick={() => setEditing(item)}
                           aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
                           className="flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent"
                         >
                           <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button variant="ghost"
                           onClick={() => {
                             void deleteItem(item.id).catch(() =>
                               toast.error("ရောင်းချထားသော မှတ်တမ်းရှိသည့် ကုန်ပစ္စည်းကို ဖျက်၍မရပါ"),
@@ -237,7 +227,7 @@ function InventoryPage() {
                           className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -267,8 +257,7 @@ function InventoryPage() {
             const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
             return (
               <div key={item.id} className="rounded-xl border border-border bg-card p-3">
-                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
-                  <ItemThumb item={item} />
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{item.name}</p>
                     <p className="truncate text-xs text-muted-foreground">{item.sku}</p>
@@ -290,21 +279,21 @@ function InventoryPage() {
                     <span className="text-muted-foreground"> · လက်ကျန် {item.stock_quantity} ခု</span>
                   </p>
                   <div className="flex gap-1.5">
-                    <button
+                    <Button variant="ghost"
                       onClick={() => setLabelItem(item)}
                       aria-label={`${item.name} အတွက် လေဘယ်ထုတ်ရန်`}
                       className="flex h-11 w-11 items-center justify-center rounded-lg border border-border active:scale-95"
                     >
                       <QrCode className="h-4 w-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="ghost"
                       onClick={() => setEditing(item)}
                       aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
                       className="flex h-11 w-11 items-center justify-center rounded-lg border border-border active:scale-95"
                     >
                       <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="ghost"
                       onClick={() => {
                         void deleteItem(item.id).catch(() =>
                           toast.error("မှတ်တမ်းရှိသည့် ကုန်ပစ္စည်းကို ဖျက်၍မရပါ(ပြုပြင်ပါ)"),
@@ -314,7 +303,7 @@ function InventoryPage() {
                       className="flex h-11 w-11 items-center justify-center rounded-lg border border-border text-muted-foreground active:scale-95"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -463,9 +452,9 @@ function ProductModal({
       <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">{item ? "ကုန်ပစ္စည်း ပြင်ဆင်ရန်" : "ကုန်ပစ္စည်း အသစ်"}</h2>
-          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+          <Button variant="ghost" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
         <div className="space-y-3">
           {isPro ? (
@@ -480,21 +469,21 @@ function ProductModal({
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold">ကုန်ပစ္စည်း ဓာတ်ပုံ</p>
                 <div className="mt-2 flex gap-2">
-                  <button
+                  <Button variant="ghost"
                     disabled={uploading}
                     onClick={() => imageInputRef.current?.click()}
                     className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary disabled:opacity-50"
                   >
-                    {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                    {uploading && <Loader2 className="h-3 w-3 animate-spin" />}
                     {uploading ? "တင်နေသည်..." : "ဓာတ်ပုံ ရွေးရန်"}
-                  </button>
+                  </Button>
                   {imageUrl && (
-                    <button
+                    <Button variant="ghost"
                       onClick={() => setImageUrl(null)}
                       className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
                     >
                       <Trash2 className="h-3 w-3" /> ဖယ်ရှားရန်
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -542,7 +531,7 @@ function ProductModal({
             <div className="rounded-lg border border-border bg-card p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs font-semibold">ထုပ်ပိုးမှု အရွယ်အစား</span>
-                <button
+                <Button variant="ghost"
                   onClick={() =>
                     setUnits((prev) => [
                       ...prev,
@@ -552,7 +541,7 @@ function ProductModal({
                   className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary"
                 >
                   <Plus className="h-3 w-3" /> အရွယ်အစား ထည့်မည်
-                </button>
+                </Button>
               </div>
               <div className="space-y-2">
                 {units.map((u, idx) => (
@@ -590,13 +579,13 @@ function ProductModal({
                       }
                       className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none"
                     />
-                    <button
+                    <Button variant="ghost"
                       onClick={() => setUnits((prev) => prev.filter((_, i) => i !== idx))}
                       className="text-muted-foreground hover:text-destructive"
                       aria-label="ဖျက်ရန်"
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -608,7 +597,7 @@ function ProductModal({
             </div>
           )}
         </div>
-        <button
+        <Button variant="ghost"
           disabled={saving || !form.name.trim()}
           onClick={() => {
             setSaving(true);
@@ -638,7 +627,7 @@ function ProductModal({
           className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-transform hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
         >
           {saving ? "သိမ်းဆည်းနေသည်..." : "ကုန်ပစ္စည်း သိမ်းဆည်းမည်"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -659,14 +648,14 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
       <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-xl print:border-0 print:p-0 print:shadow-none">
         <div className="mb-4 flex items-center justify-between print:hidden">
           <h2 className="text-sm font-semibold">လေဘယ် ထုတ်ယူရန်</h2>
-          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+          <Button variant="ghost" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
 
         <div className="mb-4 grid grid-cols-2 gap-2 print:hidden">
           {(["qr", "barcode"] as const).map((key) => (
-            <button
+            <Button variant="ghost"
               key={key}
               onClick={() => setMode(key)}
               className={cn(
@@ -678,7 +667,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
             >
               {key === "qr" ? <QrCode className="h-4 w-4" /> : <BarcodeIcon className="h-4 w-4" />}
               {key === "qr" ? "QR ကုဒ်" : "ဘာကုဒ်"}
-            </button>
+            </Button>
           ))}
         </div>
 
@@ -692,7 +681,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
                 ["shop", "ဆိုင်အမည်"],
               ] as const
             ).map(([key, label]) => (
-              <button
+              <Button variant="ghost"
                 key={key}
                 onClick={() => toggle(key)}
                 className={cn(
@@ -701,12 +690,12 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
                 )}
               >
                 {label}
-              </button>
+              </Button>
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {(["40x30", "50x25"] as const).map((s) => (
-              <button
+              <Button variant="ghost"
                 key={s}
                 onClick={() => setSize(s)}
                 className={cn(
@@ -715,7 +704,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
                 )}
               >
                 {s.replace("x", "mm x ")}mm
-              </button>
+              </Button>
             ))}
             <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
               အရေအတွက်
@@ -773,18 +762,18 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
         </div>
 
         <div className="mt-5 flex gap-2 print:hidden">
-          <button
+          <Button variant="ghost"
             onClick={() => window.print()}
             className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95"
           >
             <Printer className="h-4 w-4" /> {qty} ခု ပရင်ထုတ်မည်
-          </button>
-          <button
+          </Button>
+          <Button variant="ghost"
             onClick={onClose}
             className="min-h-11 flex-1 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent active:scale-95"
           >
             ပိတ်မည်
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -824,9 +813,9 @@ function ImportModal({
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <FileSpreadsheet className="h-4 w-4" /> ကုန်ပစ္စည်း အစုလိုက် ထည့်သွင်းခြင်း
           </h2>
-          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+          <Button variant="ghost" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
 
         {!isPro && (
@@ -843,18 +832,18 @@ function ImportModal({
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <button
+          <Button variant="ghost"
             onClick={() => downloadCsv("items-template.csv", SAMPLE_CSV_ROWS)}
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
           >
-            <Download className="h-4 w-4" /> နမူနာ CSV ရယူမည်
-          </button>
-          <button
+            နမူနာ CSV ရယူမည်
+          </Button>
+          <Button variant="ghost"
             onClick={() => inputRef.current?.click()}
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
           >
-            <Upload className="h-4 w-4" /> ဖိုင် ရွေးမည်
-          </button>
+            ဖိုင် ရွေးမည်
+          </Button>
           <input
             ref={inputRef}
             type="file"
@@ -906,7 +895,7 @@ function ImportModal({
           </div>
         )}
 
-        <button
+        <Button variant="ghost"
           disabled={busy || rows.length === 0 || !isPro}
           onClick={() => {
             setBusy(true);
@@ -921,7 +910,7 @@ function ImportModal({
           className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {busy && <Loader2 className="h-4 w-4 animate-spin" />} ထည့်သွင်းမည်
-        </button>
+        </Button>
       </div>
     </div>
   );

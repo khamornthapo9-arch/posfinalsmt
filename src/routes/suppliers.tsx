@@ -14,6 +14,8 @@ export const Route = createFileRoute("/suppliers")({
   ssr: false,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ — SMT POS" },
       { name: "description", content: "ကုန်သွင်းသူများ၊ ဝယ်ယူမှု အော်ဒါများနှင့် ပေးရန်ကြွေးများကို စီမံပါ။" },
       { property: "og:title", content: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ — SMT POS" },
