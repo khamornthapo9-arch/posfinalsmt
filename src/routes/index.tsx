@@ -66,6 +66,8 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
+const myanmarSerif = { fontFamily: "'Noto Serif Myanmar', serif" };
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#FDFDFE] text-[#1E202A] antialiased selection:bg-[#5B51D8] selection:text-white">
@@ -137,7 +139,10 @@ export default function LandingPage() {
                   <span>ဗားရှင်း ၁.၂</span>
                 </div>
 
-                <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-[54px] lg:leading-[1.15]">
+                <h1
+                  style={myanmarSerif}
+                  className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-[54px] lg:leading-[1.2]"
+                >
                   SMT POS မှာ ဖြည့်ဆည်းပေးထားသည့်အရာများ -
                 </h1>
 
@@ -183,14 +188,14 @@ export default function LandingPage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#7C3AED] text-white shadow-sm mb-3">
                   <ScanLine className="h-5 w-5 stroke-[2]" />
                 </div>
-                <span className="text-sm font-bold text-slate-900">ဘားကုဒ် Scan </span>
+                <span className="text-sm font-bold text-slate-900">ဘားကုဒ် Scan</span>
               </div>
 
               <div className="flex flex-col items-center justify-center rounded-xl bg-white p-5 shadow-sm border border-slate-100 text-center transition-transform hover:-translate-y-1">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EA580C] text-white shadow-sm mb-3">
                   <WifiOff className="h-5 w-5 stroke-[2]" />
                 </div>
-                <span className="text-sm font-bold text-slate-900"> Offline မုဒ်</span>
+                <span className="text-sm font-bold text-slate-900">Offline မုဒ်</span>
               </div>
 
               <div className="flex flex-col items-center justify-center rounded-xl bg-white p-5 shadow-sm border border-slate-100 text-center transition-transform hover:-translate-y-1">
@@ -211,7 +216,7 @@ export default function LandingPage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#4F46E5] text-white shadow-sm mb-3">
                   <Receipt className="h-5 w-5 stroke-[2]" />
                 </div>
-                <span className="text-sm font-bold text-slate-900"> ဝယ်/ရောင်း အကြွေးစာရင်း</span>
+                <span className="text-sm font-bold text-slate-900">ဝယ်/ရောင်း အကြွေးစာရင်း</span>
               </div>
             </div>
           </div>
@@ -222,7 +227,7 @@ export default function LandingPage() {
         ========================================================= */}
         <section className="relative overflow-hidden bg-gradient-to-r from-[#9D8AF2] via-[#8572ED] to-[#6E5BE8] py-20 text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-8">
-            {/* အပေါ်ဘက် Pill ၅ ခု (Syntax အမှန်ပြင်ဆင်ထားသည်) */}
+            {/* အပေါ်ဘက် Pill ၅ ခု */}
             <div className="mb-14 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#7C3AED] text-white">
@@ -242,7 +247,7 @@ export default function LandingPage() {
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0EA5E9] text-white">
                   <TrendingUp className="h-4 w-4 stroke-[2]" />
                 </div>
-                <span className="text-xs font-bold"> အမြတ်ငွေ တွက်ချက်ခြင်း</span>
+                <span className="text-xs font-bold">အမြတ်ငွေ တွက်ချက်ခြင်း</span>
               </div>
 
               <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20">
@@ -267,12 +272,15 @@ export default function LandingPage() {
               </div>
 
               <div className="lg:col-span-6 space-y-6">
-                <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
+                <h2
+                  style={myanmarSerif}
+                  className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl leading-snug"
+                >
                   မြန်ဆန်ပြီး တိကျသော လက်လီငွေရှင်းကောင်တာ
                 </h2>
                 <p className="text-base text-white/90 leading-relaxed sm:text-lg">
-                  လူစည်ကားတဲ့ စတိုးဆိုင်များအတွက် အထူးဒီဇိုင်းဆင်ထားပါတယ်။ ငွေရှင်းဖို့ တန်းစီဖို့မလိုပဲ မရှိစေဘဲ
-                  စောင့်ဆိုင်းစနစ် (Holding)
+                  လူစည်ကားတဲ့ စတိုးဆိုင်များအတွက် အထူးဒီဇိုင်းဆင်ထားပါတယ်။ ငွေရှင်းဖို့ တန်းစီဖို့မလိုပဲ
+                  ခေတ္တစောင့်ဆိုင်းစနစ် (Holding) ဖြင့် အဆင်ပြေပြေ ရောင်းချနိုင်ပါတယ်။
                 </p>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-2">
@@ -322,10 +330,11 @@ export default function LandingPage() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#E11D48] text-white mb-4">
                   <ScanLine className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">ဘားကုဒ်ဖြင့် အမြန်ငွေရှင်းဖို့</h3>
+                <h3 style={myanmarSerif} className="text-base font-bold text-slate-900">
+                  ဘားကုဒ်ဖြင့် အမြန်ငွေရှင်းဖို့
+                </h3>
                 <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                  USB/Bluetooth ဘားကုဒ်ဖတ်စက် သို့မဟုတ် ဖုန်းကင်မရာလိုအပ်ပါမယ်...
-                  ဒါမှ ဘောက်ချာကိုချက်ချင်း ထုတ်နိုင်မှာပါ။
+                  USB/Bluetooth ဘားကုဒ်ဖတ်စက် သို့မဟုတ် ဖုန်းကင်မရာဖြင့် ဘောက်ချာကို ချက်ချင်း ထုတ်ယူနိုင်ပါသည်။
                 </p>
               </div>
 
@@ -333,7 +342,9 @@ export default function LandingPage() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#16A34A] text-white mb-4">
                   <Boxes className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">ဝယ်ဈေးနှင့် အမြတ်ငွေတွက်ချက်မှု</h3>
+                <h3 style={myanmarSerif} className="text-base font-bold text-slate-900">
+                  ဝယ်ဈေးနှင့် အမြတ်ငွေတွက်ချက်မှု
+                </h3>
                 <p className="mt-2 text-xs leading-relaxed text-slate-500">
                   ဝယ်ဈေးနှင့် ရောင်းဈေးများကို အလိုအလျောက် တွက်ချက်ပေးလို့ ဘောက်ချာတစ်ခုချင်းစီရဲ့
                   အသားတင်အမြတ်ငွေကို အတိအကျ ကြည့်ရှုနိုင်ပါတယ်။
@@ -344,7 +355,9 @@ export default function LandingPage() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0284C7] text-white mb-4">
                   <Users className="h-5 w-5" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">ဖောက်သည် အကြွေးစာရင်း</h3>
+                <h3 style={myanmarSerif} className="text-base font-bold text-slate-900">
+                  ဖောက်သည် အကြွေးစာရင်း
+                </h3>
                 <p className="mt-2 text-xs leading-relaxed text-slate-500">
                   အကြွေးရောင်းချမှုများ၊ ပြန်ဆပ်ငွေများနှင့် ဖောက်သည်တစ်ဦးချင်းစီ၏ အကြွေးကျန်စာရင်းများကို
                   စနစ်တကျ မှတ်တမ်းတင် ထိန်းသိမ်းနိုင်သည်။
@@ -371,30 +384,34 @@ export default function LandingPage() {
                 <div className="inline-flex items-center gap-2 rounded bg-white/20 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white">
                   SMT POS Pro တွင် ပါဝင်လာသော စနစ်သစ်များ
                 </div>
-                <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
+                <h2
+                  style={myanmarSerif}
+                  className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl leading-snug"
+                >
                   ဆိုင်ခွဲရှိသော စတိုးကြီးများအတွက် ပရိုစနစ်များ
                 </h2>
 
                 <div className="rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur-md space-y-4 text-xs text-white/90 leading-relaxed">
                   <div>
-                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <h4 style={myanmarSerif} className="text-sm font-bold text-white flex items-center gap-2">
                       <Building2 className="h-4 w-4" /> ဆိုင်ခွဲများ ကွန်ရက်ချိတ်ဆက်ခြင်း
                     </h4>
                     <p className="mt-1">
-                       ဆိုင်ခွဲကုဒ်နှင့် ၄ လုံး PIN ဖြင့် ဆိုင်ခွဲပေါင်းများစွာကို ပင်မအကောင့်တစ်ခုတည်းကနေ တိုက်ရိုက် စီမံခန့်ခွဲနိုင်သည်။
+                      ဆိုင်ခွဲကုဒ်နှင့် ၄ လုံး PIN ဖြင့် ဆိုင်ခွဲပေါင်းများစွာကို ပင်မအကောင့်တစ်ခုတည်းကနေ တိုက်ရိုက် စီမံခန့်ခွဲနိုင်သည်။
                     </p>
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <h4 style={myanmarSerif} className="text-sm font-bold text-white flex items-center gap-2">
                       <ImageIcon className="h-4 w-4" /> အော့ဖ်လိုင်းစနစ်
                     </h4>
                     <p className="mt-1">
-                      အင်တာနက်လိုင်းကျချိန်မှာတောင် အရောင်းစာရင်းနဲ့ လုပ်ဆောင်ချက်ကို တိကျအောင် လုပ်ပေးနိုင်သည်။ </p>
+                      အင်တာနက်လိုင်းကျချိန်မှာတောင် အရောင်းစာရင်းနဲ့ လုပ်ဆောင်ချက်ကို တိကျအောင် လုပ်ပေးနိုင်သည်။
+                    </p>
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <h4 style={myanmarSerif} className="text-sm font-bold text-white flex items-center gap-2">
                       <Receipt className="h-4 w-4" /> ဘောက်ချာဒီဇိုင်း
                     </h4>
                     <p className="mt-1">
@@ -422,7 +439,10 @@ export default function LandingPage() {
         ========================================================= */}
         <section id="capabilities" className="py-20 lg:py-24 bg-slate-50/50">
           <div className="mx-auto max-w-7xl px-4 sm:px-8">
-            <h2 className="text-center text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+            <h2
+              style={myanmarSerif}
+              className="text-center text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl"
+            >
               အဓိက လက်လီလုပ်ဆောင်ချက် ၁၄ ခု
             </h2>
             <p className="mt-2 text-center text-xs text-slate-500 sm:text-sm">
@@ -547,7 +567,10 @@ export default function LandingPage() {
         ========================================================= */}
         <section id="plans" className="py-20 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-8 text-center">
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+            <h2
+              style={myanmarSerif}
+              className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl"
+            >
               သင့်ဆိုင်နှင့် ကိုက်ညီသော အစီအစဉ်ကတော့
             </h2>
             <p className="mt-2 text-xs text-slate-500 sm:text-sm">
@@ -561,7 +584,9 @@ export default function LandingPage() {
                   <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
                     စတင်သူများအတွက်
                   </span>
-                  <div className="text-4xl font-extrabold mt-1">အခမဲ့ (Free)</div>
+                  <div style={myanmarSerif} className="text-4xl font-extrabold mt-1">
+                    အခမဲ့ (Free)
+                  </div>
                   <p className="text-xs text-slate-400 mt-1">ဆိုင်ငယ်တစ်ဆိုင်အတွက် သင့်တော်သည်</p>
                 </div>
                 <div className="p-6 space-y-3.5 text-xs text-slate-600">
@@ -589,7 +614,9 @@ export default function LandingPage() {
                   <span className="text-xs font-bold uppercase tracking-widest text-white/80">
                     ပရို စီးပွားရေးအစီအစဉ်
                   </span>
-                  <div className="text-4xl font-extrabold mt-1">Admin အဆင့်မြှင့်တင်ရန်</div>
+                  <div style={myanmarSerif} className="text-4xl font-extrabold mt-1">
+                    Admin အဆင့်မြှင့်တင်ရန်
+                  </div>
                   <p className="text-xs text-white/80 mt-1">ဆိုင်ခွဲရှိသော စတိုးကြီးများအတွက်</p>
                 </div>
                 <div className="p-6 space-y-3.5 text-xs text-slate-600">
@@ -629,7 +656,7 @@ export default function LandingPage() {
                   <span className="text-xs font-bold uppercase tracking-widest text-[#5B51D8]">
                     ကူညီထောက်ပံ့မှုနှင့် စုံစမ်းရန်
                   </span>
-                  <h3 className="text-2xl font-extrabold text-slate-900 mt-1">
+                  <h3 style={myanmarSerif} className="text-2xl font-extrabold text-slate-900 mt-1">
                     တိုက်ရိုက် ဆက်သွယ်ရန်
                   </h3>
                 </div>
@@ -671,7 +698,7 @@ export default function LandingPage() {
                 <span className="text-xs font-bold uppercase tracking-widest text-[#5B51D8]">
                   မေးမြန်းရန်
                 </span>
-                <h3 className="text-2xl font-extrabold text-slate-900 mt-1 mb-6">
+                <h3 style={myanmarSerif} className="text-2xl font-extrabold text-slate-900 mt-1 mb-6">
                   သိရှိလိုသည်များကို မေးမြန်းနိုင်ပါသည်
                 </h3>
 
@@ -717,7 +744,7 @@ export default function LandingPage() {
           ၉။ စာမျက်နှာ အောက်ခြေ (FOOTER - မူရင်း Logo ပါဝင်သည်)
       ========================================================= */}
       <footer className="border-t border-slate-200 py-8 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-8 text-xs text-slate-500">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:px-8 text-xs text-slate-500">
           <div className="flex items-center gap-2.5">
             <img src={smtPosLogo} alt="SMT POS" className="h-6 w-6 rounded object-contain" />
             <p>© {new Date().getFullYear()} SMT POS. ခေတ်သစ် လက်လီအရောင်းနှင့် စတိုးစီမံခန့်ခွဲမှုစနစ်။</p>
