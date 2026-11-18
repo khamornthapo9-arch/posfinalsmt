@@ -138,7 +138,7 @@ export default function LandingPage() {
                 </div>
 
                 <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-[54px] lg:leading-[1.15]">
-                  SMT POS ရဲ့မှာ ဘာတွေပါဝင်မလဲ -
+                  SMT POS မှာ ဖြည့်ဆည်းပေးထားသည့်အရာများ -
                 </h1>
 
                 <p className="max-w-xl text-base leading-relaxed text-slate-500 sm:text-lg">
