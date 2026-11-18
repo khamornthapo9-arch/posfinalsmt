@@ -139,14 +139,18 @@ function AnalyticsPage() {
     let costOfGoods = 0;
     let ordersCount = 0;
 
-    for (const t of filtered) {
-      if (t.is_refund) {
-        refunds += Number(t.total || 0);
+        for (const t of filtered) {
+      const isRefund = t.status === "REFUNDED" || t.is_refund;
+      const amount = Number(t.total_amount ?? t.total ?? 0);
+
+      if (isRefund) {
+        refunds += amount;
       } else {
-        grossSales += Number(t.total || 0);
+        grossSales += amount;
         ordersCount += 1;
         // Cost of goods from items
-        for (const item of t.transaction_items || []) {
+        const lineItems = t.sale_items || t.transaction_items || [];
+        for (const item of lineItems) {
           const matchedItem = items.find((i) => i.id === item.item_id);
           const buyPrice = matchedItem?.buy_price || 0;
           costOfGoods += buyPrice * (item.quantity || 1);
