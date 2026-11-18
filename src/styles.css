@@ -466,3 +466,8 @@
 .report-metric:nth-child(4n + 2) { border-top-color: var(--success); }
 .report-metric:nth-child(4n + 3) { border-top-color: var(--warning); }
 .report-metric:nth-child(4n + 4) { border-top-color: var(--destructive); }
+/* Noto Serif Myanmar for Titles & Headlines */
+.font-myanmar-serif {
+  font-family: "Noto Serif Myanmar", serif;
+  letter-spacing: -0.01em;
+}
