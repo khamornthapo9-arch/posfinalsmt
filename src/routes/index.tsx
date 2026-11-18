@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import smtPosLogo from "@/assets/smt-pos-logo.png";
 import { Button } from "@/components/ui/button";
+import { LottiePlayer } from "@/components/landing/lottie-player";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -173,89 +174,7 @@ export default function LandingPage() {
                 <div className="absolute -top-12 -left-8 h-72 w-72 rounded-full bg-[#A898F3]/30 blur-2xl -z-10" />
                 <div className="absolute -bottom-8 -right-8 h-80 w-80 rounded-full bg-[#75C6F7]/25 blur-2xl -z-10" />
 
-                <div className="relative w-full max-w-lg rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xl">
-                  {/* Register Header */}
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full bg-rose-500" />
-                      <div className="h-3 w-3 rounded-full bg-amber-500" />
-                      <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                      <span className="text-xs font-bold text-slate-700 ml-2">SMT အရောင်းကောင်တာ #၀၁</span>
-                    </div>
-                    <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 font-mono">
-                      အော့ဖ်လိုင်း သုံးနိုင်သည်
-                    </span>
-                  </div>
-
-                  {/* ပစ္စည်းများ ရောင်းချမှု ပုံစံ */}
-                  <div className="grid grid-cols-3 gap-2.5">
-                    <div className="col-span-2 grid grid-cols-2 gap-2">
-                      <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
-                        <div className="h-14 w-full rounded bg-slate-200/80 flex items-center justify-center text-[10px] font-mono text-slate-400">
-                          [ ပစ္စည်းဓာတ်ပုံ ]
-                        </div>
-                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">Nescafe 3-in-1 (၁ ထုပ်)</p>
-                        <p className="text-[11px] font-bold text-[#5B51D8]">၈,၀၀၀ Ks</p>
-                      </div>
-
-                      <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
-                        <div className="h-14 w-full rounded bg-slate-200/80 flex items-center justify-center text-[10px] font-mono text-slate-400">
-                          [ ပစ္စည်းဓာတ်ပုံ ]
-                        </div>
-                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">ဆီသန့် ၁ လီတာ</p>
-                        <p className="text-[11px] font-bold text-[#5B51D8]">၁၄,၅၀၀ Ks</p>
-                      </div>
-
-                      <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
-                        <div className="h-14 w-full rounded bg-slate-200/80 flex items-center justify-center text-[10px] font-mono text-slate-400">
-                          [ ပစ္စည်းဓာတ်ပုံ ]
-                        </div>
-                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">Royal Milk Tea (၁ ထုပ်)</p>
-                        <p className="text-[11px] font-bold text-[#5B51D8]">၆,၅၀၀ Ks</p>
-                      </div>
-
-                      <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2.5">
-                        <div className="h-14 w-full rounded bg-slate-200/80 flex items-center justify-center text-[10px] font-mono text-slate-400">
-                          [ ပစ္စည်းဓာတ်ပုံ ]
-                        </div>
-                        <p className="text-xs font-bold text-slate-800 mt-1 truncate">Premier ကော်ဖီ (၁ ဖာ)</p>
-                        <p className="text-[11px] font-bold text-[#5B51D8]">၁၂,၀၀၀ Ks</p>
-                      </div>
-                    </div>
-
-                    {/* လက်ရှိခြင်းတောင်းနှင့် ငွေရှင်းမှု */}
-                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 flex flex-col justify-between text-[11px] font-mono">
-                      <div>
-                        <p className="font-bold text-slate-800 pb-1 border-b border-slate-200">
-                          ခြင်းတောင်း (၃ မျိုး)
-                        </p>
-                        <div className="space-y-1.5 mt-2 text-[10px] text-slate-600">
-                          <div className="flex justify-between">
-                            <span>Nescafe (x၂)</span>
-                            <span>၁၆,၀၀၀ Ks</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>ဆီသန့် ၁L (x၁)</span>
-                            <span>၁၄,၅၀၀ Ks</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Milk Tea (x၁)</span>
-                            <span>၆,၅၀၀ Ks</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="pt-2 border-t border-slate-200">
-                        <div className="flex justify-between font-bold text-slate-900">
-                          <span>စုစုပေါင်း</span>
-                          <span className="text-[#5B51D8]">၃၇,၀၀၀ Ks</span>
-                        </div>
-                        <div className="mt-2 h-7 rounded bg-[#5B51D8] flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-wider">
-                          ငွေသား / KPay
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <LottiePlayer src="/animations/computer.json" className="w-full max-w-lg aspect-square" />
               </div>
             </div>
 
@@ -345,31 +264,7 @@ export default function LandingPage() {
             {/* Split Banner */}
             <div className="grid items-center gap-12 lg:grid-cols-12">
               <div className="lg:col-span-6 flex justify-center">
-                <div className="w-full max-w-md rounded-2xl border-4 border-white/30 bg-white p-3 shadow-2xl text-slate-800">
-                  <div className="h-64 rounded-xl bg-slate-900 p-4 text-white flex flex-col justify-between font-mono text-xs">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-bold">SMT စတိုး ပင်မဆိုင်</span>
-                      <span className="text-emerald-400">အွန်လိုင်း စင့်ခ်လုပ်ပြီး</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between bg-slate-800/80 p-2 rounded">
-                        <span>ယနေ့ စုစုပေါင်းရောင်းရငွေ:</span>
-                        <span className="text-emerald-400 font-bold">၁,၈၄၂,၀၀၀ Ks</span>
-                      </div>
-                      <div className="flex justify-between bg-slate-800/80 p-2 rounded">
-                        <span>အသားတင်အမြတ်:</span>
-                        <span className="text-blue-400 font-bold">+၃၈၅,၀၀၀ Ks</span>
-                      </div>
-                      <div className="flex justify-between bg-slate-800/80 p-2 rounded">
-                        <span>ကုန်နည်းနေသောပစ္စည်း:</span>
-                        <span className="text-rose-400 font-bold">၃ မျိုး ထပ်ဖြည့်ရန်လိုသည်</span>
-                      </div>
-                    </div>
-                    <div className="text-[10px] text-slate-400 text-center">
-                      [ ဘောက်ချာပရင်တာနှင့် ဘားကုဒ်ဖတ်စက် ချိတ်ဆက်ပြီး ]
-                    </div>
-                  </div>
-                </div>
+                <LottiePlayer src="/animations/Computer_Programming.json" className="w-full max-w-md aspect-square" />
               </div>
 
               <div className="lg:col-span-6 space-y-6">
@@ -420,69 +315,7 @@ export default function LandingPage() {
         ========================================================= */}
         <section id="features" className="py-20 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-8">
-            <div className="relative mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-5 shadow-xl">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  လက်ကျန်စာရင်းနှင့် အမြတ်ငွေ တိုက်ရိုက်ကြည့်ရှုမှု
-                </span>
-                <span className="rounded bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600">
-                  စုစုပေါင်းပစ္စည်း: ၁,၂၄၀ မျိုး
-                </span>
-              </div>
-
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-left font-mono text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-slate-400">
-                      <th className="pb-2">ကုဒ် / ပစ္စည်းအမည်</th>
-                      <th className="pb-2">ဝယ်ဈေး</th>
-                      <th className="pb-2">ရောင်းဈေး</th>
-                      <th className="pb-2 text-center">လက်ကျန်</th>
-                      <th className="pb-2 text-right">အမြတ်</th>
-                      <th className="pb-2 text-center">အခြေအနေ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    <tr>
-                      <td className="py-2.5 font-bold">SKU-1042 · Nescafe ကော်ဖီထုပ်</td>
-                      <td>၆,၂၀၀ Ks</td>
-                      <td className="font-bold">၈,၀၀၀ Ks</td>
-                      <td className="text-center font-bold">၁၄၂ ထုပ်</td>
-                      <td className="text-right text-emerald-600 font-bold">+၁,၈၀၀ Ks</td>
-                      <td className="text-center">
-                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-                          ပစ္စည်းရှိသည်
-                        </span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 font-bold">SKU-2091 · ဆီသန့် ၁ လီတာ</td>
-                      <td>၁၂,၅၀၀ Ks</td>
-                      <td className="font-bold">၁၄,၅၀၀ Ks</td>
-                      <td className="text-center font-bold text-amber-600">၄ ဘူးကျန်</td>
-                      <td className="text-right text-emerald-600 font-bold">+၂,၀၀၀ Ks</td>
-                      <td className="text-center">
-                        <span className="rounded bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-600">
-                          ပစ္စည်းနည်းနေသည်
-                        </span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 font-bold">SKU-3112 · Premier ကော်ဖီဖာ</td>
-                      <td>၉,၈၀၀ Ks</td>
-                      <td className="font-bold">၁၂,၀၀၀ Ks</td>
-                      <td className="text-center font-bold">၆၅ ဖာ</td>
-                      <td className="text-right text-emerald-600 font-bold">+၂,၂၀၀ Ks</td>
-                      <td className="text-center">
-                        <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-                          ပစ္စည်းရှိသည်
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <LottiePlayer src="/animations/Open_Excel_at_Cloud.json" className="w-full mx-auto max-w-xl aspect-square" />
 
             {/* အဓိက လက်လီအင်္ဂါရပ် ၃ ခု */}
             <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -532,29 +365,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-8">
             <div className="grid items-center gap-12 lg:grid-cols-12">
               <div className="lg:col-span-6 flex justify-center">
-                <div className="relative w-full max-w-md rounded-2xl border-4 border-white/30 bg-slate-900 p-4 shadow-2xl font-mono text-xs">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-slate-400">
-                    <span>လုံခြုံရေးနှင့် PIN စနစ်</span>
-                    <span className="text-emerald-400">၄ လုံး PIN</span>
-                  </div>
-                  <div className="my-6 space-y-2.5">
-                    <div className="rounded bg-slate-800 p-3 flex justify-between items-center">
-                      <span>ပြန်အမ်းငွေ ထုတ်ပေးခြင်း</span>
-                      <span className="text-rose-400 font-bold">မန်နေဂျာ PIN လိုအပ်</span>
-                    </div>
-                    <div className="rounded bg-slate-800 p-3 flex justify-between items-center">
-                      <span>အထူးလျှော့ဈေးပေးခြင်း</span>
-                      <span className="text-amber-400 font-bold">ခွင့်ပြုချက် လိုအပ်</span>
-                    </div>
-                    <div className="rounded bg-slate-800 p-3 flex justify-between items-center">
-                      <span>ဆိုင်ခွဲအကောင့် ဝင်ရောက်ခြင်း</span>
-                      <span className="text-emerald-400 font-bold">ဆိုင်ခွဲကုဒ် + PIN</span>
-                    </div>
-                  </div>
-                  <p className="text-center text-[10px] text-slate-400">
-                    [ ငွေကြေးနှင့် စာရင်းများ လုံခြုံစေရန် စနစ်တကျ ကာကွယ်ထားသည် ]
-                  </p>
-                </div>
+                <LottiePlayer src="/animations/OTP_Verification.json" className="w-full max-w-md aspect-square" />
               </div>
 
               <div className="lg:col-span-6 space-y-6">
@@ -675,50 +486,7 @@ export default function LandingPage() {
 
               {/* အလယ် ဖုန်းမျက်နှာပြင် */}
               <div className="lg:col-span-4 flex justify-center">
-                <div className="w-full max-w-[280px] rounded-[36px] border-8 border-slate-900 bg-white p-3 shadow-2xl">
-                  <div className="mx-auto h-4 w-28 rounded-full bg-slate-900 mb-3" />
-                  <div className="space-y-2.5 text-xs font-mono">
-                    <div className="flex items-center justify-between border-b pb-1 text-[10px] text-slate-500">
-                      <span>လက်လီ အရောင်းကောင်တာ</span>
-                      <span>13:21</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1 text-[9px] text-center">
-                      <div className="bg-emerald-100 text-emerald-800 rounded py-1 font-bold">
-                        ယနေ့ဘောက်ချာ: ၄၈
-                      </div>
-                      <div className="bg-blue-100 text-blue-800 rounded py-1 font-bold">
-                        ရောင်းအား: ၁.၂M Ks
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-slate-200 p-2 text-[10px]">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded">
-                          #၁၀၈၄
-                        </span>
-                        <span className="text-emerald-600 font-bold">✓ ရှင်းပြီး (KBZPay)</span>
-                      </div>
-                      <div className="flex justify-between text-slate-600">
-                        <span>ပစ္စည်း: ၃ မျိုး</span>
-                        <span className="font-bold text-slate-900">၂၉,၀၀၀ Ks</span>
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-slate-200 p-2 text-[10px]">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-bold bg-amber-600 text-white px-1.5 py-0.2 rounded">
-                          #၁၀၈၃
-                        </span>
-                        <span className="text-amber-600 font-bold">အကြွေး (ဦးကျော်)</span>
-                      </div>
-                      <div className="flex justify-between text-slate-600">
-                        <span>ပစ္စည်း: ၅ မျိုး</span>
-                        <span className="font-bold text-slate-900">၄၅,၀၀၀ Ks</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <LottiePlayer src="/animations/phone.json" className="w-full max-w-[300px] aspect-square" />
               </div>
 
               {/* ညာဘက် Pill ၇ ခု */}
