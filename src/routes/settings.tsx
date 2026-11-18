@@ -22,6 +22,7 @@ import { usePos } from "@/lib/pos-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
+import { sendStoreTelegramReport } from "@/lib/telegram-report.functions";
 
 export const Route = createFileRoute("/settings")({
   ssr: false,
@@ -32,8 +33,7 @@ export const Route = createFileRoute("/settings")({
       { title: "ဆိုင် ပြင်ဆင်ချက်များ — SMT POS" },
       {
         name: "description",
-        content:
-          "သင့် ဆိုင်အတွက် အသေးစိတ် ပြင်ဆင်မှုများနှင့် အကူအညီများရယူရန်။",
+        content: "သင့် ဆိုင်အတွက် အသေးစိတ် ပြင်ဆင်မှုများနှင့် အကူအညီများရယူရန်။",
       },
       { property: "og:title", content: "ဆိုင် ပြင်ဆင်ချက်များ — SMT POS" },
       {
@@ -58,15 +58,14 @@ const PLANS = [
   {
     name: "Pro Casher",
     price: "$19",
-    period: "တစ်လ",
-    features: ["အကန့်အသတ်မရှိ ကုန်ပစ္စည်းများ", "ဆိုင်ခွဲများ", "အသေးစိတ် အမြတ်စာရင်း", "CSV ထုတ်ယူမှုများ"],
-    current: false,
-  },
-  {
-    name: "လက်ခွဲဆိုင်များ",
-    price: "$79",
-    period: "တစ်လလျှင်",
-    features: ["အကန့်အသတ်မရှိ ဆိုင်ခွဲများ", "ဝန်ထမ်း အကောင့်များ", "၂၄/၇ အကူအညီ", " အသေးစိတ် စာရင်း"],
+    period: "/လ",
+    features: [
+      "ဆိုင်ခွဲများ စီမံခြင်း",
+      "ကုန်ပစ္စည်း အကန့်အသတ်မရှိ",
+      "လိုဂိုနှင့် ဘောက်ချာ စိတ်ကြိုက်ပြင်ဆင်မှု",
+      "အဆင့်မြင့် အစီရင်ခံစာနှင့် EOD",
+      "Telegram နေ့ချုပ် အစီရင်ခံစာ",
+    ],
     current: false,
   },
 ];
@@ -81,42 +80,27 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-border bg-card shadow-sm">
-      <div className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+    <div className="rounded-lg border border-border bg-card p-4 sm:p-6">
+      <div className="mb-4">
+        <h2 className="text-base font-semibold">{title}</h2>
         {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
       </div>
-      <div className="p-4">{children}</div>
-    </section>
+      {children}
+    </div>
   );
 }
 
-const inputClass =
-  "h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-ring";
-const labelClass = "mb-1.5 block text-xs font-medium text-muted-foreground";
-
 function SettingsPage() {
-  const { store, session, updateStore, refreshStore, signOut } = useAuth();
-  const { isOwner, isActive, role } = useRole();
-  const { refreshCatalog, refreshTabs } = usePos();
-  const navigate = useNavigate();
+  const { session, store, updateStore, signOut } = useAuth();
+  const { isPro, symbol } = useStoreSettings();
+  const { isOwner, isManager } = useRole();
+  const { items } = usePos();
   const logoUrl = useStoreLogo();
-  const { isPro } = useStoreSettings();
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  if (!isOwner || !isActive) {
-    return (
-      <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ">
-        <div className="p-6 text-sm text-muted-foreground">
-          ဤစာမျက်နှာကို ဆိုင်ပိုင်ရှင်သာ ကြည့်ရှုနိုင်ပါသည်။
-        </div>
-      </PosShell>
-    );
-  }
-
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState("");
-  const [symbol, setSymbol] = useState("$");
+  const [storeSymbol, setStoreSymbol] = useState("Ks");
   const [tax, setTax] = useState("5");
   const [address, setAddress] = useState("");
   const [cashierName, setCashierName] = useState("");
@@ -127,11 +111,12 @@ function SettingsPage() {
   const [email, setEmail] = useState("");
   const [savingEmail, setSavingEmail] = useState(false);
   const [plansOpen, setPlansOpen] = useState(false);
+  const [testingTelegram, setTestingTelegram] = useState(false);
 
   useEffect(() => {
     if (!store) return;
     setName(store.name);
-    setSymbol(store.currency_symbol || "Ks");
+    setStoreSymbol(store.currency_symbol || "Ks");
     setTax(String(store.tax_rate ?? 5));
     setAddress(store.address ?? "");
     setCashierName(store.cashier_name ?? "");
@@ -151,7 +136,7 @@ function SettingsPage() {
     try {
       await updateStore({
         name: name.trim(),
-        currency_symbol: symbol.trim() || "Ks",
+        currency_symbol: storeSymbol.trim() || "Ks",
         tax_rate: Number(tax) || 0,
         address: address.trim() || null,
         cashier_name: cashierName.trim() || null,
@@ -216,166 +201,231 @@ function SettingsPage() {
     }
   };
 
+  const sendTestTelegram = async () => {
+    if (!store) return;
+    setTestingTelegram(true);
+    try {
+      const res = await sendStoreTelegramReport({
+        data: {
+          storeId: store.id,
+          storeName: store.name,
+          currencySymbol: symbol,
+          dateStr: new Date().toLocaleDateString("en-GB"),
+          grossSales: 150000,
+          refunds: 0,
+          netSales: 150000,
+          estimatedProfit: 45000,
+          ordersCount: 12,
+          cashIn: 100000,
+          kbzIn: 50000,
+          waveIn: 0,
+          creditIssued: 0,
+          closedBy: "ဆိုင်ရှင် (စမ်းသပ်)",
+          isTest: true,
+        },
+      });
+      if (res.success) {
+        toast.success("Telegram သို့ စမ်းသပ်စာရင်း ရောက်ရှိသွားပါပြီ!");
+      } else {
+        toast.error(res.error || "ပို့၍မရပါ");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "မအောင်မြင်ပါ");
+    } finally {
+      setTestingTelegram(false);
+    }
+  };
+
+  const disconnectTelegram = async () => {
+    if (!store) return;
+    try {
+      await supabase
+        .from("stores")
+        .update({
+          telegram_chat_id: null,
+          telegram_username: null,
+        } as any)
+        .eq("id", store.id);
+      toast.success("Telegram ချိတ်ဆက်မှု ဖြုတ်လိုက်ပါပြီ");
+      window.location.reload();
+    } catch {
+      toast.error("ချိတ်ဆက်မှု ဖြုတ်၍ မရပါ");
+    }
+  };
+
+  const inputClass =
+    "h-10 w-full rounded-md border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+
+  const telegramChatId = (store as any)?.telegram_chat_id;
+  const telegramUsername = (store as any)?.telegram_username;
+  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "smt_pos_daily_bot";
+
   return (
     <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ">
-      <div className="mx-auto max-w-3xl space-y-4 p-4">
-        <Section
-          title="ဆိုင် အချက်အလက်နှင့် အမှတ်တံဆိပ်"
-          description="သင်၏ အရောင်းပြေစာ၊ တံဆိပ်နှင့် ဘေးဘောင်တို့တွင် ပြသပါမည်။"
-        >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+      <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">ဆိုင် ပြင်ဆင်ချက်များ</h1>
+            <p className="text-sm text-muted-foreground">{store?.name ?? "သင့်ဆိုင်"}</p>
+          </div>
+          <button
+            onClick={async () => {
+              await signOut();
+              navigate({ to: "/login" });
+            }}
+            className="inline-flex h-9 items-center gap-1.5 self-start rounded-md border border-destructive/30 px-3 text-xs font-medium text-destructive hover:bg-destructive/10 sm:self-auto"
+          >
+            <LogOut className="h-3.5 w-3.5" /> အကောင့်ထွက်မည်
+          </button>
+        </div>
+
+        {/* Quick Links */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Link
+            to="/settings/staff"
+            className="flex items-center justify-between rounded-lg border border-border bg-card p-4 hover:border-primary/50 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-semibold">ဝန်ထမ်းများနှင့် ဆိုင်ခွဲများ</p>
+              <p className="text-xs text-muted-foreground">ဆိုင်ခွဲ PIN နှင့် ဝန်ထမ်းများ</p>
+            </div>
+            <Store className="h-5 w-5 text-muted-foreground" />
+          </Link>
+
+          <Link
+            to="/settings/receipt"
+            className="flex items-center justify-between rounded-lg border border-border bg-card p-4 hover:border-primary/50 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-semibold">ဘောက်ချာ စာရွက်ပုံစံ</p>
+              <p className="text-xs text-muted-foreground">ခေါင်းစဉ်၊ ခြေဆင်းနှင့် ဘားကုဒ်</p>
+            </div>
+            <Store className="h-5 w-5 text-muted-foreground" />
+          </Link>
+
+          <Link
+            to="/settings/plan"
+            className="flex items-center justify-between rounded-lg border border-border bg-card p-4 hover:border-primary/50 transition-colors"
+          >
+            <div>
+              <p className="text-sm font-semibold">အဆင့်မြှင့်တင်မှု (Pro Plan)</p>
+              <p className="text-xs text-muted-foreground">{isPro ? "Pro ဖွင့်ထားသည်" : "Free Plan"}</p>
+            </div>
+            <CreditCard className="h-5 w-5 text-muted-foreground" />
+          </Link>
+        </div>
+
+        {/* Shop Info Section */}
+        <Section title="ဆိုင် အချက်အလက်များ">
+          <div className="space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
                 {logoUrl ? (
-                  <img src={logoUrl} alt="ဆိုင် လိုဂို" className="h-full w-full object-contain" />
+                  <img src={logoUrl} alt="Store logo" className="h-full w-full object-cover" />
                 ) : (
-                  <Store className="h-7 w-7 text-muted-foreground" />
+                  <Store className="h-8 w-8 text-muted-foreground" />
                 )}
               </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void uploadLogo(file);
-                  e.target.value = "";
-                }}
-              />
-              <button
-                onClick={() => isPro && fileRef.current?.click()}
-                disabled={uploading || !isPro}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
-              >
-                {uploading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                {isPro ? "လိုဂို တင်မည်" : "Pro သို့ အဆင့်မြှင့်ပါ"}
-              </button>
-
+              <div className="space-y-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void uploadLogo(file);
+                  }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading || !isPro}
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                >
+                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "လိုဂို ပြောင်းမည်"}
+                </button>
+                {!isPro && (
+                  <p className="text-[11px] text-muted-foreground">လိုဂိုတင်ရန် Pro Plan လိုအပ်ပါသည်</p>
+                )}
+              </div>
             </div>
 
-            <div className="grid flex-1 gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className={labelClass} htmlFor="store-name">
-                  ဆိုင်အမည်
-                </label>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">ဆိုင်အမည်</label>
                 <input
-                  id="store-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className={inputClass}
+                  className={cn(inputClass, "mt-1")}
+                  placeholder="SMT စတိုး"
                 />
               </div>
+
               <div>
-                <label className={labelClass} htmlFor="currency">
-                  ငွေကြေး သင်္ကေတ
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="currency"
-                    value={symbol}
-                    onChange={(e) => setSymbol(e.target.value)}
-                    maxLength={6}
-                    className={cn(inputClass, "w-20 text-center")}
-                  />
-                  <div className="flex flex-wrap gap-1">
-                    {CURRENCIES.map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => setSymbol(c)}
-                        className={cn(
-                          "h-10 w-9 rounded-md border text-sm",
-                          symbol === c ? "border-primary bg-primary/10" : "border-border",
-                        )}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <label className="text-xs font-medium text-muted-foreground">ငွေကြေး သင်္ကေတ</label>
+                <select
+                  value={storeSymbol}
+                  onChange={(e) => setStoreSymbol(e.target.value)}
+                  className={cn(inputClass, "mt-1")}
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
+
               <div>
-                <label className={labelClass} htmlFor="tax">
-                  မူလ အရောင်းအခွန် (%)
-                </label>
+                <label className="text-xs font-medium text-muted-foreground">အခွန် ရာခိုင်နှုန်း (%)</label>
                 <input
-                  id="tax"
                   type="number"
-                  step="0.1"
                   min="0"
+                  max="100"
                   value={tax}
                   onChange={(e) => setTax(e.target.value)}
-                  className={inputClass}
+                  className={cn(inputClass, "mt-1")}
                 />
               </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass} htmlFor="store-address">
-                  ဆိုင် လိပ်စာ
-                </label>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">ကောင်တာ အရောင်းစာရေး</label>
                 <input
-                  id="store-address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="အမှတ်၊ လမ်း၊ မြို့နယ်"
-                  className={inputClass}
-                />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Link
-                    to="/settings/receipt"
-                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
-                  >
-                    ပြေစာ ဒီဇိုင်း ပြင်ဆင်ရန်
-                  </Link>
-                  <Link
-                    to="/settings/plan"
-                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
-                  >
-                    Plan နှင့် Pro အဆင့်မြှင့်ခြင်း
-                  </Link>
-                  <Link
-                    to="/settings/staff"
-                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
-                  >
-                    ဝန်ထမ်း စီမံခန့်ခွဲမှု
-                  </Link>
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass} htmlFor="cashier-name">
-                  ငွေကိုင် / ဝန်ထမ်း အမည်
-                </label>
-                <input
-                  id="cashier-name"
                   value={cashierName}
                   onChange={(e) => setCashierName(e.target.value)}
-                  placeholder="ဥပမာ - မမြင့်"
-                  className={inputClass}
+                  className={cn(inputClass, "mt-1")}
+                  placeholder="ကိုမင်းမင်း"
                 />
               </div>
+
               <div className="sm:col-span-2">
-                <span className={labelClass}>ဖုန်းနံပါတ်များ</span>
-                <div className="space-y-2">
-                  {phones.map((phone, index) => (
-                    <div key={index} className="flex gap-2">
+                <label className="text-xs font-medium text-muted-foreground">ဆိုင်လိပ်စာ</label>
+                <input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className={cn(inputClass, "mt-1")}
+                  placeholder="အမှတ် (၁၂)၊ လမ်းမတော်၊ ရန်ကုန်"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">ဖုန်းနံပါတ်များ</label>
+                <div className="mt-1 space-y-2">
+                  {phones.map((phone, idx) => (
+                    <div key={idx} className="flex gap-2">
                       <input
                         value={phone}
-                        onChange={(e) =>
-                          setPhones((prev) =>
-                            prev.map((p, i) => (i === index ? e.target.value : p)),
-                          )
-                        }
-                        inputMode="tel"
-                        placeholder="09xxxxxxxxx"
+                        onChange={(e) => {
+                          const updated = [...phones];
+                          updated[idx] = e.target.value;
+                          setPhones(updated);
+                        }}
                         className={inputClass}
+                        placeholder="၀၉-xxxxxxxxx"
                       />
                       <button
-                        onClick={() =>
-                          setPhones((prev) =>
-                            prev.length === 1 ? [""] : prev.filter((_, i) => i !== index),
-                          )
-                        }
-                        aria-label="ဖုန်းနံပါတ် ဖျက်ရန်"
-                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-accent"
+                        onClick={() => setPhones(phones.filter((_, i) => i !== idx))}
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border hover:bg-accent"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -389,6 +439,7 @@ function SettingsPage() {
                   </button>
                 </div>
               </div>
+
               <div className="sm:col-span-2">
                 <button
                   onClick={() => void saveProfile()}
@@ -402,9 +453,58 @@ function SettingsPage() {
           </div>
         </Section>
 
+        {/* Telegram Daily Closing Integration */}
         <Section
-          title="အသုံးပြုမည့် မော်ဂျူးများ"
+          title="Telegram နေ့ချုပ် အစီရင်ခံစာ"
+          description="ဆိုင်ပိတ်ချိန် နေ့စဉ် အရောင်းနှင့် အသားတင်အမြတ် စာရင်းများကို သင့် Telegram သို့ အလိုအလျောက် ပို့ပေးပါမည်။"
         >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-1">
+            {telegramChatId ? (
+              <div className="flex items-center gap-2 text-sm text-emerald-500 font-medium">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                ချိတ်ဆက်ထားသည်: @{telegramUsername || "Telegram Account"}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                ချိတ်ဆက်ထားခြင်း မရှိသေးပါ။ ခလုတ်ကို နှိပ်ပြီး Telegram တွင် <b>Start</b> နှိပ်ပေးပါ။
+              </p>
+            )}
+
+            <div className="flex items-center gap-2">
+              {telegramChatId ? (
+                <>
+                  <button
+                    onClick={() => void sendTestTelegram()}
+                    disabled={testingTelegram}
+                    className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                  >
+                    {testingTelegram && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    စမ်းသပ် ပို့ကြည့်မည်
+                  </button>
+                  <button
+                    onClick={() => void disconnectTelegram()}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-md border border-destructive/30 px-3 text-xs font-medium text-destructive hover:bg-destructive/10"
+                  >
+                    ချိတ်ဆက်မှုဖြုတ်
+                  </button>
+                </>
+              ) : (
+                <a
+                  href={`https://t.me/${botUsername}?start=store_${store?.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-9 items-center gap-2 rounded-md bg-sky-500 hover:bg-sky-600 px-4 text-xs font-medium text-white transition-colors"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Telegram နှင့် ချိတ်ဆက်မည်
+                </a>
+              )}
+            </div>
+          </div>
+        </Section>
+
+        {/* Modules Section */}
+        <Section title="အသုံးပြုမည့် မော်ဂျူးများ">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-sm font-medium">
@@ -432,6 +532,7 @@ function SettingsPage() {
           </div>
         </Section>
 
+        {/* Account Section */}
         <Section title="အကောင့်" description="ဤဆိုင်ပိုင်ရှင်၏ ဝင်ရောက်ရန် အီးမေးလ်။">
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
@@ -453,15 +554,7 @@ function SettingsPage() {
           </div>
         </Section>
 
-        <Section title="စာရင်းသွင်းမှု ပလန်" description="သင်သည် အခမဲ့ စတင်သူ ပလန်ကို အသုံးပြုနေပါသည်။">
-          <button
-            onClick={() => setPlansOpen(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            <CreditCard className="h-4 w-4" /> ပလန်များ ကြည့်မည်
-          </button>
-        </Section>
-
+        {/* Support Section */}
         <Section title="အကူအညီ" description="အကူအညီ လိုအပ်ပါသလား? SMT POS အကူအညီပေးရေးသို့ ဆက်သွယ်ပါ။">
           <div className="flex flex-wrap gap-2">
             <a
@@ -476,77 +569,11 @@ function SettingsPage() {
               rel="noreferrer"
               className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium hover:bg-accent"
             >
-              <Send className="h-4 w-4" /> Telegram
+              <Send className="h-4 w-4" /> Telegram အကူအညီ
             </a>
           </div>
         </Section>
-
-        <Section title="အကောင့်အသုံးပြုမှု" description="အကောင့်မှ ထွက်ပြီး သိမ်းဆည်းထားသော အော့ဖ်လိုင်း ဒေတာများကို ရှင်းလင်းပါမည်။">
-          <button
-            onClick={() => {
-              void (async () => {
-                await signOut();
-                void navigate({ to: "/login", replace: true });
-              })();
-            }}
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-destructive px-4 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
-          >
-            <LogOut className="h-4 w-4" /> ထွက်မည်
-          </button>
-        </Section>
       </div>
-
-      {plansOpen && <PlansModal onClose={() => setPlansOpen(false)} />}
     </PosShell>
   );
 }
-
-function PlansModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="max-h-full w-full max-w-3xl overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold">စာရင်းသွင်းမှု ပလန်များ</h2>
-          <button onClick={onClose} aria-label="Close plans" className="text-muted-foreground">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="grid gap-3 p-4 md:grid-cols-3">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.name}
-              className={cn(
-                "flex flex-col rounded-md border px-4 py-4",
-                plan.current ? "border-primary bg-primary/5" : "border-border",
-              )}
-            >
-              <p className="text-sm font-semibold">{plan.name}</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">{plan.price}</p>
-              <p className="text-xs text-muted-foreground">{plan.period}</p>
-              <ul className="mt-3 flex-1 space-y-1.5 text-xs text-muted-foreground">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-1.5">
-                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                disabled={plan.current}
-                onClick={() => toast.info("ငွေပေးချေမှုစနစ် မကြာမီ လာပါမည် — အဆင့်မြှင့်တင်ရန် အကူအညီပေးရေးသို့ ဆက်သွယ်ပါ။")}
-                className={cn(
-                  "mt-4 h-10 rounded-md text-sm font-medium",
-                  plan.current
-                    ? "border border-border text-muted-foreground"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90",
-                )}
-              >
-                {plan.current ? "လက်ရှိ ပလန်" : "ပလန် အဆင့်မြှင့်မည်"}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
