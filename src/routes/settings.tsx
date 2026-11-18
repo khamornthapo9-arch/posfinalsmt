@@ -258,7 +258,7 @@ function SettingsPage() {
 
   const telegramChatId = (store as any)?.telegram_chat_id;
   const telegramUsername = (store as any)?.telegram_username;
-  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "smt_pos_daily_bot";
+  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "Smtpos_bot";
 
   return (
     <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ">
