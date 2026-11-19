@@ -581,11 +581,23 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     );
   }, [storeId]);
 
-  const refundOrder = useCallback<PosContextValue["refundOrder"]>(
+    const refundOrder = useCallback<PosContextValue["refundOrder"]>(
     async ({ orderId, reason, note }) => {
       if (!storeId) throw new Error("No active store");
       const order = recentOrders.find((o) => o.id === orderId);
       if (!order) throw new Error("Order not found");
+
+      // Only allow refunds for sales created TODAY
+      const orderDate = new Date(order.created_at);
+      const now = new Date();
+      const isToday =
+        orderDate.getFullYear() === now.getFullYear() &&
+        orderDate.getMonth() === now.getMonth() &&
+        orderDate.getDate() === now.getDate();
+
+      if (!isToday) {
+        throw new Error("ယနေ့ဘောင်ချာသာ ပြန်အမ်းခွင့်ရှိပါသည် (Only today's sales can be refunded)");
+      }
 
       const { error } = await supabase
         .from("sales")
@@ -599,7 +611,8 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         .eq("id", orderId);
       if (error) throw error;
 
-      // Put the stock back item by item.
+      // Put the stock back item by item...
+
       for (const line of order.lines) {
         const { data: current } = await supabase
           .from("items")
