@@ -859,6 +859,9 @@ export type Database = {
           receipt_footer: string | null
           receipt_header: string | null
           tax_rate: number
+          telegram_chat_id: string | null
+          telegram_notify_enabled: boolean | null
+          telegram_username: string | null
         }
         Insert: {
           address?: string | null
@@ -877,6 +880,9 @@ export type Database = {
           receipt_footer?: string | null
           receipt_header?: string | null
           tax_rate?: number
+          telegram_chat_id?: string | null
+          telegram_notify_enabled?: boolean | null
+          telegram_username?: string | null
         }
         Update: {
           address?: string | null
@@ -895,6 +901,9 @@ export type Database = {
           receipt_footer?: string | null
           receipt_header?: string | null
           tax_rate?: number
+          telegram_chat_id?: string | null
+          telegram_notify_enabled?: boolean | null
+          telegram_username?: string | null
         }
         Relationships: [
           {
