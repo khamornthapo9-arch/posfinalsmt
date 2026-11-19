@@ -306,7 +306,7 @@ export function PosShell({
       {/* Sidebar */}
       <aside
         className={cn(
-          "no-print hidden shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-3 transition-[width] duration-200 md:flex",
+          "no-print hidden shrink-0 flex-col self-start overflow-y-auto border-r border-sidebar-border bg-sidebar p-3 transition-[width] duration-200 md:sticky md:top-0 md:flex md:h-screen",
           collapsed ? "w-[68px]" : "w-60",
         )}
       >
@@ -363,7 +363,7 @@ export function PosShell({
 
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75 md:static">
+        <header className="no-print sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
           <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
             <button
               onClick={() => setDrawerOpen(true)}
