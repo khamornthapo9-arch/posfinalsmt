@@ -1,3 +1,4 @@
+import { LottiePlayer } from "@/components/landing/lottie-player";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Loader2,
