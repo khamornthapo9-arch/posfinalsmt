@@ -141,7 +141,7 @@ function AnalyticsPage() {
     });
   }, [transactions, range, customStart, customEnd]);
 
-  // Aggregate metrics
+    // Aggregate metrics
   const totals = useMemo(() => {
     let grossSales = 0;
     let refunds = 0;
@@ -152,13 +152,16 @@ function AnalyticsPage() {
       const isRefund = t.status === "REFUNDED" || t.is_refund;
       const amount = Number(t.total_amount ?? t.total ?? 0);
 
+      // 1. Gross sales captures all transactions originally rung up
+      grossSales += amount;
+
       if (isRefund) {
+        // 2. Track refunds separately
         refunds += amount;
       } else {
-        grossSales += amount;
+        // 3. Count completed orders and COGS only for non-refunded items
         ordersCount += 1;
 
-        // Cost of goods from items
         const lineItems = t.sale_items || t.transaction_items || [];
         for (const item of lineItems) {
           const matchedItem = items.find((i) => i.id === item.item_id);
@@ -168,7 +171,8 @@ function AnalyticsPage() {
       }
     }
 
-    const netSales = grossSales - refunds;
+    // 4. Net sales = Gross Sales minus Refunds (no double-subtraction)
+    const netSales = Math.max(0, grossSales - refunds);
     const netProfit = Math.max(0, netSales - costOfGoods);
 
     return {
