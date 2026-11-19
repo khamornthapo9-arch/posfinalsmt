@@ -36,7 +36,7 @@ export function ManagerPinModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 px-4">
-      <div className="w-full max-w-xs rounded-xl border border-border bg-card p-5 shadow-lg">
+      <div className="w-full max-w-xs rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="inline-flex items-center gap-2 text-sm font-semibold">
             <ShieldCheck className="h-4 w-4 text-primary" /> {title}
@@ -52,12 +52,12 @@ export function ManagerPinModal({
           autoFocus
           placeholder="PIN"
           aria-label="မန်နေဂျာ PIN"
-          className="h-12 w-full rounded-lg border border-input bg-background text-center text-lg tracking-[0.4em] outline-none focus:ring-2 focus:ring-ring"
+          className="h-12 w-full rounded-md border border-input bg-background text-center text-lg tracking-[0.4em] outline-none focus:ring-2 focus:ring-ring"
         />
         <button
           disabled={busy || pin.length < 4}
           onClick={submit}
-          className="mt-4 h-11 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="mt-4 h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           အတည်ပြုမည်
         </button>

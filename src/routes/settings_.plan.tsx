@@ -107,12 +107,12 @@ function PlanSettingsPage() {
       <div className="mx-auto max-w-4xl space-y-4 p-3 sm:p-4">
         <Link
           to="/settings"
-          className="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
         >
           <ArrowLeft className="h-4 w-4" /> ပြင်ဆင်ချက်များသို့
         </Link>
 
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-4">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card p-4">
           <span className="text-sm font-medium">လက်ရှိ အသုံးပြုနေသော Plan:</span>
           <span
             className={cn(
@@ -128,7 +128,7 @@ function PlanSettingsPage() {
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-md border border-border bg-card p-4">
             <h2 className="text-sm font-semibold">Standard (အခမဲ့)</h2>
             <p className="mt-1 text-2xl font-bold tabular-nums">Ks 0</p>
             <ul className="mt-3 space-y-2 text-sm">
@@ -141,7 +141,7 @@ function PlanSettingsPage() {
             </ul>
           </div>
 
-          <div className="rounded-xl border-2 border-amber-500/60 bg-card p-4">
+          <div className="rounded-md border-2 border-amber-500/60 bg-card p-4">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
               <Crown className="h-4 w-4 text-amber-500" /> Pro Plan (လုပ်ငန်းသုံး)
             </h2>
@@ -159,7 +159,7 @@ function PlanSettingsPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-md border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">စီမံခန့်ခွဲသူထံ ဆက်သွယ်ရန် အချက်အလက် ဖြည့်ပါ</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             Pro Plan ဖွင့်ပေးရန် စီမံခန့်ခွဲသူက ဤအချက်အလက်များဖြင့် ပြန်လည် ဆက်သွယ်ပါမည်။
@@ -178,7 +178,7 @@ function PlanSettingsPage() {
                 <input
                   value={form[key]}
                   onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                  className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+                  className="mt-1 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
                 />
               </label>
             ))}
@@ -189,25 +189,25 @@ function PlanSettingsPage() {
               value={form.note}
               rows={2}
               onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))}
-              className="mt-1 w-full rounded-lg border border-border bg-background p-2 text-sm text-foreground"
+              className="mt-1 w-full rounded-md border border-border bg-background p-2 text-sm text-foreground"
             />
           </label>
           <button
             disabled={saving}
             onClick={() => void save()}
-            className="mt-3 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="mt-3 inline-flex h-11 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />} သိမ်းမည်
           </button>
         </div>
 
-        <div className="rounded-xl border border-border bg-muted/30 p-4">
+        <div className="rounded-md border border-border bg-muted/30 p-4">
           <h2 className="text-sm font-semibold">စီမံခန့်ခွဲသူ ဆက်သွယ်ရန်</h2>
           <div className="mt-3 space-y-2">
             {ADMIN_CONTACT.map((row) => (
               <div
                 key={row.label}
-                className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-sm"
+                className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm"
               >
                 <span className="flex items-center gap-2 text-muted-foreground">
                   <row.icon className="h-4 w-4" />

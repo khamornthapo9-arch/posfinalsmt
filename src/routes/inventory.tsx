@@ -106,10 +106,10 @@ function InventoryPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="ကုန်ပစ္စည်းရှာဖွေရန်"
-              className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-base outline-none focus:ring-2 focus:ring-ring sm:text-sm"
+              className="h-11 w-full rounded-md border border-input bg-card pl-9 pr-3 text-base outline-none focus:ring-2 focus:ring-ring sm:text-sm"
             />
           </div>
-          <div className="flex gap-1 rounded-lg border border-border p-1">
+          <div className="flex gap-1 rounded-md border border-border p-1">
             {(["all", "low", "out"] as Filter[]).map((f) => (
               <Button variant="ghost"
                 key={f}
@@ -125,19 +125,19 @@ function InventoryPage() {
           </div>
           <Button variant="ghost"
             onClick={() => downloadCsv(`items-${new Date().toISOString().slice(0, 10)}.csv`, itemsToCsvRows(items))}
-            className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-accent"
+            className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-card px-4 text-sm font-medium hover:bg-accent"
           >
             ကုန်ပစ္စည်းများ ထုတ်ယူမည် (CSV)
           </Button>
           <Button variant="ghost"
             onClick={() => setImportOpen(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-accent"
+            className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-card px-4 text-sm font-medium hover:bg-accent"
           >
             CSV ဖြင့် ထည့်သွင်းမည်
           </Button>
           <Button variant="ghost"
             onClick={() => setEditing("new")}
-            className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/90 active:scale-95"
+            className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/90 active:scale-95"
           >
             ကုန်ပစ္စည်းသစ်ထည့်မည်
           </Button>
@@ -151,7 +151,7 @@ function InventoryPage() {
                   .finally(() => setSeeding(false));
               }}
               disabled={seeding}
-              className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+              className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
             >
               {seeding ? (
                 <span className="inline-flex items-center gap-1">
@@ -167,7 +167,7 @@ function InventoryPage() {
           )}
         </div>
 
-        <div className="hidden overflow-x-auto rounded-xl border border-border bg-card md:block">
+        <div className="hidden overflow-x-auto rounded-md border border-border bg-card md:block">
           <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -191,11 +191,11 @@ function InventoryPage() {
                     <td className="px-4 py-3">
                       <span
                         className={cn(
-                          "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                          "rounded-sm px-1.5 py-0.5 text-[11px] font-semibold leading-4",
                           status === "ok" &&
-                            "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
-                          status === "low" && "bg-amber-500/15 text-amber-600 dark:text-amber-300",
-                          status === "out" && "bg-destructive/15 text-destructive",
+                            "bg-success-soft text-success",
+                          status === "low" && "bg-warning-soft text-warning",
+                          status === "out" && "bg-danger-soft text-destructive",
                         )}
                       >
                         {status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
@@ -252,22 +252,22 @@ function InventoryPage() {
         </div>
 
         {/* Mobile: compact structured cards */}
-        <div className="grid gap-3 md:hidden">
+        <div className="divide-y divide-border border-y border-border bg-card md:hidden">
           {filtered.map((item) => {
             const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
             return (
-              <div key={item.id} className="rounded-xl border border-border bg-card p-3">
+              <div key={item.id} className="px-3 py-2.5">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{item.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{item.sku}</p>
+                    <p className="truncate text-sm font-semibold leading-6">{item.name}</p>
+                    <p className="truncate font-mono text-[11px] tracking-wide text-muted-foreground">{item.sku}</p>
                   </div>
                   <span
                     className={cn(
-                      "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                      status === "ok" && "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
-                      status === "low" && "bg-amber-500/15 text-amber-600 dark:text-amber-300",
-                      status === "out" && "bg-destructive/15 text-destructive",
+                      "shrink-0 rounded-sm px-1.5 py-0.5 text-[11px] font-semibold leading-4",
+                      status === "ok" && "bg-success-soft text-success",
+                      status === "low" && "bg-warning-soft text-warning",
+                      status === "out" && "bg-danger-soft text-destructive",
                     )}
                   >
                     {status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
@@ -282,14 +282,14 @@ function InventoryPage() {
                     <Button variant="ghost"
                       onClick={() => setLabelItem(item)}
                       aria-label={`${item.name} အတွက် လေဘယ်ထုတ်ရန်`}
-                      className="flex h-11 w-11 items-center justify-center rounded-lg border border-border active:scale-95"
+                      className="flex h-9 w-9 items-center justify-center rounded-md border border-border active:scale-95"
                     >
                       <QrCode className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost"
                       onClick={() => setEditing(item)}
                       aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
-                      className="flex h-11 w-11 items-center justify-center rounded-lg border border-border active:scale-95"
+                      className="flex h-9 w-9 items-center justify-center rounded-md border border-border active:scale-95"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -300,7 +300,7 @@ function InventoryPage() {
                         );
                       }}
                       aria-label={`${item.name} ကိုဖျက်ရန်`}
-                      className="flex h-11 w-11 items-center justify-center rounded-lg border border-border text-muted-foreground active:scale-95"
+                      className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground active:scale-95"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -310,7 +310,7 @@ function InventoryPage() {
             );
           })}
           {filtered.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
+            <div className="px-4 py-12 text-center text-sm text-muted-foreground">
               {items.length === 0 ? (
                 <div className="space-y-2">
                   <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
@@ -442,14 +442,14 @@ function ProductModal({
         step={type === "number" ? "0.01" : undefined}
         value={form[key]}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-        className="h-11 w-full rounded-lg border border-input bg-background px-3 text-base outline-none focus:ring-2 focus:ring-ring sm:text-sm"
+        className="h-11 w-full rounded-md border border-input bg-background px-3 text-base outline-none focus:ring-2 focus:ring-ring sm:text-sm"
       />
     </label>
   );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-6">
-      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-xl">
+      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-md border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">{item ? "ကုန်ပစ္စည်း ပြင်ဆင်ရန်" : "ကုန်ပစ္စည်း အသစ်"}</h2>
           <Button variant="ghost" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -458,11 +458,11 @@ function ProductModal({
         </div>
         <div className="space-y-3">
           {isPro ? (
-            <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+            <div className="flex items-center gap-3 rounded-md border border-border bg-card p-3">
               {previewSrc ? (
-                <img src={previewSrc} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                <img src={previewSrc} alt="" className="h-16 w-16 rounded-md object-cover" />
               ) : (
-                <div className="grid h-16 w-16 place-items-center rounded-lg bg-muted text-muted-foreground">
+                <div className="grid h-16 w-16 place-items-center rounded-md bg-muted text-muted-foreground">
                   <ImagePlus className="h-5 w-5" />
                 </div>
               )}
@@ -509,7 +509,7 @@ function ProductModal({
               />
             </div>
           ) : (
-            <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
               <Crown className="h-4 w-4 text-amber-500" />
               ကုန်ပစ္စည်း ဓာတ်ပုံ ထည့်ရန် Pro Plan လိုအပ်သည်။
             </div>
@@ -528,7 +528,7 @@ function ProductModal({
           </div>
 
           {isPro ? (
-            <div className="rounded-lg border border-border bg-card p-3">
+            <div className="rounded-md border border-border bg-card p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs font-semibold">ထုပ်ပိုးမှု အရွယ်အစား</span>
                 <Button variant="ghost"
@@ -591,7 +591,7 @@ function ProductModal({
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
               <Crown className="h-4 w-4 text-amber-500" />
               ထုပ်ပိုးမှု အရွယ်အစား စီမံခန့်ခွဲရန် Pro Plan လိုအပ်သည်။
             </div>
@@ -624,7 +624,7 @@ function ProductModal({
                 : undefined,
             }).finally(() => setSaving(false));
           }}
-          className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-transform hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
+          className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-transform hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
         >
           {saving ? "သိမ်းဆည်းနေသည်..." : "ကုန်ပစ္စည်း သိမ်းဆည်းမည်"}
         </Button>
@@ -645,7 +645,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-6 print:static print:block print:bg-transparent print:p-0">
-      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-xl print:border-0 print:p-0 print:shadow-none">
+      <div className="w-full max-w-lg rounded-md border border-border bg-card p-5 shadow-xl print:border-0 print:p-0 print:shadow-none">
         <div className="mb-4 flex items-center justify-between print:hidden">
           <h2 className="text-sm font-semibold">လေဘယ် ထုတ်ယူရန်</h2>
           <Button variant="ghost" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -659,7 +659,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
               key={key}
               onClick={() => setMode(key)}
               className={cn(
-                "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border text-xs font-medium transition-all active:scale-95",
+                "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border text-xs font-medium transition-all active:scale-95",
                 mode === key
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border hover:bg-accent",
@@ -685,7 +685,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
                 key={key}
                 onClick={() => toggle(key)}
                 className={cn(
-                  "min-h-9 rounded-full border px-3 text-xs font-medium",
+                  "min-h-9 rounded-md border px-3 text-xs font-medium",
                   show[key] ? "border-primary bg-primary text-primary-foreground" : "border-border",
                 )}
               >
@@ -716,7 +716,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
                 onChange={(e) =>
                   setQty(Math.min(200, Math.max(1, Math.trunc(Number(e.target.value) || 1))))
                 }
-                className="h-9 w-20 rounded-lg border border-input bg-background px-2 text-sm"
+                className="h-9 w-20 rounded-md border border-input bg-background px-2 text-sm"
               />
             </label>
           </div>
@@ -764,13 +764,13 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
         <div className="mt-5 flex gap-2 print:hidden">
           <Button variant="ghost"
             onClick={() => window.print()}
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95"
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:scale-95"
           >
             <Printer className="h-4 w-4" /> {qty} ခု ပရင်ထုတ်မည်
           </Button>
           <Button variant="ghost"
             onClick={onClose}
-            className="min-h-11 flex-1 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent active:scale-95"
+            className="min-h-11 flex-1 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent active:scale-95"
           >
             ပိတ်မည်
           </Button>
@@ -808,7 +808,7 @@ function ImportModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-6">
-      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-xl">
+      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-md border border-border bg-card p-5 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <FileSpreadsheet className="h-4 w-4" /> ကုန်ပစ္စည်း အစုလိုက် ထည့်သွင်းခြင်း
@@ -819,7 +819,7 @@ function ImportModal({
         </div>
 
         {!isPro && (
-          <div className="mb-3 flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+          <div className="mb-3 flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
             <Crown className="h-4 w-4 text-amber-500" />
             အစုလိုက် ထည့်သွင်းခြင်းသည် Pro Plan အင်္ဂါရပ် ဖြစ်သည်။
           </div>
@@ -834,13 +834,13 @@ function ImportModal({
         <div className="mt-3 flex flex-wrap gap-2">
           <Button variant="ghost"
             onClick={() => downloadCsv("items-template.csv", SAMPLE_CSV_ROWS)}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
           >
             နမူနာ CSV ရယူမည်
           </Button>
           <Button variant="ghost"
             onClick={() => inputRef.current?.click()}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
           >
             ဖိုင် ရွေးမည်
           </Button>
@@ -863,7 +863,7 @@ function ImportModal({
         )}
 
         {errors.length > 0 && (
-          <ul className="mt-2 max-h-28 space-y-1 overflow-y-auto rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+          <ul className="mt-2 max-h-28 space-y-1 overflow-y-auto rounded-md border border-warning/40 bg-warning-soft p-2 text-xs text-warning">
             {errors.slice(0, 20).map((err) => (
               <li key={err}>{err}</li>
             ))}
@@ -871,7 +871,7 @@ function ImportModal({
         )}
 
         {rows.length > 0 && (
-          <div className="mt-3 max-h-48 overflow-y-auto rounded-lg border border-border">
+          <div className="mt-3 max-h-48 overflow-y-auto rounded-md border border-border">
             <table className="w-full text-xs">
               <thead className="bg-muted/50 text-left text-muted-foreground">
                 <tr>
@@ -907,7 +907,7 @@ function ImportModal({
               .catch(() => toast.error("ထည့်သွင်း၍ မရပါ"))
               .finally(() => setBusy(false));
           }}
-          className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           {busy && <Loader2 className="h-4 w-4 animate-spin" />} ထည့်သွင်းမည်
         </Button>

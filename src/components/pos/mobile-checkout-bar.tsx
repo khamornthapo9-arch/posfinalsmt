@@ -14,19 +14,20 @@ export function MobileCheckoutBar({ cart, total, currencySymbol, onCheckout }: M
   const count = cart.reduce((sum, line) => sum + line.quantity, 0);
 
   return (
-    <div className="border-t border-border bg-card p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+    <div className="flex items-center gap-3 border-t border-border bg-card px-3 py-2.5">
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <ShoppingCart className="h-3.5 w-3.5" />
+          <span className="tabular-nums">{count}</span> ခု
+        </p>
+        <p className="truncate text-lg font-bold leading-7 tabular-nums">{fmt(total)}</p>
+      </div>
       <button
         onClick={onCheckout}
         disabled={cart.length === 0}
-        className="flex w-full items-center justify-between rounded-xl bg-primary px-4 py-3 text-primary-foreground disabled:opacity-50"
+        className="h-12 shrink-0 rounded-md bg-primary px-6 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
       >
-        <span className="flex items-center gap-2 text-sm font-medium">
-          <ShoppingCart className="h-4 w-4" />
-          {count} ခု
-        </span>
-        <span className="text-base font-bold tabular-nums">
-          {fmt(total)} <span className="ml-1 text-sm font-normal opacity-90">→ Checkout</span>
-        </span>
+        Checkout
       </button>
     </div>
   );

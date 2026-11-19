@@ -7,7 +7,7 @@ const RevenueTrendChart = lazy(() =>
 const TopProductsChart = lazy(() =>
   import("@/components/lazy/analytics-charts").then((m) => ({ default: m.TopProductsChart })),
 );
-const chartFallback = <div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />;
+const chartFallback = <div className="h-full w-full animate-pulse rounded-md bg-muted/40" />;
 
 import {
   DollarSign,
@@ -162,7 +162,7 @@ function AnalyticsPage() {
         const lineItems = t.sale_items || t.transaction_items || [];
         for (const item of lineItems) {
           const matchedItem = items.find((i) => i.id === item.item_id);
-          const buyPrice = matchedItem?.buy_price || 0;
+          const buyPrice = matchedItem?.cost_price || 0;
           costOfGoods += buyPrice * (item.quantity || 1);
         }
       }
@@ -277,14 +277,17 @@ function AnalyticsPage() {
   };
 
   const exportCsv = () => {
-    const rows = filtered.map((t) => ({
-      ID: t.id,
-      Date: new Date(t.created_at).toLocaleString(),
-      Total: t.total_amount ?? t.total ?? 0,
-      Refund: (t.status === "REFUNDED" || t.is_refund) ? "Yes" : "No",
-      Payment: t.payment_method || "Cash",
-    }));
-    downloadCsv(rows, `sales-${range}-${new Date().toISOString().slice(0, 10)}.csv`);
+    const rows: (string | number)[][] = [
+      ["ID", "Date", "Total", "Refund", "Payment"],
+      ...filtered.map((t) => [
+        String(t.id),
+        new Date(t.created_at).toLocaleString(),
+        Number(t.total_amount ?? t.total ?? 0),
+        t.status === "REFUNDED" || t.is_refund ? "Yes" : "No",
+        String(t.payment_method || "Cash"),
+      ]),
+    ];
+    downloadCsv(`sales-${range}-${new Date().toISOString().slice(0, 10)}.csv`, rows);
     toast.success("CSV ထုတ်ယူပြီးပါပြီ");
   };
 
@@ -313,7 +316,7 @@ function AnalyticsPage() {
               key={r}
               onClick={() => setRange(r)}
               className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
                 range === r
                   ? "bg-primary text-primary-foreground"
                   : "border border-border bg-card text-muted-foreground hover:bg-accent",
@@ -329,14 +332,14 @@ function AnalyticsPage() {
                 type="date"
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="h-9 rounded-lg border border-input bg-card px-2 text-sm"
+                className="h-9 rounded-md border border-input bg-card px-2 text-sm"
               />
               <span className="text-muted-foreground">-</span>
               <input
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="h-9 rounded-lg border border-input bg-card px-2 text-sm"
+                className="h-9 rounded-md border border-input bg-card px-2 text-sm"
               />
             </div>
           )}
@@ -345,7 +348,7 @@ function AnalyticsPage() {
             <Button
               variant="outline"
               onClick={exportCsv}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium hover:bg-accent"
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
             >
               CSV ထုတ်ယူမည်
             </Button>
@@ -356,7 +359,7 @@ function AnalyticsPage() {
                 variant="outline"
                 onClick={() => void handleSendTelegram()}
                 disabled={sendingTelegram}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-500 hover:bg-sky-500/20 text-xs font-medium"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-sky-500/30 bg-sky-500/10 text-sky-500 hover:bg-sky-500/20 text-xs font-medium"
               >
                 {sendingTelegram ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -371,7 +374,7 @@ function AnalyticsPage() {
               <Button
                 variant="outline"
                 onClick={() => setEodOpen(true)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium hover:bg-accent"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
               >
                 <Printer className="h-3.5 w-3.5" /> နေ့ချုပ် ပရင့်
               </Button>
@@ -382,7 +385,7 @@ function AnalyticsPage() {
         {/* Main Metric Cards */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {cards.map((card) => (
-            <div key={card.label} className="report-metric rounded-lg border border-border bg-card p-4">
+            <div key={card.label} className="report-metric rounded-md border border-border bg-card p-4">
               <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
               <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">{card.value}</p>
             </div>
@@ -393,7 +396,7 @@ function AnalyticsPage() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {profitCards.map((card) => (
             <ProLock key={card.label} locked={card.pro && !isPro}>
-              <div className="report-metric rounded-lg border border-border bg-card p-4">
+              <div className="report-metric rounded-md border border-border bg-card p-4">
                 <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
                 <p className="mt-2 truncate text-xl font-semibold tabular-nums sm:text-2xl">
                   {card.value}
@@ -405,7 +408,7 @@ function AnalyticsPage() {
 
         {/* Payment Channels Split */}
         {isPro && (
-          <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-card p-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 rounded-md border border-border bg-card p-4 lg:grid-cols-4">
             {[
               { label: "ငွေသား (Cash)", value: paymentBuckets.cashIn },
               { label: "KBZ Pay", value: paymentBuckets.kbzIn },
@@ -423,7 +426,7 @@ function AnalyticsPage() {
         {/* Lazy Charts */}
         {isPro && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="rounded-lg border border-border bg-card p-4">
+            <div className="rounded-md border border-border bg-card p-4">
               <h3 className="mb-4 text-sm font-semibold">အရောင်း ဝင်ငွေ လားရာ</h3>
               <div className="h-64">
                 <Suspense fallback={chartFallback}>
@@ -432,7 +435,7 @@ function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-border bg-card p-4">
+            <div className="rounded-md border border-border bg-card p-4">
               <h3 className="mb-4 text-sm font-semibold">အရောင်းရဆုံး ပစ္စည်းများ</h3>
               <div className="h-64">
                 <Suspense fallback={chartFallback}>

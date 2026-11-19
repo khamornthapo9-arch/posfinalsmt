@@ -497,7 +497,7 @@ function RegisterPage() {
                   key={num}
                   onClick={() => openTable(num)}
                   className={cn(
-                    "flex min-h-28 flex-col justify-between rounded-lg border bg-card px-4 py-3 text-left shadow-sm transition-colors",
+                    "flex min-h-28 flex-col justify-between rounded-md border bg-card px-4 py-3 text-left shadow-sm transition-colors",
                     occupied
                       ? "border-red-200 bg-red-50 hover:border-red-300"
                       : "border-emerald-200 bg-emerald-50/60 hover:border-emerald-300",
@@ -830,7 +830,7 @@ function CustomerPickerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-      <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-lg border border-border bg-card p-5 shadow-lg">
+      <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold">အကြွေး ဖောက်သည် ရွေးရန်</h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -964,7 +964,7 @@ function ReceiptModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
       <div
         className={cn(
-          "print-area receipt-sheet my-auto w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-lg",
+          "print-area receipt-sheet my-auto w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg",
           paperWidth === "58" && "receipt-58",
         )}
       >
@@ -1113,7 +1113,7 @@ function KitchenTicketModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
-      <div className="print-area kitchen-ticket w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-lg">
+      <div className="print-area kitchen-ticket w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-3 flex items-center justify-between print:hidden">
           <h2 className="text-sm font-semibold">မီးဖိုချောင် အော်ဒါလတ်မှတ်</h2>
           <button onClick={onClose} aria-label="လက်မှတ် ပိတ်ရန်" className="text-muted-foreground">
@@ -1168,7 +1168,7 @@ function HoldNoteModal({
   const [note, setNote] = useState("");
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-lg">
+      <div className="w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold">ခဏဆိုင်းထားမည်</h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -1225,7 +1225,7 @@ function HeldOrdersDrawer({
             <p className="py-10 text-center text-sm text-muted-foreground">ဆိုင်းထားသော ဘောက်ချာ မရှိပါ။</p>
           )}
           {orders.map((order) => (
-            <div key={order.id} className="mb-3 rounded-lg border border-border p-3 shadow-sm">
+            <div key={order.id} className="mb-3 rounded-md border border-border p-3 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">{order.note || "မှတ်ချက်မရှိ"}</span>
                 <span className="text-sm font-bold tabular-nums">{fmt(order.total_amount)}</span>
@@ -1301,7 +1301,7 @@ function OrderHistoryDrawer({
             <button
               key={order.id}
               onClick={() => setSelected(order)}
-              className="mb-2 flex w-full items-center justify-between gap-2 rounded-lg border border-border px-3 py-2.5 text-left hover:bg-accent"
+              className="mb-2 flex w-full items-center justify-between gap-2 rounded-md border border-border px-3 py-2.5 text-left hover:bg-accent"
             >
               <span className="min-w-0">
                 <span className="block text-sm font-semibold tabular-nums">{fmt(order.total_amount)}</span>

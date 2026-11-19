@@ -118,7 +118,7 @@ export function CartPanel({
                   className="flex items-center gap-3 px-4 py-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{line.name}</p>
+                    <p className="truncate text-sm font-medium leading-6">{line.name}</p>
                     <p className="text-[11px] tabular-nums text-muted-foreground">
                       {fmt(line.unit_price)} / {line.unit_name ?? "အရပ်"} · ကျန် {stock}
                     </p>
@@ -148,7 +148,7 @@ export function CartPanel({
                   <button
                     onClick={() => onRemove(line.item_id, unitKey)}
                     aria-label={`${line.name} ကို ဖျက်ရန်`}
-                    className="text-muted-foreground transition-colors hover:text-destructive"
+                    className="ml-1 grid h-8 w-8 place-items-center rounded-md border-l border-border text-muted-foreground transition-colors hover:bg-danger-soft hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -159,7 +159,7 @@ export function CartPanel({
         )}
       </div>
 
-      <div className="border-t border-border bg-card p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
+      <div className="border-t border-border bg-card p-4">
         {isRestaurant && (
           <div className="mb-3">
             <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
@@ -184,9 +184,9 @@ export function CartPanel({
             <span>အခွန် ({taxPercent}%)</span>
             <span className="tabular-nums">{fmt(tax)}</span>
           </div>
-          <div className="flex justify-between text-base font-semibold">
-            <span>ကျသင့်ငွေ</span>
-            <span className="tabular-nums">{fmt(total)}</span>
+          <div className="mt-2 flex items-end justify-between border-t border-border pt-2.5">
+            <span className="text-sm font-semibold leading-7">ကျသင့်ငွေ</span>
+            <span className="text-2xl font-bold leading-8 tabular-nums">{fmt(total)}</span>
           </div>
         </div>
 
@@ -219,17 +219,17 @@ export function CartPanel({
                 <button
                   onClick={() => (splitMode ? onToggleSplit(method.id) : onSelectPayment(method.id))}
                   className={cn(
-                    "press inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
+                    "press inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors",
                     active
-                      ? `${method.tone} border-transparent text-white`
-                      : "border-border bg-background hover:bg-accent",
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input bg-card text-foreground hover:bg-accent",
                   )}
                 >
                   {method.logo && (
                     <img
                       src={method.logo}
                       alt={`${method.label} logo`}
-                      className="h-4 w-4 rounded-xs bg-white object-contain p-px"
+                      className="h-4 w-4 rounded-xs bg-card object-contain p-px"
                     />
                   )}
                   {method.label}
@@ -312,14 +312,14 @@ export function CartPanel({
               <button
                 onClick={onPark}
                 disabled={cart.length === 0 || busy}
-                className="press inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-warning bg-warning/10 text-sm font-semibold text-warning hover:bg-warning/20 disabled:opacity-50"
+                className="press inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-input bg-card text-sm font-semibold text-foreground hover:bg-accent disabled:opacity-50"
               >
                 <PauseCircle className="h-4 w-4" /> ခဏဆိုင်းထားမည်
               </button>
               <button
                 onClick={onComplete}
                 disabled={cart.length === 0 || busy || needsCreditCustomer || (splitMode && remaining !== 0)}
-                className="press h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className="press h-14 w-full rounded-md bg-primary text-base font-bold tabular-nums text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
               >
                 {busy ? "လုပ်ဆောင်နေသည်…" : `စာရင်းတွက်မည် · ${fmt(total)}`}
               </button>

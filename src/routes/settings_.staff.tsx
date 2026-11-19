@@ -115,14 +115,14 @@ function BranchesPage() {
         {!isMain ? (
           <p className="text-sm text-muted-foreground">ပင်မဆိုင် ပိုင်ရှင်သာ ဆိုင်ခွဲ စီမံနိုင်ပါသည်။</p>
         ) : !isPro ? (
-          <div className="rounded-xl border border-border bg-card p-5 text-sm">
+          <div className="rounded-md border border-border bg-card p-5 text-sm">
             ဆိုင်ခွဲ ဖွင့်ရန် Pro Plan လိုအပ်ပါသည်။{" "}
             <Link to="/settings/plan" className="font-medium text-primary underline">
               Admin ကို ဆက်သွယ်ရန်
             </Link>
           </div>
         ) : (
-          <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+          <div className="space-y-3 rounded-md border border-border bg-card p-4">
             <h2 className="font-semibold">ဆိုင်ခွဲ အသစ်</h2>
             <div className="grid gap-2 sm:grid-cols-[1fr_140px_auto]">
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ဆိုင်ခွဲ အမည်" maxLength={80} />
@@ -140,7 +140,7 @@ function BranchesPage() {
           </div>
         )}
         {isMain && (
-          <div className="divide-y divide-border rounded-xl border border-border bg-card">
+          <div className="divide-y divide-border rounded-md border border-border bg-card">
             {loading ? (
               <p className="p-4 text-sm text-muted-foreground">…</p>
             ) : rows.length === 0 ? (

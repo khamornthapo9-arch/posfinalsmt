@@ -43,7 +43,7 @@ export function ProLock({
 }) {
   if (!locked) return <>{children}</>;
   return (
-    <div className={cn("relative overflow-hidden rounded-xl", className)}>
+    <div className={cn("relative overflow-hidden rounded-md", className)}>
       <div aria-hidden className="pointer-events-none select-none blur-[6px]">
         {children}
       </div>

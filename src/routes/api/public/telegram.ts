@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const BOT_TOKEN = process.env["TELEGRAM_BOT_TOKEN"];
 
 async function sendTelegramMessage(chatId: string | number, text: string) {
   if (!BOT_TOKEN) return;

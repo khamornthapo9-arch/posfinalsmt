@@ -57,7 +57,7 @@ function CustomersPage() {
     return (
       <PosShell title="ဖောက်သည်များ">
         <div className="p-4">
-          <p className="rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center text-sm text-muted-foreground">
+          <p className="rounded-md border border-dashed border-border bg-card px-6 py-14 text-center text-sm text-muted-foreground">
             ဤမော်ဂျူးကို အသုံးပြုရန် ပြုပြင်ခြင်းတွင် အဆင့်မြင့် စာရင်းကိုင် မုဒ်ကို ဖွင့်ပါ။
           </p>
         </div>
@@ -75,18 +75,18 @@ function CustomersPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="ဖောက်သည် ရှာဖွေရန်"
-              className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              className="h-11 w-full rounded-md border border-input bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <button
             onClick={() => setEditing("new")}
-            className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" /> ဖောက်သည် အသစ်
           </button>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-md border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -196,7 +196,7 @@ function CustomerModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-lg">
+      <div className="w-full max-w-md rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">
             {customer ? "ဖောက်သည် ပြင်ဆင်ရန်" : "ဖောက်သည် အသစ်"}
@@ -236,7 +236,7 @@ function CustomerModal({
               note: note.trim(),
             }).finally(() => setSaving(false));
           }}
-          className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           သိမ်းဆည်းမည်
         </button>
@@ -264,7 +264,7 @@ export function SettleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-lg">
+      <div className="w-full max-w-md rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">{title}</h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -311,7 +311,7 @@ export function SettleModal({
             setBusy(true);
             void onConfirm(Number(amount), method).finally(() => setBusy(false));
           }}
-          className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           မှတ်တမ်းတင်မည်
         </button>

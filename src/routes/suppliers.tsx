@@ -51,7 +51,7 @@ function SuppliersPage() {
     return (
       <PosShell title="ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ">
         <div className="p-4">
-          <p className="rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center text-sm text-muted-foreground">
+          <p className="rounded-md border border-dashed border-border bg-card px-6 py-14 text-center text-sm text-muted-foreground">
             ဤမော်ဂျူးကို အသုံးပြုရန် ပြုပြင်ခြင်းတွင် အဆင့်မြင့် စာရင်းကိုင် မုဒ်ကို ဖွင့်ပါ။
           </p>
         </div>
@@ -65,19 +65,19 @@ function SuppliersPage() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSupplierOpen(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium hover:bg-accent"
+            className="inline-flex h-11 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium hover:bg-accent"
           >
             <Plus className="h-4 w-4" /> ကုန်သွင်းသူ အသစ်
           </button>
           <button
             onClick={() => setPurchaseOpen(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" /> ဝယ်ယူမှု အော်ဒါ
           </button>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-md border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -128,14 +128,14 @@ function SuppliersPage() {
         <div className="space-y-2">
           <h2 className="text-sm font-semibold">ဝယ်ယူမှု အော်ဒါများ</h2>
           {purchases.length === 0 && (
-            <p className="rounded-lg border border-dashed border-border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
+            <p className="rounded-md border border-dashed border-border bg-card px-4 py-10 text-center text-sm text-muted-foreground">
               ဝယ်ယူမှု မှတ်တမ်း မရှိသေးပါ။
             </p>
           )}
           {purchases.map((purchase) => {
             const supplier = suppliers.find((s) => s.id === purchase.supplier_id);
             return (
-              <div key={purchase.id} className="rounded-xl border border-border bg-card p-4">
+              <div key={purchase.id} className="rounded-md border border-border bg-card p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{supplier?.name ?? "ကုန်သွင်းသူ မသတ်မှတ်"}</p>
@@ -232,7 +232,7 @@ function SupplierModal({
   const [busy, setBusy] = useState(false);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-lg">
+      <div className="w-full max-w-md rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">ကုန်သွင်းသူ အသစ်</h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -259,7 +259,7 @@ function SupplierModal({
             setBusy(true);
             void onSave({ name: name.trim(), phone: phone.trim(), note: note.trim() }).finally(() => setBusy(false));
           }}
-          className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           သိမ်းဆည်းမည်
         </button>
@@ -296,7 +296,7 @@ function PurchaseModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-lg">
+      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">ဝယ်ယူမှု အော်ဒါ အသစ်</h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -390,7 +390,7 @@ function PurchaseModal({
               notes: notes.trim(),
             }).finally(() => setBusy(false));
           }}
-          className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           သိမ်းဆည်းမည် ({total.toFixed(2)})
         </button>

@@ -80,7 +80,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4 sm:p-6">
+    <div className="rounded-md border border-border bg-card p-4 sm:p-6">
       <div className="mb-4">
         <h2 className="text-base font-semibold">{title}</h2>
         {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
@@ -258,7 +258,7 @@ function SettingsPage() {
 
   const telegramChatId = (store as any)?.telegram_chat_id;
   const telegramUsername = (store as any)?.telegram_username;
-  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || "Smtpos_bot";
+  const botUsername = import.meta.env["VITE_TELEGRAM_BOT_USERNAME"] || "Smtpos_bot";
 
   return (
     <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ">
@@ -283,7 +283,7 @@ function SettingsPage() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             to="/settings/staff"
-            className="flex items-center justify-between rounded-lg border border-border bg-card p-4 hover:border-primary/50 transition-colors"
+            className="flex items-center justify-between rounded-md border border-border bg-card p-4 hover:border-primary/50 transition-colors"
           >
             <div>
               <p className="text-sm font-semibold">ဝန်ထမ်းများနှင့် ဆိုင်ခွဲများ</p>
@@ -294,7 +294,7 @@ function SettingsPage() {
 
           <Link
             to="/settings/receipt"
-            className="flex items-center justify-between rounded-lg border border-border bg-card p-4 hover:border-primary/50 transition-colors"
+            className="flex items-center justify-between rounded-md border border-border bg-card p-4 hover:border-primary/50 transition-colors"
           >
             <div>
               <p className="text-sm font-semibold">ဘောက်ချာ စာရွက်ပုံစံ</p>
@@ -305,7 +305,7 @@ function SettingsPage() {
 
           <Link
             to="/settings/plan"
-            className="flex items-center justify-between rounded-lg border border-border bg-card p-4 hover:border-primary/50 transition-colors"
+            className="flex items-center justify-between rounded-md border border-border bg-card p-4 hover:border-primary/50 transition-colors"
           >
             <div>
               <p className="text-sm font-semibold">အဆင့်မြှင့်တင်မှု (Pro Plan)</p>
@@ -319,7 +319,7 @@ function SettingsPage() {
         <Section title="ဆိုင် အချက်အလက်များ">
           <div className="space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
                 {logoUrl ? (
                   <img src={logoUrl} alt="Store logo" className="h-full w-full object-cover" />
                 ) : (

@@ -38,7 +38,7 @@ function ExpensesPage() {
     return (
       <PosShell title="အသုံးစရိတ်">
         <div className="p-4">
-          <div className="rounded-xl border border-dashed border-border bg-card px-6 py-14 text-center">
+          <div className="rounded-md border border-dashed border-border bg-card px-6 py-14 text-center">
             <p className="text-sm text-muted-foreground">
               အသုံးစရိတ် မှတ်တမ်းသည် Pro Plan တွင်သာ ရရှိနိုင်ပါသည်။
             </p>
@@ -55,7 +55,7 @@ function ExpensesPage() {
     return (
       <PosShell title="အသုံးစရိတ်">
         <div className="p-4">
-          <p className="rounded-lg border border-dashed border-border bg-card px-6 py-14 text-center text-sm text-muted-foreground">
+          <p className="rounded-md border border-dashed border-border bg-card px-6 py-14 text-center text-sm text-muted-foreground">
             ဤမော်ဂျူးကို အသုံးပြုရန် ပြုပြင်ခြင်းတွင် အဆင့်မြင့် စာရင်းကိုင် မုဒ်ကို ဖွင့်ပါ။
           </p>
         </div>
@@ -68,12 +68,12 @@ function ExpensesPage() {
       <div className="space-y-4 p-3 sm:p-4">
         <button
           onClick={() => setOpen(true)}
-          className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" /> အသုံးစရိတ် ထည့်မည်
         </button>
 
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-md border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -151,7 +151,7 @@ function ExpenseModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-lg">
+      <div className="w-full max-w-md rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">အသုံးစရိတ် အသစ်</h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -214,7 +214,7 @@ function ExpenseModal({
               spentAt: new Date().toISOString(),
             }).finally(() => setBusy(false));
           }}
-          className="mt-5 h-12 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           သိမ်းဆည်းမည်
         </button>

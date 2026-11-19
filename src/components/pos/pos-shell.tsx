@@ -8,7 +8,7 @@ import {
   UserCog,
   X,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-store";
 import { usePlatformAdmin } from "@/lib/use-platform-admin";
 import { AnnouncementMarquee } from "@/components/pos/announcement-marquee";
@@ -17,9 +17,19 @@ import { useSubscription } from "@/lib/subscription";
 import { StaffSwitchModal } from "@/components/pos/staff-switch-modal";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
+import { ShoppingCart, Boxes, BarChart3, Settings as SettingsIcon, Users, Truck, Wallet, ShieldCheck } from "lucide-react";
 
-// Static logo fallbacks pointing directly to public folder
-const DEFAULT_LOGO = "/smt-pos-logo.png";
+const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  sales: ShoppingCart,
+  inventory: Boxes,
+  reports: BarChart3,
+  settings: SettingsIcon,
+  customers: Users,
+  suppliers: Truck,
+  expenses: Wallet,
+  admin: ShieldCheck,
+};
+
 
 const NAV = [
   { to: "/register", label: "အရောင်းစာရင်း", tone: "sales", roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
@@ -38,21 +48,26 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
   const logo = useStoreLogo();
   const { store } = useAuth();
 
-  const logoSrc = logo || DEFAULT_LOGO;
-
   return (
     <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
-      <img
-        src={logoSrc}
-        alt={store ? `${store.name} logo` : "SMT POS logo"}
-        className="h-9 w-9 shrink-0 rounded-md bg-white object-contain p-0.5"
-      />
+      {logo ? (
+        <img
+          src={logo}
+          alt={store ? `${store.name} logo` : "SMT POS logo"}
+          className="h-9 w-9 shrink-0 rounded-md border border-sidebar-border bg-card object-contain p-0.5"
+        />
+      ) : (
+        <div
+          aria-label="SMT POS"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-[11px] font-black tracking-wider text-sidebar-primary-foreground"
+        >
+          SMT
+        </div>
+      )}
       {!collapsed && (
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold tracking-tight text-sidebar-accent-foreground">
-            SMT POS
-          </p>
-          <p className="truncate text-xs text-sidebar-foreground/60">{store?.name ?? "Store"}</p>
+          <p className="truncate text-sm font-bold tracking-tight text-sidebar-foreground">SMT POS</p>
+          <p className="truncate text-xs leading-5 text-muted-foreground">{store?.name ?? "Store"}</p>
         </div>
       )}
     </div>
@@ -71,7 +86,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
     : null;
   return (
     <nav className="flex flex-col gap-0.5">
-      {items.map((item, index) => (
+      {items.map((item) => (
         <Link
           key={item.to}
           to={item.to as string}
@@ -80,15 +95,19 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
           onClick={onNavigate}
           activeOptions={{ exact: item.to === "/register" }}
           activeProps={{
-            className: "bg-sidebar-accent text-sidebar-accent-foreground",
+            className: "",
             "data-active": "true",
           }}
           className={cn(
-            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors",
             collapsed && "justify-center px-0",
           )}
         >
-          <span className="truncate">{collapsed ? String(index + 1).padStart(2, "0") : item.label}</span>
+          {(() => {
+            const Icon = NAV_ICONS[item.tone] ?? ShoppingCart;
+            return <Icon className="h-4 w-4 shrink-0" />;
+          })()}
+          {!collapsed && <span className="truncate leading-6">{item.label}</span>}
         </Link>
       ))}
       {adminItem && (
@@ -97,13 +116,14 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
           title={adminItem.label}
           data-tone={adminItem.tone}
           onClick={onNavigate}
-          activeProps={{ className: "bg-sidebar-accent text-sidebar-accent-foreground", "data-active": "true" }}
+          activeProps={{ "data-active": "true" }}
           className={cn(
-            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors",
             collapsed && "justify-center px-0",
           )}
         >
-          <span className="truncate">{collapsed ? "A" : adminItem.label}</span>
+          <ShieldCheck className="h-4 w-4 shrink-0" />
+          {!collapsed && <span className="truncate leading-6">{adminItem.label}</span>}
         </Link>
       )}
     </nav>
@@ -282,7 +302,7 @@ export function PosShell({
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
+    <div className="pos-app flex min-h-screen w-full bg-background text-foreground">
       {/* Sidebar */}
       <aside
         className={cn(
@@ -319,7 +339,7 @@ export function PosShell({
           <button
             aria-label="Close menu"
             onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-slate-900/60"
+            className="absolute inset-0 bg-foreground/50"
           />
           <div className="absolute inset-y-0 left-0 flex w-[264px] flex-col border-r border-sidebar-border bg-sidebar p-3">
             <div className="flex items-center justify-between px-1 py-2">
@@ -353,7 +373,7 @@ export function PosShell({
               <Menu className="h-4 w-4" />
             </button>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold tracking-tight">{title}</h1>
+              <h1 className="truncate text-base font-semibold leading-7 tracking-tight">{title}</h1>
               {subtitle && (
                 <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
               )}

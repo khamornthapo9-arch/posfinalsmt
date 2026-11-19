@@ -16,12 +16,13 @@ export interface DailyReportInput {
   waveIn: number;
   creditIssued: number;
   closedBy?: string;
+  isTest?: boolean;
 }
 
 export const sendStoreTelegramReport = createServerFn({ method: "POST" })
   .validator((d: DailyReportInput) => d)
   .handler(async ({ data }) => {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const token = process.env["TELEGRAM_BOT_TOKEN"];
     if (!token) {
       return { success: false, error: "Telegram Bot Token မရှိပါ" };
     }

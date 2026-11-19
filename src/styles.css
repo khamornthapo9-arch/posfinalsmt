@@ -22,10 +22,10 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-4xl: var(--radius);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -81,64 +81,55 @@
 }
 
 :root {
-  --radius: 0.75rem;
-  /* Soft off-white canvas #F8FAFC */
-  --background: oklch(0.984 0.003 247.858);
+  --radius: 0.375rem;
+  /* Neutral app canvas #F4F5F7 */
+  --background: oklch(0.969 0.003 264.5);
   --foreground: oklch(0.208 0.042 265.755);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.208 0.042 265.755);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.208 0.042 265.755);
-  /* Indigo #4F46E5 */
-  --primary: oklch(0.511 0.262 276.966);
+  /* Deep slate navy #0F172A */
+  --primary: oklch(0.208 0.042 265.755);
   --primary-foreground: oklch(0.985 0.002 247.839);
-  --secondary: oklch(0.968 0.007 247.896);
+  --secondary: oklch(0.969 0.003 264.5);
   --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.962 0.018 272.314);
-  --accent-foreground: oklch(0.373 0.184 277.366);
-  /* Coral red #EF4444 */
-  --destructive: oklch(0.637 0.237 25.331);
+  --muted: oklch(0.969 0.003 264.5);
+  --muted-foreground: oklch(0.446 0.037 257.281);
+  --accent: oklch(0.945 0.006 264.5);
+  --accent-foreground: oklch(0.208 0.042 265.755);
+  /* Red #DC2626 */
+  --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0.002 247.839);
-  --danger-soft: oklch(0.955 0.032 25.331);
-  /* Emerald #10B981 */
-  --success: oklch(0.696 0.17 162.48);
+  --danger-soft: oklch(0.96 0.025 27.325);
+  /* Emerald #15803D */
+  --success: oklch(0.527 0.137 150.069);
   --success-foreground: oklch(0.985 0.002 247.839);
-  --success-soft: oklch(0.958 0.037 162.48);
-  /* Amber #F59E0B */
-  --warning: oklch(0.769 0.188 70.08);
-  --warning-foreground: oklch(0.279 0.077 45.635);
-  --warning-soft: oklch(0.962 0.06 82.5);
-  /* Blue #3B82F6 */
-  --info: oklch(0.623 0.214 259.815);
+  --success-soft: oklch(0.962 0.04 150);
+  /* Amber #D97706 */
+  --warning: oklch(0.666 0.179 58.318);
+  --warning-foreground: oklch(0.985 0.002 247.839);
+  --warning-soft: oklch(0.962 0.05 80);
+  --info: oklch(0.372 0.044 257.287);
   --info-foreground: oklch(0.985 0.002 247.839);
-  --info-soft: oklch(0.955 0.028 259.815);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.511 0.262 276.966);
-  --chart-1: oklch(0.511 0.262 276.966);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.623 0.214 259.815);
-  --chart-5: oklch(0.637 0.237 25.331);
-  /* Dark slate sidebar #0F172A */
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.869 0.022 252.894);
-  --sidebar-primary: oklch(0.585 0.233 277.117);
+  --info-soft: oklch(0.945 0.01 257);
+  /* Hairline #E2E6EC */
+  --border: oklch(0.925 0.008 258);
+  --input: oklch(0.89 0.01 258);
+  --ring: oklch(0.208 0.042 265.755);
+  --chart-1: oklch(0.208 0.042 265.755);
+  --chart-2: oklch(0.527 0.137 150.069);
+  --chart-3: oklch(0.666 0.179 58.318);
+  --chart-4: oklch(0.446 0.043 257.281);
+  --chart-5: oklch(0.577 0.245 27.325);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.208 0.042 265.755);
+  --sidebar-primary: oklch(0.208 0.042 265.755);
   --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(0.279 0.041 260.031);
-  --sidebar-ring: oklch(0.585 0.233 277.117);
-  --nav-sales: oklch(0.83 0.12 160);
-  --nav-inventory: oklch(0.83 0.12 85);
-  --nav-reports: oklch(0.82 0.1 235);
-  --nav-settings: oklch(0.83 0.1 305);
-  --nav-customers: oklch(0.82 0.12 15);
-  --nav-suppliers: oklch(0.83 0.11 195);
-  --nav-expenses: oklch(0.84 0.11 55);
-  --nav-admin: oklch(0.84 0.1 115);
+  --sidebar-accent: oklch(0.945 0.006 264.5);
+  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
+  --sidebar-border: oklch(0.925 0.008 258);
+  --sidebar-ring: oklch(0.208 0.042 265.755);
 }
 
 .dark {
@@ -448,21 +439,14 @@
   animation: pos-marquee 18s linear infinite;
 }
 
-.pos-nav-tab { color: var(--tab-color); border-left: 3px solid var(--tab-color); }
-.pos-nav-tab[data-tone="sales"] { --tab-color: var(--nav-sales); }
-.pos-nav-tab[data-tone="inventory"] { --tab-color: var(--nav-inventory); }
-.pos-nav-tab[data-tone="reports"] { --tab-color: var(--nav-reports); }
-.pos-nav-tab[data-tone="settings"] { --tab-color: var(--nav-settings); }
-.pos-nav-tab[data-tone="customers"] { --tab-color: var(--nav-customers); }
-.pos-nav-tab[data-tone="suppliers"] { --tab-color: var(--nav-suppliers); }
-.pos-nav-tab[data-tone="expenses"] { --tab-color: var(--nav-expenses); }
-.pos-nav-tab[data-tone="admin"] { --tab-color: var(--nav-admin); }
-.pos-nav-tab:hover, .pos-nav-tab[data-active="true"] {
-  color: var(--tab-color);
-  background: color-mix(in oklch, var(--tab-color) 16%, var(--sidebar));
+.pos-nav-tab { color: var(--sidebar-foreground); border-left: 3px solid transparent; }
+.pos-nav-tab:hover { background: var(--sidebar-accent); }
+.pos-nav-tab[data-active="true"] {
+  font-weight: 700;
+  background: var(--sidebar-accent);
+  border-left-color: var(--sidebar-primary);
 }
-.pos-nav-tab[data-active="true"] { font-weight: 700; }
-.report-metric { border-top: 3px solid var(--info); }
+.report-metric { border-top: 2px solid var(--primary); }
 .report-metric:nth-child(4n + 2) { border-top-color: var(--success); }
 .report-metric:nth-child(4n + 3) { border-top-color: var(--warning); }
 .report-metric:nth-child(4n + 4) { border-top-color: var(--destructive); }
@@ -471,3 +455,12 @@
   font-family: "Noto Serif Myanmar", serif;
   letter-spacing: -0.01em;
 }
+
+/* Commercial retail shape rules: no pill controls inside the app shell. */
+.pos-app button.rounded-full,
+.pos-app a.rounded-full,
+.pos-app input.rounded-full,
+.pos-app [role="dialog"] .rounded-full:not(.h-2):not(.h-1\.5):not(.h-2\.5) {
+  border-radius: var(--radius);
+}
+.pos-app { font-variant-numeric: tabular-nums; }

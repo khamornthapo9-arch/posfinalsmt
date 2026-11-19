@@ -59,13 +59,13 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
         onClick={onClose}
         aria-label="Close checkout"
         className={cn(
-          "absolute inset-0 bg-slate-900/60 transition-opacity",
+          "absolute inset-0 bg-foreground/50 transition-opacity",
           open ? "opacity-100" : "opacity-0",
         )}
       />
       <div
         className={cn(
-          "absolute inset-x-0 bottom-0 top-16 flex flex-col rounded-t-2xl border-t border-border bg-card shadow-2xl transition-transform duration-300",
+          "absolute inset-x-0 bottom-0 top-16 flex flex-col rounded-t-md border-t border-border bg-card shadow-lg transition-transform duration-300",
           open ? "translate-y-0" : "translate-y-full",
         )}
       >

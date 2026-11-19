@@ -121,7 +121,7 @@ function ReceiptSettingsPage() {
       actions={
         <Link
           to="/settings"
-          className="no-print inline-flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+          className="no-print inline-flex h-10 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
         >
           <ArrowLeft className="h-4 w-4" /> ပြင်ဆင်ချက်များ
         </Link>
@@ -129,14 +129,14 @@ function ReceiptSettingsPage() {
     >
       <div className="grid gap-4 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="no-print space-y-4">
-          <section className="rounded-xl border border-border bg-card p-4">
+          <section className="rounded-md border border-border bg-card p-4">
             <h2 className="mb-3 text-sm font-semibold">ဆိုင် အချက်အလက်</h2>
             <div className="space-y-3">
               <Field label="ဆိုင်အမည်">
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   placeholder="SMT စတိုးဆိုင်"
                 />
               </Field>
@@ -145,7 +145,7 @@ function ReceiptSettingsPage() {
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   rows={2}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   placeholder="အမှတ် ၁၂၃၊ ဗိုလ်ချုပ်လမ်း၊ ရန်ကုန်"
                 />
               </Field>
@@ -160,12 +160,12 @@ function ReceiptSettingsPage() {
                         addPhone();
                       }
                     }}
-                    className="h-10 flex-1 rounded-lg border border-input bg-background px-3 text-sm"
+                    className="h-10 flex-1 rounded-md border border-input bg-background px-3 text-sm"
                     placeholder="09-xxxxxxxxx"
                   />
                   <button
                     onClick={addPhone}
-                    className="inline-flex h-10 items-center gap-1 rounded-lg border border-border px-3 text-sm font-medium hover:bg-accent"
+                    className="inline-flex h-10 items-center gap-1 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
                   >
                     <Plus className="h-4 w-4" /> ထည့်မည်
                   </button>
@@ -192,7 +192,7 @@ function ReceiptSettingsPage() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-border bg-card p-4">
+          <section className="rounded-md border border-border bg-card p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold">ပြေစာ စာသားများ</h2>
               {!isPro && (
@@ -207,7 +207,7 @@ function ReceiptSettingsPage() {
                   rows={2}
                   maxLength={160}
                   disabled={!isPro}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                   placeholder={isPro ? "ကြိုဆိုပါသည်!" : "Pro Plan သို့ အဆင့်မြှင့်ပါ"}
                 />
               </Field>
@@ -218,7 +218,7 @@ function ReceiptSettingsPage() {
                   rows={3}
                   maxLength={200}
                   disabled={!isPro}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
                   placeholder={isPro ? "ကျေးဇူးတင်ပါသည်။ နောက်တစ်ခေါက် ကြွရောက်ပါဦး!" : "Pro Plan သို့ အဆင့်မြှင့်ပါ"}
                 />
               </Field>
@@ -247,14 +247,14 @@ function ReceiptSettingsPage() {
             <button
               onClick={() => void save()}
               disabled={saving}
-              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               သိမ်းမည်
             </button>
             <button
               onClick={() => window.print()}
-              className="inline-flex h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm font-medium hover:bg-accent"
+              className="inline-flex h-11 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium hover:bg-accent"
             >
               <Printer className="h-4 w-4" /> အစမ်း ပရင့်
             </button>
@@ -265,7 +265,7 @@ function ReceiptSettingsPage() {
           <p className="no-print mb-2 text-xs font-medium text-muted-foreground">
             တိုက်ရိုက် အစမ်းကြည့်ရှုမှု
           </p>
-          <div className="rounded-xl bg-muted/50 p-3">
+          <div className="rounded-md bg-muted/50 p-3">
             <div
               className={cn(
                 "print-area receipt-sheet mx-auto bg-white p-4 font-mono text-[12px] leading-relaxed text-black shadow-sm",
