@@ -261,7 +261,7 @@ function ReceiptSettingsPage() {
           </div>
         </div>
 
-        <div className="lg:sticky lg:top-4">
+        <div className="lg:sticky lg:top-20">
           <p className="no-print mb-2 text-xs font-medium text-muted-foreground">
             တိုက်ရိုက် အစမ်းကြည့်ရှုမှု
           </p>
