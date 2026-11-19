@@ -1266,16 +1266,39 @@ function HeldOrdersDrawer({
 
 const REFUND_REASONS = ["ပစ္စည်း ပြန်အပ်", "ပစ္စည်း ချွတ်ယွင်း", "အမှားရိုက်မိ", "အခြား"];
 
+function isOrderToday(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
+function isOrderYesterday(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  return (
+    d.getFullYear() === yesterday.getFullYear() &&
+    d.getMonth() === yesterday.getMonth() &&
+    d.getDate() === yesterday.getDate()
+  );
+}
+
 function OrderHistoryDrawer({
   orders,
   fmt,
   canRefund,
+  isPro,
   onClose,
   onRefund,
 }: {
   orders: OrderSummary[];
   fmt: (n: number) => string;
   canRefund: boolean;
+  isPro: boolean;
   onClose: () => void;
   onRefund: (orderId: string, reason: string, note: string) => Promise<void>;
 }) {
@@ -1284,34 +1307,153 @@ function OrderHistoryDrawer({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Date filter state: Free gets "today" & "yesterday"; Pro also gets "custom" and "all"
+  const [filterMode, setFilterMode] = useState<"today" | "yesterday" | "custom" | "all">("today");
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      if (filterMode === "today") return isOrderToday(order.created_at);
+      if (filterMode === "yesterday") return isOrderYesterday(order.created_at);
+      if (filterMode === "custom") {
+        return order.created_at.slice(0, 10) === selectedDate;
+      }
+      return true; // "all" (Pro only)
+    });
+  }, [orders, filterMode, selectedDate]);
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60" onClick={onClose}>
       <aside
         className="flex h-full w-full max-w-md flex-col bg-card shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="text-sm font-semibold">ဘောက်ချာ မှတ်တမ်း</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">ဘောက်ချာ မှတ်တမ်း</h2>
+            {!isPro && (
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                အခမဲ့ (၂ ရက်သာ)
+              </span>
+            )}
+          </div>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Date Filter Tabs */}
+        <div className="border-b border-border bg-muted/40 p-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => {
+                setFilterMode("today");
+                setSelected(null);
+              }}
+              className={cn(
+                "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                filterMode === "today"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-foreground hover:bg-accent",
+              )}
+            >
+              ဒီနေ့
+            </button>
+            <button
+              onClick={() => {
+                setFilterMode("yesterday");
+                setSelected(null);
+              }}
+              className={cn(
+                "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                filterMode === "yesterday"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-foreground hover:bg-accent",
+              )}
+            >
+              မနေ့က
+            </button>
+
+            {isPro ? (
+              <>
+                <button
+                  onClick={() => {
+                    setFilterMode("custom");
+                    setSelected(null);
+                  }}
+                  className={cn(
+                    "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                    filterMode === "custom"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-foreground hover:bg-accent",
+                  )}
+                >
+                  ရက်စွဲရွေးမည်
+                </button>
+                <button
+                  onClick={() => {
+                    setFilterMode("all");
+                    setSelected(null);
+                  }}
+                  className={cn(
+                    "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                    filterMode === "all"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-foreground hover:bg-accent",
+                  )}
+                >
+                  အားလုံး
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground ml-auto">
+                <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-amber-600 dark:text-amber-400 font-medium">
+                  PRO
+                </span>
+                <span>ရက်စွဲအစုံကြည့်ရန်</span>
+              </div>
+            )}
+          </div>
+
+          {/* Custom Date Input for PRO */}
+          {isPro && filterMode === "custom" && (
+            <div className="mt-2.5 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">ရက်စွဲ:</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Orders List */}
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {orders.map((order) => (
+          {filteredOrders.map((order) => (
             <button
               key={order.id}
               onClick={() => setSelected(order)}
-              className="mb-2 flex w-full items-center justify-between gap-2 rounded-md border border-border px-3 py-2.5 text-left hover:bg-accent"
+              className={cn(
+                "mb-2 flex w-full items-center justify-between gap-2 rounded-md border p-3 text-left transition-colors",
+                selected?.id === order.id
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:bg-accent",
+              )}
             >
               <span className="min-w-0">
-                <span className="block text-sm font-semibold tabular-nums">{fmt(order.total_amount)}</span>
+                <span className="block text-sm font-semibold tabular-nums">
+                  {fmt(order.total_amount)}
+                </span>
                 <span className="block text-xs text-muted-foreground">
                   {new Date(order.created_at).toLocaleString()} · {order.payment_method}
                 </span>
               </span>
               <span
                 className={cn(
-                  "shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold text-white",
+                  "shrink-0 rounded px-2 py-0.5 text-[11px] font-bold text-white",
                   order.status === "REFUNDED"
                     ? "bg-destructive"
                     : order.status === "OPEN" || order.status === "UNPAID"
@@ -1323,55 +1465,80 @@ function OrderHistoryDrawer({
               </span>
             </button>
           ))}
-          {orders.length === 0 && (
-            <p className="py-10 text-center text-sm text-muted-foreground">မှတ်တမ်း မရှိသေးပါ။</p>
+          {filteredOrders.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              ရွေးချယ်ထားသော ရက်စွဲတွင် မှတ်တမ်း မရှိပါ။
+            </p>
           )}
         </div>
 
+        {/* Voucher Detail and Refund Section */}
         {selected && (
-          <div className="border-t border-border p-4">
-            <p className="text-sm font-semibold">ဘောက်ချာ အသေးစိတ်</p>
-            <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+          <div className="border-t border-border p-4 bg-background">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">ဘောက်ချာ အသေးစိတ်</p>
+              <span className="text-xs text-muted-foreground">
+                {new Date(selected.created_at).toLocaleDateString()}
+              </span>
+            </div>
+
+            <ul className="mt-2 space-y-1 text-xs text-muted-foreground max-h-32 overflow-y-auto">
               {selected.lines.map((line) => (
-                <li key={line.item_id} className="flex justify-between">
-                  <span className="truncate pr-2">{line.name} × {line.quantity}</span>
-                  <span className="tabular-nums">{fmt(line.quantity * line.unit_price)}</span>
+                <li key={line.item_id} className="flex justify-between border-b border-border/40 py-1">
+                  <span className="truncate pr-2">
+                    {line.name} × {line.quantity}
+                  </span>
+                  <span className="tabular-nums font-medium text-foreground">
+                    {fmt(line.quantity * line.unit_price)}
+                  </span>
                 </li>
               ))}
             </ul>
+
+            {/* Refund Action Section */}
             {canRefund && selected.status !== "REFUNDED" && (
-              <div className="mt-3 space-y-2">
-                <select
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  aria-label="ပြန်အမ်းရသည့် အကြောင်းရင်း"
-                  className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm"
-                >
-                  {REFUND_REASONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="မှတ်ချက် (ရွေးချယ်နိုင်)"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                />
-                <button
-                  disabled={busy}
-                  onClick={() => {
-                    setBusy(true);
-                    void onRefund(selected.id, reason, note).finally(() => {
-                      setBusy(false);
-                      setSelected(null);
-                    });
-                  }}
-                  className="press h-10 w-full rounded-md border border-destructive text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                >
-                  ပြန်အမ်း / ဘောက်ချာဖျက်မည်
-                </button>
+              <div className="mt-3">
+                {isOrderToday(selected.created_at) ? (
+                  /* Today's voucher: Refund Allowed */
+                  <div className="space-y-2">
+                    <select
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      aria-label="အကြောင်းရင်း"
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      {REFUND_REASONS.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="မှတ်ချက် (ရွေးချယ်နိုင်)"
+                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs"
+                    />
+                    <button
+                      disabled={busy}
+                      onClick={() => {
+                        setBusy(true);
+                        void onRefund(selected.id, reason, note).finally(() => {
+                          setBusy(false);
+                          setSelected(null);
+                        });
+                      }}
+                      className="press h-9 w-full rounded-md border border-destructive text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                      ပြန်အမ်း / ဘောက်ချာဖျက်မည်
+                    </button>
+                  </div>
+                ) : (
+                  /* Older voucher: Refund Disallowed */
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300">
+                    ယနေ့ (ဒီနေ့) ရောင်းချထားသော ဘောက်ချာများတွင်သာ
+                  </div>
+                )}
               </div>
             )}
           </div>
