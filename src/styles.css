@@ -18,14 +18,32 @@
  * 2. Register it in @theme inline as --color-<name>: var(--<name>)
  */
 
+/* Typeface: Inter for Latin + numerals, Noto Sans Myanmar for Burmese body copy.
+ * Headlines keep Noto Serif Myanmar (see .font-myanmar-serif). Every stack ends in
+ * system fonts so the offline-first app still renders correctly without the CDN. */
+@theme {
+  --font-sans:
+    "Inter", "Noto Sans Myanmar", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* Elevation: soft, ink-tinted, layered. Use these instead of raw shadow-md/lg. */
+  --shadow-card: 0 1px 2px oklch(0.21 0.04 266 / 0.04), 0 1px 3px oklch(0.21 0.04 266 / 0.06);
+  --shadow-pop:
+    0 2px 6px oklch(0.21 0.04 266 / 0.06), 0 12px 28px -8px oklch(0.21 0.04 266 / 0.18);
+  --shadow-btn:
+    inset 0 1px 0 oklch(1 0 0 / 0.14), 0 1px 2px oklch(0.3 0.15 277 / 0.35);
+  --shadow-brand:
+    0 1px 2px oklch(0.3 0.15 277 / 0.3), 0 10px 24px -8px oklch(0.5 0.21 277 / 0.55);
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: var(--radius);
-  --radius-2xl: var(--radius);
-  --radius-3xl: var(--radius);
-  --radius-4xl: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 14px);
+  --radius-4xl: calc(var(--radius) + 20px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -34,6 +52,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-brand-deep: var(--brand-deep);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -81,55 +101,58 @@
 }
 
 :root {
-  --radius: 0.375rem;
-  /* Neutral app canvas #F4F5F7 */
-  --background: oklch(0.969 0.003 264.5);
-  --foreground: oklch(0.208 0.042 265.755);
+  --radius: 0.5rem;
+  /* Canvas: cool off-white, so white cards lift off the page without heavy borders */
+  --background: oklch(0.975 0.004 265);
+  /* Ink: deep slate navy for text */
+  --foreground: oklch(0.205 0.04 266);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.208 0.042 265.755);
+  --card-foreground: oklch(0.205 0.04 266);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.208 0.042 265.755);
-  /* Deep slate navy #0F172A */
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.985 0.002 247.839);
-  --secondary: oklch(0.969 0.003 264.5);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.969 0.003 264.5);
-  --muted-foreground: oklch(0.446 0.037 257.281);
-  --accent: oklch(0.945 0.006 264.5);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  /* Red #DC2626 */
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0.002 247.839);
-  --danger-soft: oklch(0.96 0.025 27.325);
-  /* Emerald #15803D */
+  --popover-foreground: oklch(0.205 0.04 266);
+  /* Brand indigo (#4D49D7). White text on it is 6.3:1. One accent, used for actions and focus. */
+  --primary: oklch(0.5 0.21 277);
+  --primary-foreground: oklch(0.99 0.003 277);
+  /* Tinted surface for selected / active / icon tiles. Brand text on it is 5.7:1. */
+  --primary-soft: oklch(0.955 0.025 277);
+  /* Deep indigo for dark brand surfaces (hero, banners) */
+  --brand-deep: oklch(0.24 0.08 275);
+  --secondary: oklch(0.96 0.012 277);
+  --secondary-foreground: oklch(0.27 0.06 270);
+  --muted: oklch(0.962 0.006 265);
+  /* 6.5:1 on white, 6.1:1 on the canvas */
+  --muted-foreground: oklch(0.48 0.03 262);
+  --accent: oklch(0.953 0.014 272);
+  --accent-foreground: oklch(0.205 0.04 266);
+  /* Status colors are AA on white as text and as a fill behind white text */
+  --destructive: oklch(0.56 0.22 27);
+  --destructive-foreground: oklch(0.99 0.002 27);
+  --danger-soft: oklch(0.965 0.025 27);
   --success: oklch(0.527 0.137 150.069);
-  --success-foreground: oklch(0.985 0.002 247.839);
+  --success-foreground: oklch(0.99 0.002 150);
   --success-soft: oklch(0.962 0.04 150);
-  /* Amber #D97706 */
-  --warning: oklch(0.666 0.179 58.318);
-  --warning-foreground: oklch(0.985 0.002 247.839);
-  --warning-soft: oklch(0.962 0.05 80);
-  --info: oklch(0.372 0.044 257.287);
-  --info-foreground: oklch(0.985 0.002 247.839);
-  --info-soft: oklch(0.945 0.01 257);
-  /* Hairline #E2E6EC */
-  --border: oklch(0.925 0.008 258);
-  --input: oklch(0.89 0.01 258);
-  --ring: oklch(0.208 0.042 265.755);
-  --chart-1: oklch(0.208 0.042 265.755);
-  --chart-2: oklch(0.527 0.137 150.069);
-  --chart-3: oklch(0.666 0.179 58.318);
-  --chart-4: oklch(0.446 0.043 257.281);
-  --chart-5: oklch(0.577 0.245 27.325);
+  --warning: oklch(0.55 0.13 55);
+  --warning-foreground: oklch(0.99 0.003 80);
+  --warning-soft: oklch(0.965 0.045 85);
+  --info: oklch(0.52 0.16 250);
+  --info-foreground: oklch(0.99 0.003 250);
+  --info-soft: oklch(0.955 0.03 250);
+  --border: oklch(0.92 0.008 265);
+  --input: oklch(0.85 0.015 265);
+  --ring: oklch(0.55 0.2 277);
+  --chart-1: oklch(0.55 0.2 277);
+  --chart-2: oklch(0.62 0.15 160);
+  --chart-3: oklch(0.75 0.15 75);
+  --chart-4: oklch(0.65 0.14 235);
+  --chart-5: oklch(0.62 0.2 15);
   --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-accent: oklch(0.945 0.006 264.5);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.925 0.008 258);
-  --sidebar-ring: oklch(0.208 0.042 265.755);
+  --sidebar-foreground: oklch(0.205 0.04 266);
+  --sidebar-primary: oklch(0.5 0.21 277);
+  --sidebar-primary-foreground: oklch(0.99 0.003 277);
+  --sidebar-accent: oklch(0.96 0.01 270);
+  --sidebar-accent-foreground: oklch(0.205 0.04 266);
+  --sidebar-border: oklch(0.92 0.008 265);
+  --sidebar-ring: oklch(0.55 0.2 277);
 }
 
 .dark {
@@ -150,6 +173,8 @@
   --popover-foreground: oklch(0.984 0.003 247.858);
   --primary: oklch(0.673 0.196 277.5);
   --primary-foreground: oklch(0.15 0.03 265);
+  --primary-soft: oklch(0.26 0.07 277);
+  --brand-deep: oklch(0.16 0.05 275);
   --secondary: oklch(0.31 0.04 260.031);
   --secondary-foreground: oklch(0.984 0.003 247.858);
   --muted: oklch(0.31 0.04 260.031);
@@ -192,9 +217,33 @@
     border-color: var(--color-border);
   }
 
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+
+  /* Keyboard focus for any control that does not style its own. Zero specificity (:where),
+   * so component-level ring utilities always win. */
+  :where(a, button, [role="button"], [role="switch"], summary, select):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Hairline scrollbars on dense lists */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent) transparent;
   }
 }
 
@@ -439,12 +488,32 @@
   animation: pos-marquee 18s linear infinite;
 }
 
-.pos-nav-tab { color: var(--sidebar-foreground); border-left: 3px solid transparent; }
-.pos-nav-tab:hover { background: var(--sidebar-accent); }
-.pos-nav-tab[data-active="true"] {
-  font-weight: 700;
+/* Sidebar navigation: quiet by default, brand-tinted pill + edge bar when active. */
+.pos-nav-tab {
+  position: relative;
+  color: color-mix(in oklab, var(--sidebar-foreground) 72%, transparent);
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+.pos-nav-tab:hover {
   background: var(--sidebar-accent);
-  border-left-color: var(--sidebar-primary);
+  color: var(--sidebar-foreground);
+}
+.pos-nav-tab[data-active="true"] {
+  font-weight: 600;
+  background: var(--primary-soft);
+  color: var(--sidebar-primary);
+}
+.pos-nav-tab[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: -0.75rem;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--sidebar-primary);
 }
 .report-metric { border-top: 2px solid var(--primary); }
 .report-metric:nth-child(4n + 2) { border-top-color: var(--success); }
@@ -464,3 +533,40 @@
   border-radius: var(--radius);
 }
 .pos-app { font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------
+ * Brand surfaces (landing page + marketing sections)
+ * ------------------------------------------------------------- */
+
+/* Deep indigo band with a soft light bloom. Text on it should be white. */
+@utility bg-brand-gradient {
+  background-color: var(--brand-deep);
+  background-image:
+    radial-gradient(60% 80% at 85% 0%, oklch(0.55 0.21 277 / 0.55), transparent 70%),
+    radial-gradient(50% 70% at 0% 100%, oklch(0.5 0.17 240 / 0.35), transparent 70%),
+    linear-gradient(160deg, oklch(0.3 0.11 275), var(--brand-deep));
+}
+
+/* Quiet atmospheric wash behind a light hero */
+@utility hero-glow {
+  background-image:
+    radial-gradient(55% 55% at 88% 0%, oklch(0.55 0.21 277 / 0.12), transparent 70%),
+    radial-gradient(40% 45% at 0% 20%, oklch(0.7 0.12 235 / 0.1), transparent 70%);
+}
+
+/* Faint dot grid that fades out toward the edges */
+@utility dot-grid {
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--foreground) 14%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+  }
+}

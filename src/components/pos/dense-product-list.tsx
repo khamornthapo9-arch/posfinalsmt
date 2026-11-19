@@ -55,12 +55,12 @@ export function DenseProductList({
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder="ရှာဖွေရန်..."
-              className="h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm shadow-xs outline-none transition-[border-color,box-shadow] hover:border-ring/40 focus:border-ring focus:ring-[3px] focus:ring-ring/25"
             />
           </div>
           <button
             onClick={onScan}
-            className="inline-flex h-11 shrink-0 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow-btn hover:bg-primary/90"
           >
             <Camera className="h-4 w-4" />
             <span className="hidden sm:inline">စကင်န်ဖတ်ရန်</span>
@@ -137,7 +137,7 @@ export function DenseProductList({
                     onClick={() => onAdd(item, defaultUnit)}
                     disabled={outOfStock}
                     aria-label={`${item.name} ထည့်ရန်`}
-                    className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40"
+                    className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-btn transition-colors hover:bg-primary/90 disabled:opacity-40 disabled:shadow-none"
                   >
                     <Plus className="h-5 w-5" />
                   </button>
