@@ -31,7 +31,6 @@ const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   admin: ShieldCheck,
 };
 
-
 const NAV = [
   { to: "/register", label: "အရောင်းစာရင်း", tone: "sales", roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
   { to: "/inventory", label: "ကုန်ပစ္စည်းများ", tone: "inventory", roles: ["OWNER", "MANAGER"] as StoreRole[] },
@@ -55,14 +54,14 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
         <img
           src={logo}
           alt={store ? `${store.name} logo` : "SMT POS logo"}
-          className="h-9 w-9 shrink-0 rounded-md border border-sidebar-border bg-card object-contain p-0.5"
+          className="h-9 w-9 shrink-0 object-contain"
         />
       ) : (
         <div
           aria-label="SMT POS"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-[11px] font-black tracking-wider text-sidebar-primary-foreground"
+          className="flex h-9 w-9 shrink-0 items-center justify-center"
         >
-          SMT
+          <LottiePlayer src="/animations/s-logo.json" className="h-9 w-9" />
         </div>
       )}
       {!collapsed && (
