@@ -186,7 +186,7 @@ export function CartPanel({
           </div>
           <div className="mt-2 flex items-end justify-between border-t border-border pt-2.5">
             <span className="text-sm font-semibold leading-7">ကျသင့်ငွေ</span>
-            <span className="text-2xl font-bold leading-8 tabular-nums">{fmt(total)}</span>
+            <span className="text-2xl font-bold leading-8 tracking-tight tabular-nums">{fmt(total)}</span>
           </div>
         </div>
 
@@ -219,10 +219,10 @@ export function CartPanel({
                 <button
                   onClick={() => (splitMode ? onToggleSplit(method.id) : onSelectPayment(method.id))}
                   className={cn(
-                    "press inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-semibold transition-colors",
+                    "press inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border px-2 text-xs font-semibold transition-colors",
                     active
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-input bg-card text-foreground hover:bg-accent",
+                      ? "border-primary bg-primary-soft text-primary ring-1 ring-primary"
+                      : "border-input bg-card text-foreground hover:border-ring/40 hover:bg-accent",
                   )}
                 >
                   {method.logo && (
@@ -295,14 +295,14 @@ export function CartPanel({
               <button
                 onClick={onSendToKitchen}
                 disabled={cart.length === 0 || busy}
-                className="press inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border bg-background text-sm font-semibold hover:bg-accent disabled:opacity-50"
+                className="press inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold shadow-xs hover:bg-accent disabled:opacity-50"
               >
                 <ChefHat className="h-4 w-4" /> ခေတ္တသိမ်း / မီးဖိုချောင်သို့ပို့ရန်
               </button>
               <button
                 onClick={onPayAndClose}
                 disabled={cart.length === 0 || busy}
-                className="press h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                className="press h-12 w-full rounded-xl bg-primary text-sm font-semibold text-primary-foreground shadow-brand hover:bg-primary/90 disabled:opacity-50 disabled:shadow-none"
               >
                 {busy ? "လုပ်ဆောင်နေသည်…" : `ငွေရှင်းပြီး စားပွဲပိတ်မည် · ${fmt(total)}`}
               </button>
@@ -312,14 +312,14 @@ export function CartPanel({
               <button
                 onClick={onPark}
                 disabled={cart.length === 0 || busy}
-                className="press inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-input bg-card text-sm font-semibold text-foreground hover:bg-accent disabled:opacity-50"
+                className="press inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-input bg-card text-sm font-semibold text-foreground shadow-xs hover:bg-accent disabled:opacity-50"
               >
                 <PauseCircle className="h-4 w-4" /> ခဏဆိုင်းထားမည်
               </button>
               <button
                 onClick={onComplete}
                 disabled={cart.length === 0 || busy || needsCreditCustomer || (splitMode && remaining !== 0)}
-                className="press h-14 w-full rounded-md bg-primary text-base font-bold tabular-nums text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+                className="press h-14 w-full rounded-xl bg-primary text-base font-bold tabular-nums text-primary-foreground shadow-brand hover:bg-primary/90 disabled:opacity-40 disabled:shadow-none"
               >
                 {busy ? "လုပ်ဆောင်နေသည်…" : `စာရင်းတွက်မည် · ${fmt(total)}`}
               </button>

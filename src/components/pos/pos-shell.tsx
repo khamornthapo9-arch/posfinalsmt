@@ -99,7 +99,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
             "data-active": "true",
           }}
           className={cn(
-            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors",
+            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
             collapsed && "justify-center px-0",
           )}
         >
@@ -118,7 +118,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
           onClick={onNavigate}
           activeProps={{ "data-active": "true" }}
           className={cn(
-            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors",
+            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
             collapsed && "justify-center px-0",
           )}
         >
@@ -154,8 +154,8 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
           onClick={() => (isPro ? setSwitching(true) : handleSignOut())}
           aria-label={isPro ? "ဝန်ထမ်း ပြောင်းရန်" : "Sign out"}
           className={cn(
-            "mx-auto flex h-9 w-9 items-center justify-center rounded-md text-sm font-semibold",
-            isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "bg-destructive/20 text-destructive",
+            "mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold",
+            isActive ? "bg-primary-soft text-primary" : "bg-destructive/15 text-destructive",
           )}
         >
           {initial}
@@ -166,18 +166,18 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   }
 
   return (
-    <div className="rounded-md border border-sidebar-border bg-sidebar-accent/40 px-3 py-2.5">
+    <div className="rounded-xl border border-sidebar-border bg-sidebar-accent/60 px-3 py-2.5">
       <div className="flex items-center gap-2.5">
         <div
           className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold",
-            isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "bg-destructive/20 text-destructive",
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold",
+            isActive ? "bg-primary-soft text-primary" : "bg-destructive/15 text-destructive",
           )}
         >
           {initial}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-medium text-sidebar-accent-foreground">{label}</p>
+          <p className="truncate text-xs font-semibold text-sidebar-accent-foreground">{label}</p>
           <p className="text-[11px] text-sidebar-foreground/60">
             {roleLoading ? "…" : ROLE_LABEL[role]}
             {!isActive && !roleLoading && " · ရပ်ဆိုင်းထား"}
@@ -339,9 +339,9 @@ export function PosShell({
           <button
             aria-label="Close menu"
             onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-foreground/50"
+            className="absolute inset-0 bg-foreground/40 backdrop-blur-[2px]"
           />
-          <div className="absolute inset-y-0 left-0 flex w-[264px] flex-col border-r border-sidebar-border bg-sidebar p-3">
+          <div className="absolute inset-y-0 left-0 flex w-[264px] flex-col border-r border-sidebar-border bg-sidebar p-3 shadow-pop">
             <div className="flex items-center justify-between px-1 py-2">
               <Brand />
               <button
@@ -363,17 +363,17 @@ export function PosShell({
 
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print sticky top-0 z-30 border-b border-border bg-card md:static">
+        <header className="no-print sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75 md:static">
           <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
             <button
               onClick={() => setDrawerOpen(true)}
               aria-label="Open menu"
-              className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground md:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden"
             >
               <Menu className="h-4 w-4" />
             </button>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold leading-7 tracking-tight">{title}</h1>
+              <h1 className="truncate text-lg font-semibold leading-7 tracking-tight">{title}</h1>
               {subtitle && (
                 <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
               )}

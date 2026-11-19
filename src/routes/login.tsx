@@ -144,8 +144,9 @@ function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-md">
+    <main className="hero-glow relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10">
+      <div aria-hidden="true" className="dot-grid pointer-events-none absolute inset-0 opacity-50" />
+      <div className="relative w-full max-w-md">
         <div className="mb-6 flex justify-center">
           <Link to="/">
             <img
@@ -158,10 +159,10 @@ function LoginPage() {
           </Link>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-pop sm:p-8">
           <>
               <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-brand">
                   <ScanLine className="h-5 w-5" />
                 </div>
                 <div>
@@ -172,18 +173,18 @@ function LoginPage() {
                 </div>
               </div>
 
-              <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
+              <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
                 <button
                   type="button"
                   onClick={() => setMode("signin")}
-                  className={`rounded-md py-2 ${mode !== "branch" ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}
+                  className={`rounded-md py-2 transition-colors ${mode !== "branch" ? "bg-card font-semibold text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   ပိုင်ရှင်
                 </button>
                 <button
                   type="button"
                   onClick={() => setMode("branch")}
-                  className={`rounded-md py-2 ${mode === "branch" ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}
+                  className={`rounded-md py-2 transition-colors ${mode === "branch" ? "bg-card font-semibold text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   ဆိုင်ခွဲဝင်ရန်
                 </button>
