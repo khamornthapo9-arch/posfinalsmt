@@ -41,7 +41,6 @@ import {
   WifiOff,
   Zap,
 } from "lucide-react";
-import smtPosLogo from "@/assets/smt-pos-logo.png";
 import { Button } from "@/components/ui/button";
 import { LottiePlayer } from "@/components/landing/lottie-player";
 
@@ -77,11 +76,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-8">
           <Link to="/" className="flex items-center gap-3">
-            <img
-              src={smtPosLogo}
-              alt="SMT POS"
-              className="h-10 w-10 rounded-xl border border-border object-contain shadow-sm"
-            />
+            <LottiePlayer src="/animations/s-logo.json" className="h-10 w-10" />
             <div className="flex flex-col">
               <span className="text-lg font-bold tracking-tight text-foreground leading-none">
                 SMT POS
@@ -744,7 +739,7 @@ export default function LandingPage() {
       <footer className="border-t border-border py-8 bg-card">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:px-8 text-xs text-muted-foreground">
           <div className="flex items-center gap-2.5">
-            <img src={smtPosLogo} alt="SMT POS" className="h-6 w-6 rounded object-contain" />
+            <LottiePlayer src="/animations/s-logo.json" className="h-6 w-6" />
             <p>© {new Date().getFullYear()} SMT POS. ခေတ်သစ် လက်လီအရောင်းနှင့် စတိုးစီမံခန့်ခွဲမှုစနစ်။</p>
           </div>
           <div className="flex items-center gap-6 font-medium">
