@@ -22,7 +22,7 @@ import { usePos } from "@/lib/pos-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
-import { sendStoreTelegramReport } from "@/lib/telegram-report.functions";
+import { createTelegramLinkToken, sendStoreTelegramReport } from "@/lib/telegram-report.functions";
 
 export const Route = createFileRoute("/settings")({
   ssr: false,
@@ -489,15 +489,28 @@ function SettingsPage() {
                   </button>
                 </>
               ) : (
-                <a
-                  href={`https://t.me/${botUsername}?start=store_${store?.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!store) return;
+                    const win = window.open("", "_blank");
+                    if (win) win.opener = null;
+                    void createTelegramLinkToken({ data: { storeId: store.id } }).then((r) => {
+                      if (!r.token) {
+                        win?.close();
+                        toast.error("ချိတ်ဆက်၍ မရပါ");
+                        return;
+                      }
+                      const url = `https://t.me/${botUsername}?start=link_${r.token}`;
+                      if (win) win.location.href = url;
+                      else window.location.href = url;
+                    });
+                  }}
                   className="inline-flex h-9 items-center gap-2 rounded-md bg-sky-500 hover:bg-sky-600 px-4 text-xs font-medium text-white transition-colors"
                 >
                   <Send className="h-3.5 w-3.5" />
                   Telegram နှင့် ချိတ်ဆက်မည်
-                </a>
+                </button>
               )}
             </div>
           </div>

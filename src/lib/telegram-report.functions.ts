@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export interface DailyReportInput {
   storeId: string;
@@ -19,9 +19,72 @@ export interface DailyReportInput {
   isTest?: boolean;
 }
 
+const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+const str = (v: unknown, max = 120) => String(v ?? "").slice(0, max);
+const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+export const createTelegramLinkToken = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { storeId: string }) => ({ storeId: str(d?.storeId, 64) }))
+  .handler(async ({ data, context }) => {
+    const { data: owned } = await context.supabase
+      .from("stores")
+      .select("id")
+      .eq("id", data.storeId)
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (!owned) return { token: null as string | null };
+    const bytes = crypto.getRandomValues(new Uint8Array(18));
+    const token = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("telegram_link_tokens").delete().eq("store_id", owned.id);
+    await supabaseAdmin.from("telegram_link_tokens").insert({
+      token,
+      store_id: owned.id,
+      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    });
+    return { token };
+  });
+
 export const sendStoreTelegramReport = createServerFn({ method: "POST" })
-  .validator((d: DailyReportInput) => d)
-  .handler(async ({ data }) => {
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: DailyReportInput): DailyReportInput => ({
+    storeId: str(d?.storeId, 64),
+    storeName: esc(str(d?.storeName)),
+    currencySymbol: esc(str(d?.currencySymbol, 8)),
+    dateStr: esc(str(d?.dateStr, 32)),
+    grossSales: num(d?.grossSales),
+    refunds: num(d?.refunds),
+    netSales: num(d?.netSales),
+    estimatedProfit: num(d?.estimatedProfit),
+    ordersCount: num(d?.ordersCount),
+    cashIn: num(d?.cashIn),
+    kbzIn: num(d?.kbzIn),
+    waveIn: num(d?.waveIn),
+    creditIssued: num(d?.creditIssued),
+    closedBy: esc(str(d?.closedBy, 60)),
+    isTest: Boolean(d?.isTest),
+  }))
+  .handler(async ({ data, context }) => {
+    // Caller must be the owner or an active manager of this store (RLS-scoped checks).
+    const { data: visible } = await context.supabase
+      .from("stores")
+      .select("id, owner_id")
+      .eq("id", data.storeId)
+      .maybeSingle();
+    if (!visible) return { success: false, error: "ခွင့်ပြုချက် မရှိပါ" };
+    if (visible.owner_id !== context.userId) {
+      const { data: member } = await context.supabase
+        .from("store_members")
+        .select("role, is_active")
+        .eq("store_id", data.storeId)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      if (!member?.is_active || member.role !== "MANAGER") {
+        return { success: false, error: "ခွင့်ပြုချက် မရှိပါ" };
+      }
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const token = process.env["TELEGRAM_BOT_TOKEN"];
     if (!token) {
       return { success: false, error: "Telegram Bot Token မရှိပါ" };

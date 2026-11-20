@@ -21,6 +21,11 @@ async function handleTelegramWebhook({ request }: { request: Request }) {
     return new Response("Method not allowed", { status: 405 });
   }
 
+  const secret = process.env["TELEGRAM_WEBHOOK_SECRET"];
+  if (secret && request.headers.get("x-telegram-bot-api-secret-token") !== secret) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
   try {
     const update = await request.json();
     const message = update?.message;
@@ -33,10 +38,17 @@ async function handleTelegramWebhook({ request }: { request: Request }) {
     const username = message.from?.username || message.from?.first_name || "Unknown";
 
     // Handle Deep-Link: /start store_<storeId>
-    if (text.startsWith("/start store_")) {
-      const storeId = text.replace("/start store_", "").trim();
+    if (text.startsWith("/start link_")) {
+      const token = text.replace("/start link_", "").trim().slice(0, 80);
+      const { data: link } = await supabaseAdmin
+        .from("telegram_link_tokens")
+        .select("store_id, expires_at")
+        .eq("token", token)
+        .maybeSingle();
+      const storeId =
+        link && new Date(link.expires_at).getTime() > Date.now() ? link.store_id : "";
+      if (link) await supabaseAdmin.from("telegram_link_tokens").delete().eq("token", token);
 
-      // Update store in database using admin client
       const { data: store, error } = await supabaseAdmin
         .from("stores")
         .update({
@@ -44,9 +56,9 @@ async function handleTelegramWebhook({ request }: { request: Request }) {
           telegram_username: username,
           telegram_notify_enabled: true,
         })
-        .eq("id", storeId)
+        .eq("id", storeId || "00000000-0000-0000-0000-000000000000")
         .select("name")
-        .single();
+        .maybeSingle();
 
       if (error || !store) {
         await sendTelegramMessage(
@@ -56,7 +68,7 @@ async function handleTelegramWebhook({ request }: { request: Request }) {
       } else {
         await sendTelegramMessage(
           chatId,
-          `🎉 <b>${store.name}</b> နှင့် အောင်မြင်စွာ ချိတ်ဆက်ပြီးပါပြီ!\n\n` +
+          `🎉 <b>${String(store.name).replace(/[<>&]/g, "")}</b> နှင့် အောင်မြင်စွာ ချိတ်ဆက်ပြီးပါပြီ!\n\n` +
           `ယခုမှစ၍ နေ့စဉ် အရောင်းအစီရင်ခံစာ (EOD) များကို ဤနေရာသို့ အလိုအလျောက် ပို့ပေးသွားပါမည်။ ✅`
         );
       }

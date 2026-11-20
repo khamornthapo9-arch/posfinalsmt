@@ -992,6 +992,35 @@ export type Database = {
           },
         ]
       }
+      telegram_link_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          store_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          store_id: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          store_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_link_tokens_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
