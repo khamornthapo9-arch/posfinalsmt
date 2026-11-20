@@ -545,4 +545,991 @@ function RegisterPage() {
           />
         </div>
 
-        {/* Right Cart Panel with text-only
+        {/* Right Cart Panel with text-only Held and History buttons */}
+        <div className="min-w-0 border-l border-border">
+          <CartPanel
+            cart={cart}
+            items={items}
+            isRestaurant={isRestaurant}
+            activeTable={activeTable}
+            notes={notes}
+            payment={payment}
+            splitMode={splitMode}
+            splits={splits}
+            creditCustomer={creditCustomer}
+            busy={busy}
+            subtotal={subtotal}
+            tax={tax}
+            total={total}
+            taxPercent={taxPercent}
+            remaining={remaining}
+            creditPortion={creditPortion}
+            needsCreditCustomer={needsCreditCustomer}
+            currencySymbol={symbol}
+            payments={availablePayments}
+            heldCount={heldOrders.length}
+            onOpenHeld={() => setHeldOpen(true)}
+            onOpenHistory={() => setHistoryOpen(true)}
+            onChangeQty={changeQty}
+            onRemove={removeFromCart}
+            onNotesChange={setNotes}
+            onSelectPayment={selectPayment}
+            onToggleSplit={toggleSplit}
+            onSplitChange={(methodId: string, amount: number) =>
+              setSplits((prev) => ({ ...prev, [methodId]: amount }))
+            }
+            onToggleSplitMode={toggleSplitMode}
+            onPickCustomer={() => setPickerOpen(true)}
+            onPark={() => setHoldNoteOpen(true)}
+            onComplete={() => void completeSale()}
+            onSendToKitchen={() => void sendToKitchen()}
+            onPayAndClose={() => void payAndClose()}
+          />
+        </div>
+      </div>
+
+      {/* Mobile: scrollable product list + sticky checkout bar */}
+      <div className="flex h-[calc(100vh-64px)] flex-col md:hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <DenseProductList
+            items={items}
+            query={query}
+            onQueryChange={setQuery}
+            selectedCategory={category}
+            onCategoryChange={setCategory}
+            lowStockCount={lowStockItems.length}
+            currencySymbol={symbol}
+            isPro={isPro}
+            onScan={() => setScannerOpen(true)}
+            onAdd={addToCart}
+          />
+        </div>
+        <MobileCheckoutBar
+          cart={cart}
+          total={total}
+          currencySymbol={symbol}
+          onCheckout={() => setCheckoutOpen(true)}
+        />
+      </div>
+
+      <MobileCheckoutDrawer
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        cart={cart}
+        items={items}
+        isRestaurant={isRestaurant}
+        activeTable={activeTable}
+        notes={notes}
+        payment={payment}
+        splitMode={splitMode}
+        splits={splits}
+        creditCustomer={creditCustomer}
+        busy={busy}
+        subtotal={subtotal}
+        tax={tax}
+        total={total}
+        taxPercent={taxPercent}
+        remaining={remaining}
+        creditPortion={creditPortion}
+        needsCreditCustomer={needsCreditCustomer}
+        currencySymbol={symbol}
+        payments={availablePayments}
+        onChangeQty={changeQty}
+        onRemove={removeFromCart}
+        onNotesChange={setNotes}
+        onSelectPayment={selectPayment}
+        onToggleSplit={toggleSplit}
+        onSplitChange={(methodId: string, amount: number) =>
+          setSplits((prev) => ({ ...prev, [methodId]: amount }))
+        }
+        onToggleSplitMode={toggleSplitMode}
+        onPickCustomer={() => setPickerOpen(true)}
+        onPark={() => setHoldNoteOpen(true)}
+        onComplete={() => {
+          setCheckoutOpen(false);
+          void completeSale();
+        }}
+        onSendToKitchen={() => {
+          setCheckoutOpen(false);
+          void sendToKitchen();
+        }}
+        onPayAndClose={() => {
+          setCheckoutOpen(false);
+          void payAndClose();
+        }}
+      />
+
+      <ScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={(code) => {
+          setScannerOpen(false);
+          addBySku(code);
+        }}
+      />
+
+      {pickerOpen && (
+        <CustomerPickerModal
+          customers={customers}
+          onClose={() => {
+            setPickerOpen(false);
+            if (!creditCustomer && !splitMode) setPayment("ငွေသား");
+          }}
+          onPick={(customer) => {
+            setCreditCustomer(customer);
+            if (!splitMode) setPayment(CREDIT_METHOD);
+            setPickerOpen(false);
+          }}
+          onQuickAdd={quickAddCustomer}
+        />
+      )}
+
+      {holdNoteOpen && (
+        <HoldNoteModal
+          onClose={() => setHoldNoteOpen(false)}
+          onConfirm={(note) => {
+            setHoldNoteOpen(false);
+            void parkOrder(note);
+          }}
+        />
+      )}
+
+      {heldOpen && (
+        <HeldOrdersDrawer
+          orders={heldOrders}
+          fmt={fmt}
+          onClose={() => setHeldOpen(false)}
+          onResume={(order) => {
+            setCart(
+              order.lines.map((line) => ({
+                ...line,
+                stock: items.find((i) => i.id === line.item_id)?.stock_quantity ?? line.quantity,
+              })),
+            );
+            void deleteHeldOrder(order.id);
+            setHeldOpen(false);
+            toast.success("ဘောက်ချာကို ပြန်ဖွင့်ပြီးပါပြီ");
+          }}
+          onDelete={(id) => void deleteHeldOrder(id)}
+        />
+      )}
+
+      {historyOpen && (
+        <OrderHistoryDrawer
+          orders={recentOrders}
+          fmt={fmt}
+          canRefund={canApprove}
+          isPro={isPro}
+          onClose={() => setHistoryOpen(false)}
+          onRefund={async (orderId, reason, note) => {
+            if (isPro) {
+              const approved = await new Promise<boolean>((resolve) => {
+                setPendingApproval(() => (ok: boolean) => resolve(ok));
+              });
+              if (!approved) return;
+            }
+            try {
+              await refundOrder({ orderId, reason, note });
+              toast.success("ဘောက်ချာ ပြန်အမ်းပြီးပါပြီ");
+            } catch {
+              toast.error("ပြန်အမ်း၍ မရပါ");
+            }
+          }}
+        />
+      )}
+
+      {pendingApproval && (
+        <ManagerPinModal
+          title="ပြန်အမ်းရန် မန်နေဂျာ PIN"
+          onClose={() => {
+            pendingApproval(false);
+            setPendingApproval(null);
+          }}
+          onApproved={() => {
+            pendingApproval(true);
+            setPendingApproval(null);
+          }}
+        />
+      )}
+
+      {receipt && (
+        <ReceiptModal
+          receipt={receipt}
+          storeName={store?.name ?? "SMT POS"}
+          address={address}
+          cashierName={cashierName}
+          phoneNumbers={phoneNumbers}
+          logoUrl={logoUrl}
+          footerNote={receiptSettings.footerNote}
+          paperWidth={receiptSettings.paperWidth}
+          showLogo={receiptSettings.showLogo}
+          fmt={fmt}
+          onClose={() => setReceipt(null)}
+        />
+      )}
+
+      {ticket && <KitchenTicketModal ticket={ticket} onClose={() => setTicket(null)} />}
+    </PosShell>
+  );
+}
+
+function CustomerPickerModal({
+  customers,
+  onClose,
+  onPick,
+  onQuickAdd,
+}: {
+  customers: Customer[];
+  onClose: () => void;
+  onPick: (customer: Customer) => void;
+  onQuickAdd: (input: { name: string; phone: string }) => Promise<Customer>;
+}) {
+  const [query, setQuery] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const list = customers.filter((c) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return c.name.toLowerCase().includes(q) || (c.phone ?? "").includes(q);
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+      <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-md border border-border bg-card p-5 shadow-lg">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">အကြွေး ဖောက်သည် ရွေးရန်</h2>
+          <button type="button" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {adding ? (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="qa-name">
+                အမည်
+              </label>
+              <input
+                id="qa-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="qa-phone">
+                ဖုန်းနံပါတ်
+              </label>
+              <input
+                id="qa-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                inputMode="tel"
+                className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setAdding(false)}
+                className="h-11 flex-1 rounded-md border border-border text-sm font-medium hover:bg-accent"
+              >
+                နောက်သို့
+              </button>
+              <button
+                type="button"
+                disabled={busy || !name.trim() || !phone.trim()}
+                onClick={() => {
+                  setBusy(true);
+                  void onQuickAdd({ name: name.trim(), phone: phone.trim() })
+                    .then((customer) => {
+                      toast.success("ဖောက်သည် ထည့်ပြီးပါပြီ");
+                      onPick(customer);
+                    })
+                    .catch(() => toast.error("ဖောက်သည် မထည့်နိုင်ပါ"))
+                    .finally(() => setBusy(false));
+                }}
+                className="h-11 flex-1 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                သိမ်းပြီး ရွေးမည်
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="အမည် သို့ ဖုန်းဖြင့် ရှာပါ"
+                className="h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border">
+              {list.map((customer) => (
+                <button
+                  key={customer.id}
+                  type="button"
+                  onClick={() => onPick(customer)}
+                  className="flex w-full items-center justify-between gap-2 border-b border-border px-3 py-3 text-left last:border-0 hover:bg-accent"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{customer.name}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {customer.phone ?? "—"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {customer.balance > 0 ? `အကြွေး ${customer.balance}` : "—"}
+                  </span>
+                </button>
+              ))}
+              {list.length === 0 && (
+                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  ဖောက်သည် မတွေ့ပါ။
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" /> ဖောက်သည် အမြန်ထည့်မည်
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReceiptModal({
+  receipt,
+  storeName,
+  address,
+  cashierName,
+  phoneNumbers,
+  logoUrl,
+  footerNote,
+  paperWidth,
+  showLogo,
+  fmt,
+  onClose,
+}: {
+  receipt: Receipt;
+  storeName: string;
+  address: string;
+  cashierName: string;
+  phoneNumbers: string[];
+  logoUrl: string | null;
+  footerNote: string;
+  paperWidth: "58" | "80";
+  showLogo: boolean;
+  fmt: (n: number) => string;
+  onClose: () => void;
+}) {
+  const isCredit = receipt.paymentMethod === CREDIT_METHOD;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
+      <div
+        className={cn(
+          "print-area receipt-sheet my-auto w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg",
+          paperWidth === "58" && "receipt-58",
+        )}
+      >
+        <div className="mb-3 flex items-center justify-between print:hidden">
+          <h2 className="text-sm font-semibold">ပြေစာ</h2>
+          <button type="button" onClick={onClose} aria-label="ပြေစာ ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="text-center">
+          {showLogo && logoUrl && (
+            <img
+              src={logoUrl}
+              alt={`${storeName} လိုဂို`}
+              className="mx-auto mb-2 h-12 w-12 rounded-md object-cover"
+            />
+          )}
+          <p className="text-base font-semibold">{storeName}</p>
+          {address && <p className="text-xs text-muted-foreground">{address}</p>}
+          {phoneNumbers.length > 0 && (
+            <p className="text-xs text-muted-foreground">ဖုန်း — {phoneNumbers.join(" / ")}</p>
+          )}
+          {cashierName && <p className="text-xs text-muted-foreground">ကောင်တာ — {cashierName}</p>}
+          {receipt.tableNumber != null && (
+            <p className="text-xs font-medium">စားပွဲ {receipt.tableNumber}</p>
+          )}
+          {receipt.offline && (
+            <p className="mt-1 text-xs font-medium text-warning">
+              အော့ဖ်လိုင်း အရောင်း — ချိတ်ဆက်ရန် စောင့်ဆိုင်းနေသည်
+            </p>
+          )}
+        </div>
+
+        <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+
+        <table className="w-full text-xs">
+          <thead className="text-left text-muted-foreground">
+            <tr>
+              <th className="pb-1 font-medium">ပစ္စည်း</th>
+              <th className="pb-1 text-center font-medium">အရေ</th>
+              <th className="pb-1 text-right font-medium">နှုန်း</th>
+              <th className="pb-1 text-right font-medium">ပေါင်း</th>
+            </tr>
+          </thead>
+          <tbody>
+            {receipt.lines.map((line) => (
+              <tr key={`${line.item_id}-${line.unit_name ?? "base"}`}>
+                <td className="py-0.5 pr-1">{line.name}</td>
+                <td className="py-0.5 text-center tabular-nums">{line.quantity}</td>
+                <td className="py-0.5 text-right tabular-nums">{fmt(line.unit_price)}</td>
+                <td className="py-0.5 text-right tabular-nums">
+                  {fmt(line.quantity * line.unit_price)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+
+        <div className="text-sm">
+          <div className="flex justify-between text-muted-foreground">
+            <span>စုစုပေါင်း</span>
+            <span className="tabular-nums">{fmt(receipt.subtotal)}</span>
+          </div>
+          <div className="flex justify-between text-muted-foreground">
+            <span>အခွန်</span>
+            <span className="tabular-nums">{fmt(receipt.tax)}</span>
+          </div>
+          <div className="mt-1 flex justify-between font-semibold">
+            <span>ကျသင့်ငွေ</span>
+            <span className="tabular-nums">{fmt(receipt.total)}</span>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            ပေးချေသည့် နည်းလမ်း: {receipt.paymentMethod}
+          </p>
+          {receipt.splits && receipt.splits.length > 1 && (
+            <div className="mt-1 space-y-0.5 text-xs">
+              {receipt.splits.map((split) => (
+                <div key={split.method} className="flex justify-between text-muted-foreground">
+                  <span>{split.method}</span>
+                  <span className="tabular-nums">{fmt(split.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {isCredit && (
+          <>
+            <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+            <div className="space-y-0.5 text-xs">
+              <p className="text-sm font-semibold">အကြွေး အချက်အလက်</p>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ဖောက်သည်</span>
+                <span>{receipt.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ဖုန်း</span>
+                <span>{receipt.customerPhone || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ယခင် အကြွေး</span>
+                <span className="tabular-nums">{fmt(receipt.previousDebt ?? 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ယခု ဝယ်ယူမှု</span>
+                <span className="tabular-nums">{fmt(receipt.total)}</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span>စုစုပေါင်း အကြွေး</span>
+                <span className="tabular-nums">{fmt(receipt.newDebt ?? receipt.total)}</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+
+        <div className="text-center text-xs text-muted-foreground">
+          <p>{footerNote || "ဝယ်ယူအားပေးမှုကို ကျေးဇူးအထူးတင်ရှိပါသည်။"}</p>
+          <p className="mt-1">{receipt.timestamp}</p>
+        </div>
+
+        <div className="mt-4 flex gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Printer className="h-4 w-4" /> ပရင့်ထုတ်ရန်
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 flex-1 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
+          >
+            ပြီးပြီ
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KitchenTicketModal({ ticket, onClose }: { ticket: KitchenTicket; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
+      <div className="print-area kitchen-ticket w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg">
+        <div className="mb-3 flex items-center justify-between print:hidden">
+          <h2 className="text-sm font-semibold">မီးဖိုချောင် အော်ဒါလတ်မှတ်</h2>
+          <button type="button" onClick={onClose} aria-label="လက်မှတ် ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-semibold">စားပွဲ {ticket.tableNumber}</p>
+          <p className="text-xs text-muted-foreground">{ticket.timestamp}</p>
+        </div>
+        <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+        <div className="text-sm">
+          {ticket.lines.map((line) => (
+            <div key={`${line.item_id}-${line.unit_name ?? "base"}`} className="flex justify-between py-0.5">
+              <span className="truncate pr-2 font-medium">{line.name}</span>
+              <span className="tabular-nums">× {line.quantity}</span>
+            </div>
+          ))}
+        </div>
+        {ticket.notes.trim() && (
+          <>
+            <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+            <p className="text-sm">မှတ်ချက်: {ticket.notes}</p>
+          </>
+        )}
+        <div className="mt-4 flex gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Printer className="h-4 w-4" /> ပရင့်ထုတ်ရန်
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 flex-1 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
+          >
+            ပြီးပြီ
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HoldNoteModal({
+  onClose,
+  onConfirm,
+}: {
+  onClose: () => void;
+  onConfirm: (note: string) => void;
+}) {
+  const [note, setNote] = useState("");
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+      <div className="w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">ခဏဆိုင်းထားမည်</h2>
+          <button type="button" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="hold-note">
+          မှတ်ချက် (ဖောက်သည်အမည် / စားပွဲနံပါတ်)
+        </label>
+        <input
+          id="hold-note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+        />
+        <button
+          type="button"
+          onClick={() => onConfirm(note)}
+          className="mt-4 h-11 w-full rounded-md bg-warning text-sm font-semibold text-white hover:opacity-95"
+        >
+          ခဏဆိုင်းမည်
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function HeldOrdersDrawer({
+  orders,
+  fmt,
+  onClose,
+  onResume,
+  onDelete,
+}: {
+  orders: HeldOrder[];
+  fmt: (n: number) => string;
+  onClose: () => void;
+  onResume: (order: HeldOrder) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-slate-900/60"
+      onClick={onClose}
+    >
+      <aside
+        className="flex h-full w-full max-w-md flex-col bg-card shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="text-sm font-semibold">ခဏဆိုင်းထားသော ဘောက်ချာများ ({orders.length})</h2>
+          <button type="button" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {orders.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              ဆိုင်းထားသော ဘောက်ချာ မရှိပါ။
+            </p>
+          )}
+          {orders.map((order) => (
+            <div key={order.id} className="mb-3 rounded-md border border-border p-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">{order.note || "မှတ်ချက်မရှိ"}</span>
+                <span className="text-sm font-bold tabular-nums">{fmt(order.total_amount)}</span>
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {new Date(order.created_at).toLocaleString()} · {order.lines.length} မျိုး
+              </p>
+              <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                {order.lines.map((line) => (
+                  <li key={`${line.item_id}-${line.unit_name ?? "base"}`} className="flex justify-between">
+                    <span className="truncate pr-2">
+                      {line.name} × {line.quantity}
+                    </span>
+                    <span className="tabular-nums">{fmt(line.quantity * line.unit_price)}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onResume(order)}
+                  className="h-10 flex-1 rounded-md bg-success text-xs font-semibold text-white hover:opacity-95"
+                >
+                  ပြန်ဖွင့်မည်
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(order.id)}
+                  aria-label="ဖျက်ရန်"
+                  className="flex h-10 w-10 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+const REFUND_REASONS = ["ပစ္စည်း ပြန်အပ်", "ပစ္စည်း ချွတ်ယွင်း", "အမှားရိုက်မိ", "အခြား"];
+
+function isOrderToday(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
+function isOrderYesterday(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  return (
+    d.getFullYear() === yesterday.getFullYear() &&
+    d.getMonth() === yesterday.getMonth() &&
+    d.getDate() === yesterday.getDate()
+  );
+}
+
+function OrderHistoryDrawer({
+  orders,
+  fmt,
+  canRefund,
+  isPro,
+  onClose,
+  onRefund,
+}: {
+  orders: OrderSummary[];
+  fmt: (n: number) => string;
+  canRefund: boolean;
+  isPro: boolean;
+  onClose: () => void;
+  onRefund: (orderId: string, reason: string, note: string) => Promise<void>;
+}) {
+  const [selected, setSelected] = useState<OrderSummary | null>(null);
+  const [reason, setReason] = useState(REFUND_REASONS[0]!);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [filterMode, setFilterMode] = useState<"today" | "yesterday" | "custom" | "all">("today");
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      if (filterMode === "today") return isOrderToday(order.created_at);
+      if (filterMode === "yesterday") return isOrderYesterday(order.created_at);
+      if (filterMode === "custom") return order.created_at.slice(0, 10) === selectedDate;
+      return true;
+    });
+  }, [orders, filterMode, selectedDate]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-slate-900/60"
+      onClick={onClose}
+    >
+      <aside
+        className="flex h-full w-full max-w-md flex-col bg-card shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">ဘောက်ချာ မှတ်တမ်း</h2>
+            {!isPro && (
+              <span className="rounded-sm bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                အခမဲ့ (၂ ရက်သာ)
+              </span>
+            )}
+          </div>
+          <button type="button" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="border-b border-border bg-muted/40 p-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setFilterMode("today");
+                setSelected(null);
+              }}
+              className={cn(
+                "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
+                filterMode === "today"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-foreground hover:bg-accent",
+              )}
+            >
+              ဒီနေ့
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterMode("yesterday");
+                setSelected(null);
+              }}
+              className={cn(
+                "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
+                filterMode === "yesterday"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-foreground hover:bg-accent",
+              )}
+            >
+              မနေ့က
+            </button>
+            {isPro ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterMode("custom");
+                    setSelected(null);
+                  }}
+                  className={cn(
+                    "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
+                    filterMode === "custom"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-foreground hover:bg-accent",
+                  )}
+                >
+                  ရက်စွဲရွေးမည်
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterMode("all");
+                    setSelected(null);
+                  }}
+                  className={cn(
+                    "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
+                    filterMode === "all"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-foreground hover:bg-accent",
+                  )}
+                >
+                  အားလုံး
+                </button>
+              </>
+            ) : (
+              <div className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground">
+                <span className="rounded-sm bg-amber-500/10 px-1.5 py-0.5 font-medium text-amber-600 dark:text-amber-400">
+                  PRO
+                </span>
+                <span>ရက်စွဲအစုံကြည့်ရန်</span>
+              </div>
+            )}
+          </div>
+
+          {isPro && filterMode === "custom" && (
+            <div className="mt-2.5 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">ရက်စွဲ:</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {filteredOrders.map((order) => (
+            <button
+              key={order.id}
+              type="button"
+              onClick={() => setSelected(order)}
+              className={cn(
+                "mb-2 flex w-full items-center justify-between gap-2 rounded-md border p-3 text-left transition-colors",
+                selected?.id === order.id
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:bg-accent",
+              )}
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold tabular-nums">
+                  {fmt(order.total_amount)}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {new Date(order.created_at).toLocaleString()} · {order.payment_method}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 rounded-sm px-2 py-0.5 text-[11px] font-bold text-white",
+                  order.status === "REFUNDED"
+                    ? "bg-destructive"
+                    : order.status === "OPEN" || order.status === "UNPAID"
+                      ? "bg-warning"
+                      : "bg-success",
+                )}
+              >
+                {order.status}
+              </span>
+            </button>
+          ))}
+          {filteredOrders.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              ရွေးချယ်ထားသော ရက်စွဲတွင် မှတ်တမ်း မရှိပါ။
+            </p>
+          )}
+        </div>
+
+        {selected && (
+          <div className="border-t border-border bg-background p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">ဘောက်ချာ အသေးစိတ်</p>
+              <span className="text-xs text-muted-foreground">
+                {new Date(selected.created_at).toLocaleDateString()}
+              </span>
+            </div>
+            <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto text-xs text-muted-foreground">
+              {selected.lines.map((line) => (
+                <li
+                  key={`${line.item_id}-${line.unit_name ?? "base"}`}
+                  className="flex justify-between border-b border-border/40 py-1"
+                >
+                  <span className="truncate pr-2">
+                    {line.name} × {line.quantity}
+                  </span>
+                  <span className="tabular-nums font-medium text-foreground">
+                    {fmt(line.quantity * line.unit_price)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {canRefund && selected.status !== "REFUNDED" && (
+              <div className="mt-3">
+                {isOrderToday(selected.created_at) ? (
+                  <div className="space-y-2">
+                    <select
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      aria-label="အကြောင်းရင်း"
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      {REFUND_REASONS.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="မှတ်ချက် (မဖြစ်မနေ မဟုတ်ပါ)"
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setBusy(true);
+                        void onRefund(selected.id, reason, note).finally(() => {
+                          setBusy(false);
+                          setSelected(null);
+                          setNote("");
+                        });
+                      }}
+                      className="h-10 w-full rounded-md bg-destructive text-xs font-semibold text-white hover:opacity-95 disabled:opacity-50"
+                    >
+                      ဘောက်ချာ ပြန်အမ်းမည်
+                    </button>
+                  </div>
+                ) : (
+                  <p className="rounded-sm bg-muted p-2 text-center text-xs text-muted-foreground">
+                    ယနေ့ ဘောက်ချာများကိုသာ ပြန်အမ်းနိုင်ပါသည်။
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
