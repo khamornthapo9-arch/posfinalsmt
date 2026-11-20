@@ -536,36 +536,66 @@ function RegisterPage() {
             : "အော်ဒါအသစ်"
           : `${store?.name ?? "Store"} · ${cashierName || "ကောင်တာ"}`
       }
-      actions={
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setHeldOpen(true)}
-            className="press relative inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
-          >
-            <PauseCircle className="h-3.5 w-3.5" /> ဆိုင်းထား
-            {heldOrders.length > 0 && (
-              <span className="pulse-dot ml-1 rounded-full bg-warning px-1.5 text-[10px] font-bold text-white">
-                {heldOrders.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setHistoryOpen(true)}
-            className="press inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
-          >
-            <History className="h-3.5 w-3.5" /> မှတ်တမ်း
-          </button>
-          {isRestaurant && (
-            <button
-              onClick={leaveTable}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> စားပွဲများ မြေပုံ
-            </button>
-          )}
-        </div>
-      }
+         <PosShell
+      title="POS စာရင်းကိုင်"
+      subtitle={`${store?.name ?? "Store"} · ${cashierName || "ကောင်တာ"}`}
     >
+      {/* Desktop Split: 60% Catalog (White) + 40% Cart (Elevated) */}
+      <div className="hidden h-[calc(100vh-64px)] md:grid md:grid-cols-[60fr_40fr]">
+        <div className="min-w-0 overflow-hidden bg-background">
+          <DenseProductList
+            items={items}
+            query={query}
+            onQueryChange={setQuery}
+            selectedCategory={category}
+            onCategoryChange={setCategory}
+            lowStockCount={lowStockItems.length}
+            currencySymbol={symbol}
+            isPro={isPro}
+            onSelect={(item) => addToCart(item)}
+            onOpenScanner={() => setScannerOpen(true)}
+          />
+        </div>
+
+        {/* Right Cart Panel with text-only Held and History buttons */}
+        <CartPanel
+          cart={cart}
+          items={items}
+          isRestaurant={false}
+          activeTable={null}
+          notes={note}
+          payment={payment}
+          splitMode={splitMode}
+          splits={splits}
+          creditCustomer={creditCustomer}
+          busy={busy}
+          subtotal={subtotal}
+          tax={tax}
+          total={total}
+          taxPercent={taxPercent}
+          remaining={remaining}
+          creditPortion={creditPortion}
+          needsCreditCustomer={isCredit && !creditCustomer}
+          currencySymbol={symbol}
+          payments={PAYMENTS}
+          heldCount={heldOrders.length}
+          onOpenHeld={() => setHeldOpen(true)}
+          onOpenHistory={() => setHistoryOpen(true)}
+          onChangeQty={changeQty}
+          onRemove={removeFromCart}
+          onNotesChange={setNote}
+          onSelectPayment={setPayment}
+          onToggleSplit={toggleSplit}
+          onSplitChange={changeSplitAmount}
+          onToggleSplitMode={toggleSplitMode}
+          onPickCustomer={() => setCustomerOpen(true)}
+          onPark={parkCurrent}
+          onComplete={handleComplete}
+          onSendToKitchen={() => {}}
+          onPayAndClose={() => {}}
+        />
+      </div>
+
       {/* Desktop/Tablet: fixed 60/40 split */}
       <div className="hidden h-[calc(100vh-64px)] md:grid md:grid-cols-[60fr_40fr]">
         <div className="min-w-0 overflow-hidden">
