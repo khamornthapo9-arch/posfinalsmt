@@ -543,6 +543,42 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          email: string | null
+          id: string
+          kbzpay: string | null
+          payment_note: string | null
+          phone: string | null
+          telegram: string | null
+          updated_at: string
+          viber: string | null
+          wavepay: string | null
+        }
+        Insert: {
+          email?: string | null
+          id?: string
+          kbzpay?: string | null
+          payment_note?: string | null
+          phone?: string | null
+          telegram?: string | null
+          updated_at?: string
+          viber?: string | null
+          wavepay?: string | null
+        }
+        Update: {
+          email?: string | null
+          id?: string
+          kbzpay?: string | null
+          payment_note?: string | null
+          phone?: string | null
+          telegram?: string | null
+          updated_at?: string
+          viber?: string | null
+          wavepay?: string | null
+        }
+        Relationships: []
+      }
       purchase_items: {
         Row: {
           created_at: string
