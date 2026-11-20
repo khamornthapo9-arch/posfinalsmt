@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-store";
-import { usePlatformAdmin } from "@/lib/use-platform-admin";
 import { AnnouncementMarquee } from "@/components/pos/announcement-marquee";
 import { useRole, ROLE_LABEL, type StoreRole } from "@/lib/roles";
 import { useSubscription } from "@/lib/subscription";
@@ -77,13 +76,11 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const { store } = useAuth();
   const { role, isActive } = useRole();
-  const { isAdmin } = usePlatformAdmin();
+  
   const advanced = Boolean(store?.advanced_accounting_mode);
   const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
   const items = all.filter((item) => item.roles.includes(role) && isActive);
-  const adminItem = isAdmin
-    ? { to: "/admin", label: "Admin", tone: "admin", roles: ["OWNER"] as StoreRole[] }
-    : null;
+  const adminItem = null as null | { to: "/register"; label: string; tone: string };
   return (
     <nav className="flex flex-col gap-0.5">
       {items.map((item) => (
@@ -143,7 +140,7 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   const handleSignOut = () => {
     void (async () => {
       await signOut();
-      void navigate({ to: "/login", replace: true });
+      void navigate({ to: "/", replace: true });
     })();
   };
 
@@ -249,18 +246,18 @@ export function PosShell({
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && (!session || !store)) void navigate({ to: "/login", replace: true });
+    if (!loading && !session) void navigate({ to: "/", replace: true });
+    else if (!loading && session && !store) void navigate({ to: "/login", replace: true });
   }, [loading, session, store, navigate]);
 
   useEffect(() => {
-    if (loading || roleLoading) return;
+    if (loading || roleLoading || !session || !store) return;
     if (!isActive) {
       void navigate({ to: "/register", replace: true });
       return;
     }
     const allowed =
       pathname === "/register" ||
-      pathname.startsWith("/admin") ||
       (pathname.startsWith("/customers") && canManageCustomers) ||
       (pathname.startsWith("/inventory") && canManageInventory) ||
       (pathname.startsWith("/analytics") && canViewAnalytics) ||

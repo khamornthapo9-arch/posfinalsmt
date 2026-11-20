@@ -97,10 +97,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void loadStore(next);
     });
     void (async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      await loadStore(data.session);
-      setLoading(false);
+      try {
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("auth init timeout")), 8000),
+        );
+        const { data } = await Promise.race([supabase.auth.getSession(), timeout]);
+        setSession(data.session);
+        setLoading(false);
+        await Promise.race([loadStore(data.session), timeout]);
+      } catch (err) {
+        console.error("auth init failed", err);
+      } finally {
+        setLoading(false);
+      }
     })();
     return () => sub.subscription.unsubscribe();
   }, [loadStore]);

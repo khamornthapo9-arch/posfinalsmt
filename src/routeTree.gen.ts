@@ -19,6 +19,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SuppliersRouteImport } from './routes/suppliers'
+import { Route as AdminAdminRouteImport } from './routes/admin_.admin'
 import { Route as SettingsPlanRouteImport } from './routes/settings_.plan'
 import { Route as SettingsReceiptRouteImport } from './routes/settings_.receipt'
 import { Route as SettingsStaffRouteImport } from './routes/settings_.staff'
@@ -75,6 +76,11 @@ const SuppliersRoute = SuppliersRouteImport.update({
   path: '/suppliers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAdminRoute = AdminAdminRouteImport.update({
+  id: '/admin_/admin',
+  path: '/admin/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsPlanRoute = SettingsPlanRouteImport.update({
   id: '/settings_/plan',
   path: '/settings/plan',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/settings': typeof SettingsRoute
   '/suppliers': typeof SuppliersRoute
+  '/admin/admin': typeof AdminAdminRoute
   '/settings/plan': typeof SettingsPlanRoute
   '/settings/receipt': typeof SettingsReceiptRoute
   '/settings/staff': typeof SettingsStaffRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/settings': typeof SettingsRoute
   '/suppliers': typeof SuppliersRoute
+  '/admin/admin': typeof AdminAdminRoute
   '/settings/plan': typeof SettingsPlanRoute
   '/settings/receipt': typeof SettingsReceiptRoute
   '/settings/staff': typeof SettingsStaffRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/settings': typeof SettingsRoute
   '/suppliers': typeof SuppliersRoute
+  '/admin_/admin': typeof AdminAdminRoute
   '/settings_/plan': typeof SettingsPlanRoute
   '/settings_/receipt': typeof SettingsReceiptRoute
   '/settings_/staff': typeof SettingsStaffRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/settings'
     | '/suppliers'
+    | '/admin/admin'
     | '/settings/plan'
     | '/settings/receipt'
     | '/settings/staff'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/settings'
     | '/suppliers'
+    | '/admin/admin'
     | '/settings/plan'
     | '/settings/receipt'
     | '/settings/staff'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/settings'
     | '/suppliers'
+    | '/admin_/admin'
     | '/settings_/plan'
     | '/settings_/receipt'
     | '/settings_/staff'
@@ -218,6 +230,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SettingsRoute: typeof SettingsRoute
   SuppliersRoute: typeof SuppliersRoute
+  AdminAdminRoute: typeof AdminAdminRoute
   SettingsPlanRoute: typeof SettingsPlanRoute
   SettingsReceiptRoute: typeof SettingsReceiptRoute
   SettingsStaffRoute: typeof SettingsStaffRoute
@@ -297,6 +310,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuppliersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin_/admin': {
+      id: '/admin_/admin'
+      path: '/admin/admin'
+      fullPath: '/admin/admin'
+      preLoaderRoute: typeof AdminAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings_/plan': {
       id: '/settings_/plan'
       path: '/settings/plan'
@@ -346,6 +366,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SettingsRoute: SettingsRoute,
   SuppliersRoute: SuppliersRoute,
+  AdminAdminRoute: AdminAdminRoute,
   SettingsPlanRoute: SettingsPlanRoute,
   SettingsReceiptRoute: SettingsReceiptRoute,
   SettingsStaffRoute: SettingsStaffRoute,

@@ -271,7 +271,7 @@ function SettingsPage() {
           <button
             onClick={async () => {
               await signOut();
-              navigate({ to: "/login" });
+              void navigate({ to: "/", replace: true });
             }}
             className="inline-flex h-9 items-center gap-1.5 self-start rounded-md border border-destructive/30 px-3 text-xs font-medium text-destructive hover:bg-destructive/10 sm:self-auto"
           >

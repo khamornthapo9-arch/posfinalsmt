@@ -752,6 +752,7 @@ function RegisterPage() {
           orders={recentOrders}
           fmt={fmt}
           canRefund={canApprove}
+          isPro={isPro}
           onClose={() => setHistoryOpen(false)}
           onRefund={async (orderId, reason, note) => {
             if (isPro) {
