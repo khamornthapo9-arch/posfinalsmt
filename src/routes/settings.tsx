@@ -18,6 +18,7 @@ import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
 import { useRole } from "@/lib/roles";
+import { BranchSettingsPage } from "@/components/pos/branch-settings-page";
 import { usePos } from "@/lib/pos-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useStoreSettings } from "@/lib/use-store-settings";
@@ -91,7 +92,7 @@ function Section({
 }
 
 function SettingsPage() {
-  const { session, store, updateStore, signOut } = useAuth();
+  const { session, store, updateStore, signOut, isBranchDevice } = useAuth();
   const { isPro, symbol } = useStoreSettings();
   const { isOwner, isManager } = useRole();
   const { items } = usePos();
@@ -126,6 +127,10 @@ function SettingsPage() {
   useEffect(() => {
     setEmail(session?.user.email ?? "");
   }, [session]);
+
+  if (isBranchDevice) {
+    return <BranchSettingsPage />;
+  }
 
   const saveProfile = async () => {
     if (!name.trim()) {

@@ -27,6 +27,7 @@ import { PosShell } from "@/components/pos/pos-shell";
 import { ProLock } from "@/components/pos/pro-lock";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadCsv } from "@/lib/pos-utils";
+import { useAuth } from "@/lib/auth-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { usePos } from "@/lib/pos-store";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,7 @@ const RANGE_LABEL: Record<RangeKey, string> = {
 
 function AnalyticsPage() {
   const { isPro, fmt, symbol, store } = useStoreSettings();
+  const { isBranchDevice } = useAuth();
   const { items } = usePos();
   const [range, setRange] = useState<RangeKey>("today");
   const [customStart, setCustomStart] = useState("");
@@ -361,7 +363,7 @@ function AnalyticsPage() {
                 >
                   CSV ထုတ်ယူမည်
                 </button>
-                {isPro && (
+                {isPro && !isBranchDevice && (
                   <button
                     type="button"
                     onClick={() => {
@@ -374,7 +376,7 @@ function AnalyticsPage() {
                     နေ့ချုပ် ပရင့်ထုတ်မည်
                   </button>
                 )}
-                {telegramChatId && (
+                {telegramChatId && !isBranchDevice && (
                   <button
                     type="button"
                     disabled={sendingTelegram}
@@ -415,7 +417,12 @@ function AnalyticsPage() {
         {/* Profit Cards */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {profitCards.map((card) => (
-            <ProLock key={card.label} locked={card.pro && !isPro}>
+            <ProLock
+              key={card.label}
+              locked={(card.pro && !isPro) || isBranchDevice}
+              upgradable={!isBranchDevice}
+              label={isBranchDevice ? "ပင်မဆိုင်မှသာ ကြည့်ရှုနိုင်ပါသည်" : undefined}
+            >
               <div className="report-metric rounded-md border border-border bg-card p-4 shadow-xs">
                 <p className="text-xs font-medium text-muted-foreground">{card.label}</p>
                 <p className="mt-1 truncate text-lg font-bold tabular-nums text-foreground sm:text-2xl">

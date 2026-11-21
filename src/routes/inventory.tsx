@@ -86,6 +86,8 @@ function InventoryPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [csvMenuOpen, setCsvMenuOpen] = useState(false);
   const { isPro } = useStoreSettings();
+  const { isBranchDevice } = useAuth();
+  const canEditItems = !isBranchDevice;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -148,6 +150,7 @@ function InventoryPage() {
           </div>
 
           {/* 3. Expandable Actions Menu for CSV & Demo Items */}
+          {canEditItems && (
           <div className="relative">
             <Button
               type="button"
@@ -207,16 +210,19 @@ function InventoryPage() {
               </div>
             )}
           </div>
+          )}
 
           {/* Primary Add Item Button */}
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => setEditing("new")}
-            className="h-9 gap-1 rounded-md text-xs font-semibold"
-          >
-            <Plus className="h-3.5 w-3.5" /> ကုန်ပစ္စည်းသစ်
-          </Button>
+          {canEditItems && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setEditing("new")}
+              className="h-9 gap-1 rounded-md text-xs font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5" /> ကုန်ပစ္စည်းသစ်
+            </Button>
+          )}
         </div>
       }
     >
@@ -272,22 +278,26 @@ function InventoryPage() {
                     >
                       <QrCode className="h-3.5 w-3.5" />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditing(item)}
-                      aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
-                      className="rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(item.id)}
-                      aria-label={`${item.name} ကိုဖျက်ရန်`}
-                      className="rounded-sm p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {canEditItems && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(item)}
+                          aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
+                          className="rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(item.id)}
+                          aria-label={`${item.name} ကိုဖျက်ရန်`}
+                          className="rounded-sm p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -309,7 +319,7 @@ function InventoryPage() {
         </div>
       </div>
 
-      {editing && (
+      {editing && canEditItems && (
         <ProductModal
           item={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
@@ -334,7 +344,7 @@ function InventoryPage() {
         />
       )}
 
-      {importOpen && (
+      {importOpen && canEditItems && (
         <ImportModal
           items={items}
           isPro={isPro}

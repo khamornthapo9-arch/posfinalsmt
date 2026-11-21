@@ -83,6 +83,7 @@ export const createBranch = createServerFn({ method: "POST" })
         owner_id: context.userId,
         parent_store_id: parent.id,
         is_pro: true,
+        advanced_accounting_mode: true,
         currency_symbol: parent.currency_symbol,
         tax_rate: parent.tax_rate,
         business_type: parent.business_type,

@@ -37,9 +37,10 @@ const SAMPLE_LINES = [
 ];
 
 function ReceiptSettingsPage() {
-  const { store, updateStore } = useAuth();
+  const { store, updateStore, isBranchDevice } = useAuth();
   const { symbol, taxPercent, fmt, isPro } = useStoreSettings();
   const { isOwner, canManageSettings } = useRole();
+  const canEditReceipt = canManageSettings || isBranchDevice;
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [phones, setPhones] = useState<string[]>([]);
@@ -103,7 +104,7 @@ function ReceiptSettingsPage() {
   };
 
 
-  if (!canManageSettings) {
+  if (!canEditReceipt) {
     return (
       <PosShell title="ပြေစာ ဒီဇိုင်း">
         <div className="p-6 text-sm text-muted-foreground">

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { FREE_LIMITS } from "@/lib/subscription";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAccountingStore, type Customer } from "@/lib/accounting-store";
+import { useAuth } from "@/lib/auth-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,8 @@ function CustomersPage() {
   const { enabled, customers, saveCustomer, deleteCustomer, settleCustomerDebt } =
     useAccountingStore();
   const { fmt, isPro } = useStoreSettings();
+  const { isBranchDevice } = useAuth();
+  const canEditCustomers = !isBranchDevice;
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Customer | "new" | null>(null);
   const [settling, setSettling] = useState<Customer | null>(null);
@@ -78,12 +81,14 @@ function CustomersPage() {
               className="h-11 w-full rounded-md border border-input bg-card pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          <button
-            onClick={() => setEditing("new")}
-            className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4" /> ဖောက်သည် အသစ်
-          </button>
+          {canEditCustomers && (
+            <button
+              onClick={() => setEditing("new")}
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" /> ဖောက်သည် အသစ်
+            </button>
+          )}
         </div>
 
         <div className="overflow-x-auto rounded-md border border-border bg-card">
@@ -118,20 +123,24 @@ function CustomersPage() {
                       >
                         <HandCoins className="h-3.5 w-3.5" /> ငွေသွင်း
                       </button>
-                      <button
-                        onClick={() => setEditing(customer)}
-                        aria-label="ပြင်ဆင်ရန်"
-                        className="flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => void deleteCustomer(customer.id)}
-                        aria-label="ဖျက်ရန်"
-                        className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {canEditCustomers && (
+                        <>
+                          <button
+                            onClick={() => setEditing(customer)}
+                            aria-label="ပြင်ဆင်ရန်"
+                            className="flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-accent"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => void deleteCustomer(customer.id)}
+                            aria-label="ဖျက်ရန်"
+                            className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -148,7 +157,7 @@ function CustomersPage() {
         </div>
       </div>
 
-      {editing && (
+      {editing && canEditCustomers && (
         <CustomerModal
           customer={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}

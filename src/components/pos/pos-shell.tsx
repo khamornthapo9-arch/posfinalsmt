@@ -17,7 +17,7 @@ import { useSubscription } from "@/lib/subscription";
 import { StaffSwitchModal } from "@/components/pos/staff-switch-modal";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
-import { ShoppingCart, Boxes, BarChart3, Settings as SettingsIcon, Users, Truck, Wallet, ShieldCheck } from "lucide-react";
+import { ShoppingCart, Boxes, BarChart3, Settings as SettingsIcon, Users, Truck, Wallet, ShieldCheck, Clock } from "lucide-react";
 
 const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   sales: ShoppingCart,
@@ -28,6 +28,7 @@ const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   suppliers: Truck,
   expenses: Wallet,
   admin: ShieldCheck,
+  shift: Clock,
 };
 
 const NAV = [
@@ -41,6 +42,18 @@ const ADVANCED_NAV = [
   { to: "/customers", label: "ဖောက်သည်များ", tone: "customers", roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
   { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", tone: "suppliers", roles: ["OWNER", "MANAGER"] as StoreRole[] },
   { to: "/expenses", label: "အသုံးစရိတ်", tone: "expenses", roles: ["OWNER", "MANAGER"] as StoreRole[] },
+] as const;
+
+/** Nav shown on a branch shop login: sell, view-only stock, credit customers, its own
+ *  analytics (no profit), expenses, a cut-down settings (voucher only) and shift clock. */
+const BRANCH_NAV = [
+  { to: "/register", label: "အရောင်းစာရင်း", tone: "sales" },
+  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", tone: "inventory" },
+  { to: "/customers", label: "ဖောက်သည်များ", tone: "customers" },
+  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", tone: "reports" },
+  { to: "/expenses", label: "အသုံးစရိတ်", tone: "expenses" },
+  { to: "/shift", label: "အလုပ်ချိန်", tone: "shift" },
+  { to: "/settings", label: "ပြုပြင်ခြင်း", tone: "settings" },
 ] as const;
 
 function Brand({ collapsed = false }: { collapsed?: boolean }) {
@@ -74,12 +87,14 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 }
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
-  const { store } = useAuth();
+  const { store, isBranchDevice } = useAuth();
   const { role, isActive } = useRole();
-  
+
   const advanced = Boolean(store?.advanced_accounting_mode);
   const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
-  const items = all.filter((item) => item.roles.includes(role) && isActive);
+  const items = isBranchDevice
+    ? BRANCH_NAV.filter(() => isActive)
+    : all.filter((item) => item.roles.includes(role) && isActive);
   const adminItem = null as null | { to: "/register"; label: string; tone: string };
   return (
     <nav className="flex flex-col gap-0.5">
@@ -231,7 +246,7 @@ export function PosShell({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { session, store, loading } = useAuth();
+  const { session, store, loading, isBranchDevice } = useAuth();
   const {
     role,
     isActive,
@@ -256,14 +271,23 @@ export function PosShell({
       void navigate({ to: "/register", replace: true });
       return;
     }
-    const allowed =
-      pathname === "/register" ||
-      (pathname.startsWith("/customers") && canManageCustomers) ||
-      (pathname.startsWith("/inventory") && canManageInventory) ||
-      (pathname.startsWith("/analytics") && canViewAnalytics) ||
-      (pathname.startsWith("/suppliers") && canManageAccounting) ||
-      (pathname.startsWith("/expenses") && canManageAccounting) ||
-      ((pathname === "/settings" || pathname.startsWith("/settings/")) && canManageSettings);
+    const allowed = isBranchDevice
+      ? pathname === "/register" ||
+        pathname.startsWith("/customers") ||
+        pathname.startsWith("/inventory") ||
+        pathname.startsWith("/analytics") ||
+        pathname.startsWith("/expenses") ||
+        pathname.startsWith("/shift") ||
+        pathname === "/settings" ||
+        pathname === "/settings/receipt"
+      : pathname === "/register" ||
+        pathname.startsWith("/shift") ||
+        (pathname.startsWith("/customers") && canManageCustomers) ||
+        (pathname.startsWith("/inventory") && canManageInventory) ||
+        (pathname.startsWith("/analytics") && canViewAnalytics) ||
+        (pathname.startsWith("/suppliers") && canManageAccounting) ||
+        (pathname.startsWith("/expenses") && canManageAccounting) ||
+        ((pathname === "/settings" || pathname.startsWith("/settings/")) && canManageSettings);
     if (!allowed) void navigate({ to: "/register", replace: true });
   }, [
     loading,
@@ -271,6 +295,7 @@ export function PosShell({
     isActive,
     role,
     pathname,
+    isBranchDevice,
     canManageCustomers,
     canManageInventory,
     canViewAnalytics,

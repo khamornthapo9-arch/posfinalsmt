@@ -35,11 +35,14 @@ export function ProLock({
   label = "Pro Plan ဖြင့် ကြည့်ရှုနိုင်ပါသည်",
   children,
   className,
+  upgradable = true,
 }: {
   locked: boolean;
   label?: string;
   children: ReactNode;
   className?: string;
+  /** Set false when the lock isn't about the Pro plan (e.g. a branch login) — hides the upgrade link. */
+  upgradable?: boolean;
 }) {
   if (!locked) return <>{children}</>;
   return (
@@ -50,12 +53,14 @@ export function ProLock({
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/40 p-3 text-center backdrop-blur-md">
         <Lock className="h-4 w-4 text-amber-500" />
         <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
-        <Link
-          to="/settings/plan"
-          className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          <Crown className="h-3 w-3" /> အဆင့်မြှင့်ရန်
-        </Link>
+        {upgradable && (
+          <Link
+            to="/settings/plan"
+            className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            <Crown className="h-3 w-3" /> အဆင့်မြှင့်ရန်
+          </Link>
+        )}
       </div>
     </div>
   );

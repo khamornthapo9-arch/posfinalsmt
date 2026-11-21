@@ -16,6 +16,7 @@ import { FREE_LIMITS } from "@/lib/subscription";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useReceiptSettings } from "@/lib/receipt-settings";
 import { useRole } from "@/lib/roles";
+import { useAuth } from "@/lib/auth-store";
 import type { CachedItem, ItemUnit } from "@/lib/pos-db";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +101,7 @@ function RegisterPage() {
   } = useStoreSettings();
   const { customers, quickAddCustomer, postSale } = useAccountingStore();
   const { canApprove } = useRole();
+  const { isBranchDevice } = useAuth();
   const logoUrl = useStoreLogo();
   const { settings: receiptSettings } = useReceiptSettings();
 
@@ -681,6 +683,7 @@ function RegisterPage() {
             setPickerOpen(false);
           }}
           onQuickAdd={quickAddCustomer}
+          allowQuickAdd={!isBranchDevice}
         />
       )}
 
@@ -778,11 +781,13 @@ function CustomerPickerModal({
   onClose,
   onPick,
   onQuickAdd,
+  allowQuickAdd = true,
 }: {
   customers: Customer[];
   onClose: () => void;
   onPick: (customer: Customer) => void;
   onQuickAdd: (input: { name: string; phone: string }) => Promise<Customer>;
+  allowQuickAdd?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
@@ -806,7 +811,7 @@ function CustomerPickerModal({
           </button>
         </div>
 
-        {adding ? (
+        {adding && allowQuickAdd ? (
           <div className="space-y-3">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="qa-name">
@@ -894,13 +899,15 @@ function CustomerPickerModal({
                 </p>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4" /> ဖောက်သည် အမြန်ထည့်မည်
-            </button>
+            {allowQuickAdd && (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4" /> ဖောက်သည် အမြန်ထည့်မည်
+              </button>
+            )}
           </>
         )}
       </div>
