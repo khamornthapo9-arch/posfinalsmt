@@ -6,41 +6,47 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  UserCog,
   X,
+  ShoppingCart,
+  Boxes,
+  BarChart3,
+  Settings as SettingsIcon,
+  Users,
+  Truck,
+  Wallet,
+  Building2,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from "lucide-react";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-store";
 import { AnnouncementMarquee } from "@/components/pos/announcement-marquee";
 import { useRole, ROLE_LABEL, type StoreRole } from "@/lib/roles";
-import { useSubscription } from "@/lib/subscription";
-import { StaffSwitchModal } from "@/components/pos/staff-switch-modal";
+import { usePos } from "@/lib/pos-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
-import { ShoppingCart, Boxes, BarChart3, Settings as SettingsIcon, Users, Truck, Wallet, ShieldCheck } from "lucide-react";
 
 const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   sales: ShoppingCart,
   inventory: Boxes,
   reports: BarChart3,
-  settings: SettingsIcon,
   customers: Users,
   suppliers: Truck,
   expenses: Wallet,
-  admin: ShieldCheck,
+  branches: Building2,
+  settings: SettingsIcon,
 };
 
-const NAV = [
-  { to: "/register", label: "အရောင်းစာရင်း", tone: "sales", roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
-  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", tone: "inventory", roles: ["OWNER", "MANAGER"] as StoreRole[] },
-  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", tone: "reports", roles: ["OWNER", "MANAGER"] as StoreRole[] },
-  { to: "/settings", label: "ပြုပြင်ခြင်း", tone: "settings", roles: ["OWNER"] as StoreRole[] },
-] as const;
-
-const ADVANCED_NAV = [
-  { to: "/customers", label: "ဖောက်သည်များ", tone: "customers", roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
-  { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", tone: "suppliers", roles: ["OWNER", "MANAGER"] as StoreRole[] },
-  { to: "/expenses", label: "အသုံးစရိတ်", tone: "expenses", roles: ["OWNER", "MANAGER"] as StoreRole[] },
+const NAV_ITEMS = [
+  { to: "/register", label: "အရောင်းစာရင်း", tone: "sales", branchAllowed: true },
+  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", tone: "inventory", branchAllowed: true },
+  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", tone: "reports", branchAllowed: false },
+  { to: "/customers", label: "ဖောက်သည်များ", tone: "customers", branchAllowed: true },
+  { to: "/suppliers", label: "ကုန်သွင်းသူများ", tone: "suppliers", branchAllowed: false },
+  { to: "/expenses", label: "အသုံးစရိတ်", tone: "expenses", branchAllowed: true },
+  { to: "/settings_/staff", label: "ဆိုင်ခွဲများ (Pro)", tone: "branches", branchAllowed: false },
+  { to: "/settings", label: "ပြုပြင်ခြင်း", tone: "settings", branchAllowed: false },
 ] as const;
 
 function Brand({ collapsed = false }: { collapsed?: boolean }) {
@@ -53,7 +59,7 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
         <img
           src={logo}
           alt={store ? `${store.name} logo` : "SMT POS logo"}
-          className="h-9 w-9 shrink-0 object-contain"
+          className="h-9 w-9 shrink-0 object-contain rounded-md"
         />
       ) : (
         <div
@@ -66,7 +72,7 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
       {!collapsed && (
         <div className="min-w-0">
           <p className="truncate text-sm font-bold tracking-tight text-sidebar-foreground">SMT POS</p>
-          <p className="truncate text-xs leading-5 text-muted-foreground">{store?.name ?? "Store"}</p>
+          <p className="truncate text-xs leading-5 text-sidebar-foreground/70">{store?.name ?? "Store"}</p>
         </div>
       )}
     </div>
@@ -74,20 +80,14 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 }
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
-  const { store, isBranchDevice } = useAuth();
-  const { role, isActive } = useRole();
-  
-  const advanced = Boolean(store?.advanced_accounting_mode);
-  const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
-  
-  // ဆိုင်ခွဲစက်ဖြစ်ပါက အရောင်း၊ ကုန်ပစ္စည်း၊ ဖောက်သည်နှင့် အသုံးစရိတ်သာ ခွင့်ပြုမည်
-  const branchAllowed = ["/register", "/inventory", "/customers", "/expenses"];
+  const { isBranchDevice } = useAuth();
+
   const items = isBranchDevice
-    ? all.filter((item) => branchAllowed.includes(item.to))
-    : all.filter((item) => item.roles.includes(role) && isActive);
+    ? NAV_ITEMS.filter((item) => item.branchAllowed)
+    : NAV_ITEMS;
 
   return (
-    <nav className="flex flex-col gap-0.5">
+    <nav className="flex flex-col gap-1">
       {items.map((item) => (
         <Link
           key={item.to}
@@ -101,7 +101,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
             "data-active": "true",
           }}
           className={cn(
-            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
             collapsed && "justify-center px-0",
           )}
         >
@@ -118,13 +118,11 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
 
 function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   const { session, signOut, stores, store, switchStore, isBranchDevice } = useAuth();
-  const { role, isActive, activeStaff, loading: roleLoading } = useRole();
-  const isPro = false;
-  const [switching, setSwitching] = useState(false);
+  const { role } = useRole();
   const navigate = useNavigate();
   const email = session?.user.email ?? "";
-  const label = isBranchDevice ? (store?.name ?? "Branch") : (activeStaff?.name || email);
-  const initial = label.charAt(0).toUpperCase() || "U";
+  const label = isBranchDevice ? (store?.name ?? "ဆိုင်ခွဲ") : (store?.name || email || "ဆိုင်ရှင်");
+  const initial = label.charAt(0).toUpperCase() || "S";
 
   const handleSignOut = () => {
     void (async () => {
@@ -138,10 +136,7 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
       <button
         onClick={handleSignOut}
         aria-label="Sign out"
-        className={cn(
-          "mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold",
-          isActive ? "bg-primary-soft text-primary" : "bg-destructive/15 text-destructive",
-        )}
+        className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive text-sm font-semibold transition-colors"
       >
         {initial}
       </button>
@@ -149,39 +144,34 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   }
 
   return (
-    <div className="rounded-xl border border-sidebar-border bg-sidebar-accent/60 px-3 py-2.5">
+    <div className="rounded-xl border border-sidebar-border bg-sidebar-accent/50 p-2.5">
       <div className="flex items-center gap-2.5">
-        <div
-          className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold",
-            isActive ? "bg-primary-soft text-primary" : "bg-destructive/15 text-destructive",
-          )}
-        >
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white shadow-xs">
           {initial}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-sidebar-accent-foreground">{label}</p>
-          <p className="text-[11px] text-sidebar-foreground/60">
-            {isBranchDevice ? "ဆိုင်ခွဲစက် (Branch POS)" : roleLoading ? "…" : ROLE_LABEL[role]}
-            {!isActive && !roleLoading && " · ရပ်ဆိုင်းထား"}
+          <p className="truncate text-xs font-bold text-sidebar-accent-foreground">{label}</p>
+          <p className="text-[11px] text-sidebar-foreground/70">
+            {isBranchDevice ? "ဆိုင်ခွဲ (Branch)" : "ဆိုင်ရှင် (Shop Owner)"}
           </p>
         </div>
         <button
           onClick={handleSignOut}
+          title="အကောင့်ထွက်မည်"
           aria-label="Sign out"
-          className="text-sidebar-foreground/60 transition-colors hover:text-destructive"
+          className="rounded-md p-1.5 text-sidebar-foreground/70 transition-colors hover:bg-destructive/20 hover:text-destructive"
         >
           <LogOut className="h-4 w-4" />
         </button>
       </div>
 
-      {/* ဆိုင်ခွဲစက် မဟုတ်သော ပင်မ Owner သာ ဆိုင်ခွဲများသို့ ကူးပြောင်းကြည့်ရှုနိုင်မည် */}
+      {/* Owner store switch if multi-branch */}
       {stores.length > 1 && !isBranchDevice && (
         <select
           aria-label="ဆိုင် ပြောင်းရန်"
           value={store?.id ?? ""}
           onChange={(e) => switchStore(e.target.value)}
-          className="mt-2 w-full rounded-md border border-sidebar-border bg-sidebar px-2 py-1.5 text-xs text-sidebar-accent-foreground"
+          className="mt-2 w-full rounded-md border border-sidebar-border bg-sidebar px-2 py-1.5 text-xs text-sidebar-foreground"
         >
           {stores.map((s) => (
             <option key={s.id} value={s.id}>
@@ -191,7 +181,6 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
           ))}
         </select>
       )}
-      {switching && <StaffSwitchModal onClose={() => setSwitching(false)} />}
     </div>
   );
 }
@@ -210,16 +199,8 @@ export function PosShell({
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { session, store, loading } = useAuth();
-  const {
-    role,
-    isActive,
-    canManageSettings,
-    canManageInventory,
-    canManageAccounting,
-    canManageCustomers,
-    canViewAnalytics,
-    loading: roleLoading,
-  } = useRole();
+  const { isOwner } = useRole();
+  const { syncState, pendingCount, syncNow } = usePos();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
 
@@ -229,33 +210,17 @@ export function PosShell({
   }, [loading, session, store, navigate]);
 
   useEffect(() => {
-    if (loading || roleLoading || !session || !store) return;
-    if (!isActive) {
-      void navigate({ to: "/register", replace: true });
-      return;
-    }
+    if (loading || !session || !store) return;
     const allowed =
       pathname === "/register" ||
-      (pathname.startsWith("/customers") && canManageCustomers) ||
-      (pathname.startsWith("/inventory") && canManageInventory) ||
-      (pathname.startsWith("/analytics") && canViewAnalytics) ||
-      (pathname.startsWith("/suppliers") && canManageAccounting) ||
-      (pathname.startsWith("/expenses") && canManageAccounting) ||
-      ((pathname === "/settings" || pathname.startsWith("/settings/")) && canManageSettings);
+      pathname.startsWith("/customers") ||
+      pathname.startsWith("/inventory") ||
+      pathname.startsWith("/expenses") ||
+      (pathname.startsWith("/analytics") && isOwner) ||
+      (pathname.startsWith("/suppliers") && isOwner) ||
+      ((pathname === "/settings" || pathname.startsWith("/settings/")) && isOwner);
     if (!allowed) void navigate({ to: "/register", replace: true });
-  }, [
-    loading,
-    roleLoading,
-    isActive,
-    role,
-    pathname,
-    canManageCustomers,
-    canManageInventory,
-    canViewAnalytics,
-    canManageAccounting,
-    canManageSettings,
-    navigate,
-  ]);
+  }, [loading, session, store, isOwner, pathname, navigate]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("pos-sidebar-collapsed");
@@ -281,7 +246,7 @@ export function PosShell({
       {/* Sidebar */}
       <aside
         className={cn(
-          "no-print hidden shrink-0 flex-col self-start overflow-y-auto border-r border-sidebar-border bg-sidebar p-3 transition-[width] duration-200 md:sticky md:top-0 md:flex md:h-screen",
+          "no-print hidden shrink-0 flex-col self-start overflow-y-auto border-r border-sidebar-border bg-sidebar p-3 transition-[width] duration-200 md:sticky md:top-0 md:flex md:h-screen shadow-sm",
           collapsed ? "w-[68px]" : "w-60",
         )}
       >
@@ -295,13 +260,13 @@ export function PosShell({
           <button
             onClick={toggle}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex min-h-9 w-full items-center justify-center gap-2 rounded-md px-3 text-xs font-medium text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+            className="flex min-h-9 w-full items-center justify-center gap-2 rounded-md px-3 text-xs font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             {collapsed ? (
               <PanelLeftOpen className="h-4 w-4" />
             ) : (
               <>
-                <PanelLeftClose className="h-4 w-4" /> Collapse
+                <PanelLeftClose className="h-4 w-4" /> ဘေးဘား သိမ်းဆည်းရန်
               </>
             )}
           </button>
@@ -314,15 +279,15 @@ export function PosShell({
           <button
             aria-label="Close menu"
             onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-foreground/40 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs"
           />
-          <div className="absolute inset-y-0 left-0 flex w-[264px] flex-col border-r border-sidebar-border bg-sidebar p-3 shadow-pop">
+          <div className="absolute inset-y-0 left-0 flex w-[264px] flex-col border-r border-sidebar-border bg-sidebar p-3 shadow-xl">
             <div className="flex items-center justify-between px-1 py-2">
               <Brand />
               <button
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Close menu"
-                className="text-sidebar-foreground/70"
+                className="rounded-md p-1 text-sidebar-foreground/80 hover:bg-sidebar-accent"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -338,20 +303,43 @@ export function PosShell({
 
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
-          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
+        <header className="no-print sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md shadow-xs">
+          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 sm:px-5">
             <button
               onClick={() => setDrawerOpen(true)}
               aria-label="Open menu"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/50 text-foreground md:hidden"
             >
               <Menu className="h-4 w-4" />
             </button>
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-semibold leading-7 tracking-tight">{title}</h1>
-              {subtitle && (
-                <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-              )}
+            <div className="min-w-0 flex items-center gap-3">
+              <div>
+                <h1 className="truncate text-base font-bold leading-6 tracking-tight sm:text-lg">{title}</h1>
+                {subtitle && (
+                  <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+                )}
+              </div>
+              
+              {/* Online / Offline Sync Badge */}
+              <div className="hidden sm:flex items-center">
+                {syncState === "syncing" ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                    <RefreshCw className="h-3 w-3 animate-spin" /> ဒေတာ ချိတ်ဆက်သိမ်းဆည်းနေသည်...
+                  </span>
+                ) : syncState === "offline" || pendingCount > 0 ? (
+                  <button
+                    onClick={() => void syncNow()}
+                    title="ကွန်ရက် ပြန်ရပါက နှိပ်၍ သိမ်းပါ"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-500/25 transition-colors"
+                  >
+                    <WifiOff className="h-3 w-3" /> အော့ဖ်လိုင်း {pendingCount > 0 && `(${pendingCount} စောင်)`}
+                  </button>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    <Wifi className="h-3 w-3" /> အွန်လိုင်း
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {actions}
