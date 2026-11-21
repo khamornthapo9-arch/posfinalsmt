@@ -100,12 +100,12 @@ export function CartPanel({
   const checkoutDisabled = cart.length === 0 || busy || splitInvalid || needsCreditCustomer;
 
   return (
-    <aside className="flex h-full flex-col border-l border-border bg-card">
+    <aside className="flex h-full flex-col border-l border-border bg-slate-50/70 dark:bg-slate-900/50">
       {/* Header with Cart Title + Text-only Held & History buttons */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-slate-100/80 px-4 py-3 dark:bg-slate-900/90">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">လက်ရှိ ရောင်းချမှု</span>
-          <span className="rounded-sm bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary tabular-nums">
+          <span className="text-sm font-bold text-foreground">ရောင်းချမည့် ခြင်းတောင်း</span>
+          <span className="rounded-md bg-primary px-2 py-0.5 text-xs font-bold text-white tabular-nums shadow-xs">
             {lineCount}
           </span>
         </div>
@@ -356,9 +356,9 @@ export function CartPanel({
               type="button"
               disabled={checkoutDisabled}
               onClick={onComplete}
-              className="h-10 flex-[2] rounded-sm bg-primary text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="h-11 flex-[2] rounded-lg bg-emerald-600 text-xs font-bold text-white shadow-xs transition-all hover:bg-emerald-500 disabled:opacity-50"
             >
-              စာရင်းထွက်မည် · {money(total, currencySymbol)}
+              ငွေချေမည် · {money(total, currencySymbol)}
             </button>
           </div>
         )}
