@@ -456,65 +456,59 @@ function ProductModal({
         </div>
 
         <div className="space-y-3">
-          {isPro ? (
-            <div className="flex items-center gap-3 rounded-md border border-border bg-card p-3">
-              {previewSrc ? (
-                <img src={previewSrc} alt="" className="h-16 w-16 rounded-md object-cover" />
-              ) : (
-                <div className="grid h-16 w-16 place-items-center rounded-md bg-muted text-muted-foreground">
-                  <ImagePlus className="h-5 w-5" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold">ကုန်ပစ္စည်း ဓာတ်ပုံ</p>
-                <div className="mt-2 flex gap-2">
+          {/* Free-tier & Pro photo upload */}
+          <div className="flex items-center gap-3 rounded-md border border-border bg-card p-3">
+            {previewSrc ? (
+              <img src={previewSrc} alt="" className="h-16 w-16 rounded-md object-cover" />
+            ) : (
+              <div className="grid h-16 w-16 place-items-center rounded-md bg-muted text-muted-foreground">
+                <ImagePlus className="h-5 w-5" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold">ကုန်ပစ္စည်း ဓာတ်ပုံ</p>
+              <div className="mt-2 flex gap-2">
+                <Button
+                  variant="ghost"
+                  disabled={uploading}
+                  onClick={() => imageInputRef.current?.click()}
+                  className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary disabled:opacity-50"
+                >
+                  {uploading && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {uploading ? "တင်နေသည်..." : "ဓာတ်ပုံ ရွေးရန်"}
+                </Button>
+                {imageUrl && (
                   <Button
                     variant="ghost"
-                    disabled={uploading}
-                    onClick={() => imageInputRef.current?.click()}
-                    className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary disabled:opacity-50"
+                    onClick={() => setImageUrl(null)}
+                    className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
                   >
-                    {uploading && <Loader2 className="h-3 w-3 animate-spin" />}
-                    {uploading ? "တင်နေသည်..." : "ဓာတ်ပုံ ရွေးရန်"}
+                    <Trash2 className="h-3 w-3" /> ဖယ်ရှားရန်
                   </Button>
-                  {imageUrl && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => setImageUrl(null)}
-                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
-                    >
-                      <Trash2 className="h-3 w-3" /> ဖယ်ရှားရန်
-                    </Button>
-                  )}
-                </div>
+                )}
               </div>
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (!file || !store?.id) return;
-                  setUploading(true);
-                  try {
-                    setImageUrl(await uploadItemImage(file, store.id));
-                    toast.success("ဓာတ်ပုံ တင်ပြီးပါပြီ");
-                  } catch {
-                    toast.error("ဓာတ်ပုံ တင်၍ မရပါ");
-                  } finally {
-                    setUploading(false);
-                  }
-                }}
-              />
             </div>
-          ) : (
-            <div className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-              <Crown className="h-4 w-4 text-amber-500" /> ကုန်ပစ္စည်း ဓာတ်ပုံ ထည့်ရန် Pro Plan
-              လိုအပ်သည်။
-            </div>
-          )}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file || !store?.id) return;
+                setUploading(true);
+                try {
+                  setImageUrl(await uploadItemImage(file, store.id));
+                  toast.success("ဓာတ်ပုံ တင်ပြီးပါပြီ");
+                } catch {
+                  toast.error("ဓာတ်ပုံ တင်၍ မရပါ");
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
+          </div>
 
           {field("name", "အမည်")}
           {field("sku", "SKU နံပါတ် (မထည့်လျှင် ၈ လုံး အလိုအလျောက် ထုတ်ပေးမည်)")}
@@ -619,7 +613,7 @@ function ProductModal({
               min_stock_threshold: Math.trunc(Number(form.min_stock_threshold) || 0),
               barcode: form.barcode.trim() || null,
               qr_value: form.qr_value.trim() || null,
-              ...(isPro ? { image_url: imageUrl } : {}),
+              image_url: imageUrl,
               units: isPro
                 ? units
                     .filter((u) => u.unit_name.trim() && Number(u.conversion) > 0)
@@ -848,8 +842,7 @@ function ImportModal({
 
         {!isPro && (
           <div className="mb-3 flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-            <Crown className="h-4 w-4 text-amber-500" /> အစုလိုက် ထည့်သွင်းခြင်းသည် Pro Plan
-            အင်္ဂါရပ် ဖြစ်သည်။
+            <Crown className="h-4 w-4 text-amber-500" /> အခမဲ့ Plan တွင် စုစုပေါင်း ကုန်ပစ္စည်း ၃၀၀ အထိ ထည့်သွင်းခွင့်ရှိသည်။ (လက်ရှိ: {items.length}/၃၀၀)
           </div>
         )}
 
@@ -927,8 +920,12 @@ function ImportModal({
 
         <Button
           variant="ghost"
-          disabled={busy || rows.length === 0 || !isPro}
+          disabled={busy || rows.length === 0 || (!isPro && items.length + rows.length > 300)}
           onClick={() => {
+            if (!isPro && items.length + rows.length > 300) {
+              toast.error(`အခမဲ့ Plan တွင် ကုန်ပစ္စည်း ၃၀၀ သာ ထည့်သွင်းခွင့်ရှိပါသည် (လက်ရှိ: ${items.length})`);
+              return;
+            }
             setBusy(true);
             void onImport(rows)
               .then(({ created, updated }) => {
@@ -940,7 +937,10 @@ function ImportModal({
           }}
           className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {busy && <Loader2 className="h-4 w-4 animate-spin" />} ထည့်သွင်းမည်
+          {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {!isPro && items.length + rows.length > 300
+            ? "ကုန်ပစ္စည်း ၃၀၀ ကျော်လွန်နေပါသည်"
+            : `${rows.length} မျိုး ထည့်သွင်းမည်`}
         </Button>
       </div>
     </div>
