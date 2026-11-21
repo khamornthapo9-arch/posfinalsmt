@@ -88,7 +88,6 @@ function InventoryPage() {
   const { isPro, fmt } = useStoreSettings();
   const { isBranchDevice } = useAuth();
 
-  // ပစ္စည်းစုစုပေါင်းတန်ဖိုး တွက်ချက်ခြင်း
   const totalStockValuation = useMemo(() => {
     return items.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.stock_quantity) || 0), 0);
   }, [items]);
@@ -126,7 +125,6 @@ function InventoryPage() {
       }
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          {/* 1. Search Box — full width on mobile, fixed on desktop */}
           <div className="relative w-full sm:w-56 md:w-64">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -138,15 +136,14 @@ function InventoryPage() {
             />
           </div>
 
-          {/* 2. Stock Filter Controls — always visible */}
-          <div className="flex items-center overflow-x-auto rounded-md border border-border bg-background p-0.5">
+          <div className="flex items-center rounded-md border border-border bg-background p-0.5">
             {(["all", "low", "out"] as Filter[]).map((f) => (
               <button
                 key={f}
                 type="button"
                 onClick={() => setFilter(f)}
                 className={cn(
-                  "whitespace-nowrap rounded-sm px-2 py-1 text-[11px] font-medium transition-colors sm:px-2.5 sm:text-xs",
+                  "rounded-sm px-2 py-1 text-xs font-medium transition-colors sm:px-2.5",
                   filter === f
                     ? "bg-primary font-semibold text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
@@ -157,7 +154,6 @@ function InventoryPage() {
             ))}
           </div>
 
-          {/* 3. Actions Menu */}
           <div className="relative">
             <Button
               type="button"
@@ -170,7 +166,7 @@ function InventoryPage() {
             </Button>
 
             {csvMenuOpen && (
-              <div className="absolute right-0 top-10 z-50 w-56 max-w-[calc(100vw-1.5rem)] rounded-md border border-border bg-card p-1 shadow-lg">
+              <div className="absolute right-0 top-10 z-50 w-56 rounded-md border border-border bg-card p-1 shadow-lg">
                 <button
                   type="button"
                   onClick={() => {
@@ -222,7 +218,6 @@ function InventoryPage() {
             )}
           </div>
 
-          {/* ဆိုင်ခွဲစက်မဟုတ်သော Owner သာ ပစ္စည်းသစ် ထည့်သွင်းခွင့်ရှိမည် */}
           {!isBranchDevice && (
             <Button
               type="button"
@@ -237,7 +232,7 @@ function InventoryPage() {
       }
     >
       <div className="h-[calc(100dvh-64px)] overflow-y-auto bg-muted/20">
-        {/* Sticky Column Header — desktop only */}
+        {/* Column header — desktop only */}
         <div className="sticky top-0 z-10 hidden grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center border-b border-border bg-card/95 px-4 py-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-sm md:grid">
           <span>ကုန်ပစ္စည်း</span>
           <span>အမျိုးအစား / SKU</span>
@@ -247,123 +242,76 @@ function InventoryPage() {
           <span className="text-right">လုပ်ဆောင်ချက်များ</span>
         </div>
 
-        {/* Product Rows */}
         <div className="divide-y divide-border/60 bg-card">
           {filtered.map((item) => {
             const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
             const statusLabel =
-              status === "ok"
-                ? "ပစ္စည်းရှိသည်"
-                : status === "low"
-                  ? "လက်ကျန်နည်း"
-                  : "ပစ္စည်းပြတ်";
-            const statusClass = cn(
-              "rounded-sm px-2 py-0.5 text-[11px] font-semibold",
+              status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်";
+            const badgeClass = cn(
+              "rounded-sm px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
               status === "ok" && "bg-success-soft text-success",
               status === "low" && "bg-warning-soft text-warning",
               status === "out" && "bg-danger-soft text-destructive",
             );
 
             return (
-              <div key={item.id}>
-                {/* ── Desktop row ─────────────────────────────── */}
-                <div className="hidden grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center px-4 py-3 text-xs hover:bg-accent/40 md:grid">
-                  <span className="truncate font-semibold text-foreground">{item.name}</span>
-                  <span className="truncate font-mono text-muted-foreground">
+              // One row, one markup. On mobile: 2-col grid that wraps.
+              // On desktop (md:contents on inner div) it becomes the original 6-col grid.
+              <div
+                key={item.id}
+                className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-3 py-3 text-xs hover:bg-accent/40 md:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] md:gap-0 md:px-4"
+              >
+                <div className="col-start-1 row-start-1 min-w-0 md:contents">
+                  <span className="block truncate font-semibold text-foreground">{item.name}</span>
+                  <span className="hidden truncate font-mono text-muted-foreground md:block">
                     {item.sku || "—"}
                   </span>
-                  <span className="font-medium tabular-nums">{money(item.price)}</span>
-                  <span className="font-bold tabular-nums">{item.stock_quantity ?? 0}</span>
-                  <span>
-                    <span className={statusClass}>{statusLabel}</span>
+                  <span className="hidden font-medium tabular-nums md:block">{money(item.price)}</span>
+                  <span className="hidden font-bold tabular-nums md:block">
+                    {item.stock_quantity ?? 0}
                   </span>
-                  <div className="flex justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setLabelItem(item)}
-                      aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
-                      className="rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                    >
-                      <QrCode className="h-3.5 w-3.5" />
-                    </button>
-                    {!isBranchDevice && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setEditing(item)}
-                          aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
-                          className="rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(item.id)}
-                          aria-label={`${item.name} ကိုဖျက်ရန်`}
-                          className="rounded-sm p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  <span className="hidden md:block">
+                    <span className={badgeClass}>{statusLabel}</span>
+                  </span>
                 </div>
 
-                {/* ── Mobile card ─────────────────────────────── */}
-                <div className="px-3 py-3 hover:bg-accent/40 md:hidden">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
-                      <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
-                        {item.sku || "—"}
-                      </p>
-                    </div>
-                    <span className={cn(statusClass, "shrink-0 text-[10px]")}>
-                      {statusLabel}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                      <span className="font-medium tabular-nums">
-                        <span className="text-muted-foreground">ဈေး </span>
-                        {money(item.price)}
-                      </span>
-                      <span className="font-bold tabular-nums">
-                        <span className="text-muted-foreground">အရေအတွက် </span>
-                        {item.stock_quantity ?? 0}
-                      </span>
-                    </div>
-                    <div className="flex shrink-0 gap-0.5">
+                {/* Mobile-only meta row (hidden on desktop) */}
+                <div className="col-span-2 row-start-2 flex items-center gap-2 md:hidden">
+                  <span className="font-medium tabular-nums">{money(item.price)}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="font-bold tabular-nums">{item.stock_quantity ?? 0}</span>
+                  <span className={cn(badgeClass, "ml-auto")}>{statusLabel}</span>
+                </div>
+
+                <div className="col-start-2 row-start-1 flex justify-end gap-1 md:col-start-auto md:row-start-auto">
+                  <button
+                    type="button"
+                    onClick={() => setLabelItem(item)}
+                    aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
+                    className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground md:p-1"
+                  >
+                    <QrCode className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                  </button>
+                  {!isBranchDevice && (
+                    <>
                       <button
                         type="button"
-                        onClick={() => setLabelItem(item)}
-                        aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
-                        className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                        onClick={() => setEditing(item)}
+                        aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
+                        className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground md:p-1"
                       >
-                        <QrCode className="h-4 w-4" />
+                        <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" />
                       </button>
-                      {!isBranchDevice && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => setEditing(item)}
-                            aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
-                            className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleDelete(item.id)}
-                            aria-label={`${item.name} ကိုဖျက်ရန်`}
-                            className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(item.id)}
+                        aria-label={`${item.name} ကိုဖျက်ရန်`}
+                        className="rounded-sm p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive md:p-1"
+                      >
+                        <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -562,7 +510,6 @@ function ProductModal({
         </div>
 
         <div className="space-y-3">
-          {/* Photo Section */}
           <div className="flex items-center gap-3">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-border bg-muted/40">
               {previewSrc ? (
@@ -708,7 +655,6 @@ function ProductModal({
             </div>
           </div>
 
-          {/* Multi-unit Packaging (Pro) */}
           <div className="pt-2">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">ယူနစ် / ထုပ်ပိုးမှု</span>
@@ -824,7 +770,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4">
-      <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto rounded-md border border-border bg-card p-4 shadow-lg sm:p-5">
+      <div className="w-full max-w-sm rounded-md border border-border bg-card p-4 shadow-lg sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">လေဘယ် ရိုက်နှိပ်ရန်</h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -855,7 +801,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
 
         <div
           ref={printAreaRef}
-          className="mx-auto flex h-32 w-full max-w-[14rem] flex-col items-center justify-center rounded-md border border-dashed border-border bg-white p-2 text-black"
+          className="mx-auto flex h-32 w-56 max-w-full flex-col items-center justify-center rounded-md border border-dashed border-border bg-white p-2 text-black"
         >
           <p className="max-w-full truncate text-center text-xs font-bold">{item.name}</p>
           <div className="my-1">
@@ -939,9 +885,7 @@ function ImportModal({
 
           <div className="flex justify-between pt-2">
             <button
-              onClick={() =>
-                downloadCsv("sample-items.csv", SAMPLE_CSV_ROWS)
-              }
+              onClick={() => downloadCsv("sample-items.csv", SAMPLE_CSV_ROWS)}
               className="text-primary hover:underline"
             >
               နမူနာ CSV ရယူရန်
@@ -974,4 +918,4 @@ function ImportModal({
       </div>
     </div>
   );
-          }
+              }
