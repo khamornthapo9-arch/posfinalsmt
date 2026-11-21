@@ -123,214 +123,228 @@ function InventoryPage() {
           ? `ဆိုင်ခွဲ လက်ကျန်စာရင်း · ${items.length} မျိုး`
           : `စုစုပေါင်း ${items.length} မျိုး · တန်ဖိုး ${fmt(totalStockValuation)}`
       }
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full sm:w-56 md:w-64">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ကုန်ပစ္စည်းရှာဖွေရန်..."
-              className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
+    >
+      {/* Main Container - flex-col to stack Toolbar and List */}
+      <div className="flex h-full flex-col bg-muted/20">
+        
+        {/* Sticky Responsive Toolbar */}
+        <div className="shrink-0 border-b border-border bg-card p-3 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            
+            {/* Search Box */}
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ကုန်ပစ္စည်းရှာဖွေရန်..."
+                className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
 
-          <div className="flex items-center rounded-md border border-border bg-background p-0.5">
-            {(["all", "low", "out"] as Filter[]).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={cn(
-                  "rounded-sm px-2 py-1 text-xs font-medium transition-colors sm:px-2.5",
-                  filter === f
-                    ? "bg-primary font-semibold text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {f === "all" ? "အားလုံး" : f === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
-              </button>
-            ))}
-          </div>
+            {/* Filters & Actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Stock Filter Controls */}
+              <div className="flex flex-1 items-center rounded-md border border-border bg-background p-0.5 sm:flex-none">
+                {(["all", "low", "out"] as Filter[]).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setFilter(f)}
+                    className={cn(
+                      "flex-1 rounded-sm px-2.5 py-1 text-xs font-medium transition-colors sm:flex-none",
+                      filter === f
+                        ? "bg-primary font-semibold text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {f === "all" ? "အားလုံး" : f === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
+                  </button>
+                ))}
+              </div>
 
-          <div className="relative">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setCsvMenuOpen((prev) => !prev)}
-              className="h-9 rounded-md text-xs"
-            >
-              လုပ်ဆောင်ချက်များ ▾
-            </Button>
+              <div className="flex items-center gap-2">
+                {/* Actions Menu */}
+                <div className="relative">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCsvMenuOpen((prev) => !prev)}
+                    className="h-9 rounded-md text-xs"
+                  >
+                    လုပ်ဆောင်ချက်များ ▾
+                  </Button>
 
-            {csvMenuOpen && (
-              <div className="absolute right-0 top-10 z-50 w-56 rounded-md border border-border bg-card p-1 shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCsvMenuOpen(false);
-                    downloadCsv(
-                      `items-${new Date().toISOString().slice(0, 10)}.csv`,
-                      itemsToCsvRows(items),
-                    );
-                  }}
-                  className="w-full rounded-sm px-3 py-2 text-left text-xs font-medium hover:bg-accent"
-                >
-                  CSV ထုတ်ယူမည် (Export)
-                </button>
-                {!isBranchDevice && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCsvMenuOpen(false);
-                        setImportOpen(true);
-                      }}
-                      className="w-full rounded-sm px-3 py-2 text-left text-xs font-medium hover:bg-accent"
-                    >
-                      CSV ဖြင့် ထည့်သွင်းမည် (Import)
-                    </button>
-                    {items.length === 0 && (
+                  {csvMenuOpen && (
+                    <div className="absolute right-0 top-10 z-50 w-56 rounded-md border border-border bg-card p-1 shadow-lg">
                       <button
                         type="button"
-                        disabled={seeding}
                         onClick={() => {
                           setCsvMenuOpen(false);
-                          setSeeding(true);
-                          void seedDemoItems()
-                            .then((count) =>
-                              toast.success(`${count} ကုန်ပစ္စည်း ဥပမာများ ထည့်သွင်းပြီးပါပြီ`),
-                            )
-                            .catch(() => toast.error("ဥပမာကုန်ပစ္စည်းများ ထည့်သွင်း၍မရပါ"))
-                            .finally(() => setSeeding(false));
+                          downloadCsv(
+                            `items-${new Date().toISOString().slice(0, 10)}.csv`,
+                            itemsToCsvRows(items),
+                          );
                         }}
-                        className="flex w-full items-center gap-1.5 rounded-sm px-3 py-2 text-left text-xs font-medium hover:bg-accent disabled:opacity-50"
+                        className="w-full rounded-sm px-3 py-2 text-left text-xs font-medium hover:bg-accent"
                       >
-                        <PackagePlus className="h-3.5 w-3.5" />
-                        {seeding ? "ထည့်သွင်းနေသည်..." : "ဥပမာကုန်ပစ္စည်းထည့်မည်"}
+                        CSV ထုတ်ယူမည် (Export)
                       </button>
+                      {!isBranchDevice && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCsvMenuOpen(false);
+                              setImportOpen(true);
+                            }}
+                            className="w-full rounded-sm px-3 py-2 text-left text-xs font-medium hover:bg-accent"
+                          >
+                            CSV ဖြင့် ထည့်သွင်းမည် (Import)
+                          </button>
+                          {items.length === 0 && (
+                            <button
+                              type="button"
+                              disabled={seeding}
+                              onClick={() => {
+                                setCsvMenuOpen(false);
+                                setSeeding(true);
+                                void seedDemoItems()
+                                  .then((count) =>
+                                    toast.success(`${count} ကုန်ပစ္စည်း ဥပမာများ ထည့်သွင်းပြီးပါပြီ`),
+                                  )
+                                  .catch(() => toast.error("ဥပမာကုန်ပစ္စည်းများ ထည့်သွင်း၍မရပါ"))
+                                  .finally(() => setSeeding(false));
+                              }}
+                              className="flex w-full items-center gap-1.5 rounded-sm px-3 py-2 text-left text-xs font-medium hover:bg-accent disabled:opacity-50"
+                            >
+                              <PackagePlus className="h-3.5 w-3.5" />
+                              {seeding ? "ထည့်သွင်းနေသည်..." : "ဥပမာကုန်ပစ္စည်းထည့်မည်"}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {!isBranchDevice && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setEditing("new")}
+                    className="h-9 gap-1 rounded-md text-xs font-semibold"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> ကုန်ပစ္စည်းသစ်
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable List Area */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Column header — desktop only */}
+          <div className="sticky top-0 z-10 hidden grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center border-b border-border bg-card/95 px-4 py-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-sm md:grid">
+            <span>ကုန်ပစ္စည်း</span>
+            <span>အမျိုးအစား / SKU</span>
+            <span>ဈေးနှုန်း</span>
+            <span>အရေအတွက်</span>
+            <span>အခြေအနေ</span>
+            <span className="text-right">လုပ်ဆောင်ချက်များ</span>
+          </div>
+
+          <div className="divide-y divide-border/60 bg-card">
+            {filtered.map((item) => {
+              const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
+              const statusLabel =
+                status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်";
+              const badgeClass = cn(
+                "rounded-sm px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
+                status === "ok" && "bg-success-soft text-success",
+                status === "low" && "bg-warning-soft text-warning",
+                status === "out" && "bg-danger-soft text-destructive",
+              );
+
+              return (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-3 py-3 text-xs hover:bg-accent/40 md:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] md:gap-0 md:px-4"
+                >
+                  <div className="col-start-1 row-start-1 min-w-0 md:contents">
+                    <span className="block truncate font-semibold text-foreground">{item.name}</span>
+                    <span className="hidden truncate font-mono text-muted-foreground md:block">
+                      {item.sku || "—"}
+                    </span>
+                    <span className="hidden font-medium tabular-nums md:block">{money(item.price)}</span>
+                    <span className="hidden font-bold tabular-nums md:block">
+                      {item.stock_quantity ?? 0}
+                    </span>
+                    <span className="hidden md:block">
+                      <span className={badgeClass}>{statusLabel}</span>
+                    </span>
+                  </div>
+
+                  {/* Mobile-only meta row */}
+                  <div className="col-span-2 row-start-2 flex items-center gap-2 md:hidden">
+                    <span className="font-medium tabular-nums">{money(item.price)}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="font-bold tabular-nums">{item.stock_quantity ?? 0}</span>
+                    <span className={cn(badgeClass, "ml-auto")}>{statusLabel}</span>
+                  </div>
+
+                  <div className="col-start-2 row-start-1 flex justify-end gap-1 md:col-start-auto md:row-start-auto">
+                    <button
+                      type="button"
+                      onClick={() => setLabelItem(item)}
+                      aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
+                      className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground md:p-1"
+                    >
+                      <QrCode className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                    </button>
+                    {!isBranchDevice && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(item)}
+                          aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
+                          className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground md:p-1"
+                        >
+                          <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(item.id)}
+                          aria-label={`${item.name} ကိုဖျက်ရန်`}
+                          className="rounded-sm p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive md:p-1"
+                        >
+                          <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                        </button>
+                      </>
                     )}
-                  </>
+                  </div>
+                </div>
+              );
+            })}
+
+            {filtered.length === 0 && (
+              <div className="px-4 py-12 text-center text-xs text-muted-foreground">
+                {items.length === 0 ? (
+                  <div className="space-y-2">
+                    <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
+                    {!isBranchDevice && (
+                      <p>"ကုန်ပစ္စည်းသစ်" ခလုတ် သို့မဟုတ် "လုပ်ဆောင်ချက်များ" မှ ထည့်သွင်းနိုင်ပါသည်။</p>
+                    )}
+                  </div>
+                ) : (
+                  "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
                 )}
               </div>
             )}
           </div>
-
-          {!isBranchDevice && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setEditing("new")}
-              className="h-9 gap-1 rounded-md text-xs font-semibold"
-            >
-              <Plus className="h-3.5 w-3.5" /> ကုန်ပစ္စည်းသစ်
-            </Button>
-          )}
-        </div>
-      }
-    >
-      <div className="h-[calc(100dvh-64px)] overflow-y-auto bg-muted/20">
-        {/* Column header — desktop only */}
-        <div className="sticky top-0 z-10 hidden grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center border-b border-border bg-card/95 px-4 py-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-sm md:grid">
-          <span>ကုန်ပစ္စည်း</span>
-          <span>အမျိုးအစား / SKU</span>
-          <span>ဈေးနှုန်း</span>
-          <span>အရေအတွက်</span>
-          <span>အခြေအနေ</span>
-          <span className="text-right">လုပ်ဆောင်ချက်များ</span>
-        </div>
-
-        <div className="divide-y divide-border/60 bg-card">
-          {filtered.map((item) => {
-            const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
-            const statusLabel =
-              status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်";
-            const badgeClass = cn(
-              "rounded-sm px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
-              status === "ok" && "bg-success-soft text-success",
-              status === "low" && "bg-warning-soft text-warning",
-              status === "out" && "bg-danger-soft text-destructive",
-            );
-
-            return (
-              // One row, one markup. On mobile: 2-col grid that wraps.
-              // On desktop (md:contents on inner div) it becomes the original 6-col grid.
-              <div
-                key={item.id}
-                className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-3 py-3 text-xs hover:bg-accent/40 md:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] md:gap-0 md:px-4"
-              >
-                <div className="col-start-1 row-start-1 min-w-0 md:contents">
-                  <span className="block truncate font-semibold text-foreground">{item.name}</span>
-                  <span className="hidden truncate font-mono text-muted-foreground md:block">
-                    {item.sku || "—"}
-                  </span>
-                  <span className="hidden font-medium tabular-nums md:block">{money(item.price)}</span>
-                  <span className="hidden font-bold tabular-nums md:block">
-                    {item.stock_quantity ?? 0}
-                  </span>
-                  <span className="hidden md:block">
-                    <span className={badgeClass}>{statusLabel}</span>
-                  </span>
-                </div>
-
-                {/* Mobile-only meta row (hidden on desktop) */}
-                <div className="col-span-2 row-start-2 flex items-center gap-2 md:hidden">
-                  <span className="font-medium tabular-nums">{money(item.price)}</span>
-                  <span className="text-muted-foreground">·</span>
-                  <span className="font-bold tabular-nums">{item.stock_quantity ?? 0}</span>
-                  <span className={cn(badgeClass, "ml-auto")}>{statusLabel}</span>
-                </div>
-
-                <div className="col-start-2 row-start-1 flex justify-end gap-1 md:col-start-auto md:row-start-auto">
-                  <button
-                    type="button"
-                    onClick={() => setLabelItem(item)}
-                    aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
-                    className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground md:p-1"
-                  >
-                    <QrCode className="h-4 w-4 md:h-3.5 md:w-3.5" />
-                  </button>
-                  {!isBranchDevice && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setEditing(item)}
-                        aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
-                        className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground md:p-1"
-                      >
-                        <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(item.id)}
-                        aria-label={`${item.name} ကိုဖျက်ရန်`}
-                        className="rounded-sm p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive md:p-1"
-                      >
-                        <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-
-          {filtered.length === 0 && (
-            <div className="px-4 py-12 text-center text-xs text-muted-foreground">
-              {items.length === 0 ? (
-                <div className="space-y-2">
-                  <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
-                  {!isBranchDevice && (
-                    <p>"ကုန်ပစ္စည်းသစ်" ခလုတ် သို့မဟုတ် "လုပ်ဆောင်ချက်များ" မှ ထည့်သွင်းနိုင်ပါသည်။</p>
-                  )}
-                </div>
-              ) : (
-                "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
-              )}
-            </div>
-          )}
         </div>
       </div>
 
