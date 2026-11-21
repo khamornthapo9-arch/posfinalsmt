@@ -74,13 +74,19 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 }
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
-  const { store } = useAuth();
+function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+  const { store, isBranchDevice } = useAuth();
   const { role, isActive } = useRole();
   
   const advanced = Boolean(store?.advanced_accounting_mode);
   const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
-  const items = all.filter((item) => item.roles.includes(role) && isActive);
-  const adminItem = null as null | { to: "/register"; label: string; tone: string };
+  
+  // ဆိုင်ခွဲစက်ဖြစ်ပါက အရောင်း၊ ကုန်ပစ္စည်း၊ ဖောက်သည်နှင့် အသုံးစရိတ်သာ ခွင့်ပြုမည်
+  const branchAllowed = ["/register", "/inventory", "/customers", "/expenses"];
+  const items = isBranchDevice
+    ? all.filter((item) => branchAllowed.includes(item.to))
+    : all.filter((item) => item.roles.includes(role) && isActive);
+
   return (
     <nav className="flex flex-col gap-0.5">
       {items.map((item) => (
@@ -107,34 +113,18 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
           {!collapsed && <span className="truncate leading-6">{item.label}</span>}
         </Link>
       ))}
-      {adminItem && (
-        <Link
-          to={adminItem.to}
-          title={adminItem.label}
-          data-tone={adminItem.tone}
-          onClick={onNavigate}
-          activeProps={{ "data-active": "true" }}
-          className={cn(
-            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
-            collapsed && "justify-center px-0",
-          )}
-        >
-          <ShieldCheck className="h-4 w-4 shrink-0" />
-          {!collapsed && <span className="truncate leading-6">{adminItem.label}</span>}
-        </Link>
-      )}
     </nav>
   );
 }
 
 function UserCard({ collapsed = false }: { collapsed?: boolean }) {
-  const { session, signOut, stores, store, switchStore } = useAuth();
+  const { session, signOut, stores, store, switchStore, isBranchDevice } = useAuth();
   const { role, isActive, activeStaff, loading: roleLoading } = useRole();
   const isPro = false;
   const [switching, setSwitching] = useState(false);
   const navigate = useNavigate();
   const email = session?.user.email ?? "";
-  const label = activeStaff?.name || email;
+  const label = isBranchDevice ? (store?.name ?? "Branch") : (activeStaff?.name || email);
   const initial = label.charAt(0).toUpperCase() || "U";
 
   const handleSignOut = () => {
@@ -146,19 +136,16 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
 
   if (collapsed) {
     return (
-      <>
-        <button
-          onClick={() => (isPro ? setSwitching(true) : handleSignOut())}
-          aria-label={isPro ? "ဝန်ထမ်း ပြောင်းရန်" : "Sign out"}
-          className={cn(
-            "mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold",
-            isActive ? "bg-primary-soft text-primary" : "bg-destructive/15 text-destructive",
-          )}
-        >
-          {initial}
-        </button>
-        {switching && <StaffSwitchModal onClose={() => setSwitching(false)} />}
-      </>
+      <button
+        onClick={handleSignOut}
+        aria-label="Sign out"
+        className={cn(
+          "mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold",
+          isActive ? "bg-primary-soft text-primary" : "bg-destructive/15 text-destructive",
+        )}
+      >
+        {initial}
+      </button>
     );
   }
 
@@ -176,20 +163,10 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-sidebar-accent-foreground">{label}</p>
           <p className="text-[11px] text-sidebar-foreground/60">
-            {roleLoading ? "…" : ROLE_LABEL[role]}
+            {isBranchDevice ? "ဆိုင်ခွဲစက် (Branch POS)" : roleLoading ? "…" : ROLE_LABEL[role]}
             {!isActive && !roleLoading && " · ရပ်ဆိုင်းထား"}
           </p>
         </div>
-        {isPro && (
-          <button
-            onClick={() => setSwitching(true)}
-            aria-label="ဝန်ထမ်း ပြောင်းရန်"
-            title="ဝန်ထမ်း ပြောင်းရန် (PIN)"
-            className="text-sidebar-foreground/60 transition-colors hover:text-sidebar-accent-foreground"
-          >
-            <UserCog className="h-4 w-4" />
-          </button>
-        )}
         <button
           onClick={handleSignOut}
           aria-label="Sign out"
@@ -198,7 +175,9 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
           <LogOut className="h-4 w-4" />
         </button>
       </div>
-      {stores.length > 1 && (
+
+      {/* ဆိုင်ခွဲစက် မဟုတ်သော ပင်မ Owner သာ ဆိုင်ခွဲများသို့ ကူးပြောင်းကြည့်ရှုနိုင်မည် */}
+      {stores.length > 1 && !isBranchDevice && (
         <select
           aria-label="ဆိုင် ပြောင်းရန်"
           value={store?.id ?? ""}
