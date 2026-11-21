@@ -8,8 +8,34 @@ import { useAccountingStore, type Customer } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { useAuth } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
-// ... Routes Head definition stays as is ...
+export const Route = createFileRoute("/customers")({
+  ssr: false,
+  head: () => ({
+    meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { title: "ဖောက်သည်များနှင့် အကြွေးစာရင်း — SMT POS" },
+      {
+        name: "description",
+        content: "ဖောက်သည် စာရင်းနှင့် အကြွေးလက်ကျန်များကို စီမံခန့်ခွဲပြီး ပြန်ဆပ်ငွေများကို မှတ်တမ်းတင်ပါ။",
+      },
+      { property: "og:title", content: "ဖောက်သည်များနှင့် အကြွေးစာရင်း — SMT POS" },
+      {
+        property: "og:description",
+        content: "SMT POS ဖောက်သည် အကြွေးစာရင်း စီမံခန့်ခွဲမှု။",
+      },
+    ],
+  }),
+  component: CustomersPage,
+});
+
+const inputClass =
+  "h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring";
+const labelClass = "mb-1.5 block text-xs font-medium text-muted-foreground";
+
+export const PAY_METHODS = ["ငွေသား", "kbzpay", "wavepay"];
 
 function CustomersPage() {
   const { enabled, customers, saveCustomer, deleteCustomer, settleCustomerDebt } =
@@ -40,7 +66,7 @@ function CustomersPage() {
     }
     const rows = [
       ["ဖောက်သည်အမည်", "ဖုန်းနံပါတ်", "အကြွေးကျန်ငွေ", "မှတ်ချက်"],
-      ...debtors.map((c) => [c.name, c.phone || "-", c.balance.toString(), c.notes || "-"]),
+      ...debtors.map((c) => [c.name, c.phone || "-", c.balance.toString(), c.note || "-"]),
     ];
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map((r) => r.join(",")).join("\n");
     const link = document.createElement("a");
@@ -166,4 +192,175 @@ function CustomersPage() {
           </table>
         </div>
       </div>
-      {/* ... SettleModal and Customer edit modal stay as is ... */}
+      {editing && !isBranchDevice && (
+        <CustomerModal
+          customer={editing === "new" ? null : editing}
+          onClose={() => setEditing(null)}
+          onSave={async (values) => {
+            if (!isPro && editing === "new" && customers.length >= FREE_LIMITS.customers) {
+              toast.error(`Standard အစီအစဉ်တွင် ဖောက်သည် ${FREE_LIMITS.customers} ဦးသာ သိမ်းနိုင်သည်`);
+              return;
+            }
+            await saveCustomer(values);
+            setEditing(null);
+            toast.success("ဖောက်သည် သိမ်းဆည်းပြီးပါပြီ");
+          }}
+        />
+      )}
+      {settling && isPro && (
+        <SettleModal
+          title={`${settling.name} — ငွေပြန်ဆပ်ခြင်း`}
+          balance={settling.balance}
+          fmt={fmt}
+          onClose={() => setSettling(null)}
+          onConfirm={async (amount, method) => {
+            await settleCustomerDebt({ customerId: settling.id, amount, method });
+            setSettling(null);
+            toast.success("ငွေပြန်ဆပ်မှုကို မှတ်တမ်းတင်ပြီးပါပြီ");
+          }}
+        />
+      )}
+    </PosShell>
+  );
+}
+
+function CustomerModal({
+  customer,
+  onClose,
+  onSave,
+}: {
+  customer: Customer | null;
+  onClose: () => void;
+  onSave: (values: { id?: string; name: string; phone: string; note: string }) => Promise<void>;
+}) {
+  const [name, setName] = useState(customer?.name ?? "");
+  const [phone, setPhone] = useState(customer?.phone ?? "");
+  const [note, setNote] = useState(customer?.note ?? "");
+  const [saving, setSaving] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 px-4 py-6">
+      <div className="w-full max-w-md rounded-md border border-border bg-card p-5 shadow-lg">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">
+            {customer ? "ဖောက်သည် ပြင်ဆင်ရန်" : "ဖောက်သည် အသစ်"}
+          </h2>
+          <Button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className={labelClass} htmlFor="c-name">
+              အမည်
+            </label>
+            <input id="c-name" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="c-phone">
+              ဖုန်းနံပါတ်
+            </label>
+            <input id="c-phone" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="c-note">
+              မှတ်ချက်
+            </label>
+            <input id="c-note" value={note} onChange={(e) => setNote(e.target.value)} className={inputClass} />
+          </div>
+        </div>
+        <Button
+          disabled={saving || !name.trim()}
+          onClick={() => {
+            setSaving(true);
+            void onSave({
+              ...(customer ? { id: customer.id } : {}),
+              name: name.trim(),
+              phone: phone.trim(),
+              note: note.trim(),
+            }).finally(() => setSaving(false));
+          }}
+          className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          သိမ်းဆည်းမည်
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function SettleModal({
+  title,
+  balance,
+  fmt,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  balance: number;
+  fmt: (n: number) => string;
+  onClose: () => void;
+  onConfirm: (amount: number, method: string) => Promise<void>;
+}) {
+  const [amount, setAmount] = useState(balance > 0 ? String(balance) : "");
+  const [method, setMethod] = useState(PAY_METHODS[0] as string);
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 px-4 py-6">
+      <div className="w-full max-w-md rounded-md border border-border bg-card p-5 shadow-lg">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">{title}</h2>
+          <Button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">လက်ကျန် — {fmt(balance)}</p>
+        <div className="space-y-3">
+          <div>
+            <label className={labelClass} htmlFor="settle-amount">
+              ပမာဏ
+            </label>
+            <input
+              id="settle-amount"
+              type="number"
+              step="0.01"
+              min="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <span className={labelClass}>ငွေပေးချေမှု နည်းလမ်း</span>
+            <div className="grid grid-cols-3 gap-2">
+              {PAY_METHODS.map((m) => (
+                <Button
+                  key={m}
+                  onClick={() => setMethod(m)}
+                  className={cn(
+                    "min-h-11 rounded-md border px-2 text-xs font-medium",
+                    method === m ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-accent",
+                  )}
+                >
+                  {m}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <Button
+          disabled={busy || !(Number(amount) > 0)}
+          onClick={() => {
+            setBusy(true);
+            void onConfirm(Number(amount), method).finally(() => setBusy(false));
+          }}
+          className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          မှတ်တမ်းတင်မည်
+        </Button>
+      </div>
+    </div>
+  );
+}
+

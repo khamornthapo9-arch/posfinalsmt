@@ -846,8 +846,9 @@ function ImportModal({
     setFileName(file.name);
     try {
       const text = await file.text();
-      const parsed = parseItemsCsv(text);
-      setRows(parsed);
+      const parsed = parseItemsCsv(text, items.map((item) => item.sku));
+      setRows(parsed.rows);
+      if (parsed.errors.length > 0) toast.error(parsed.errors.join("\n"));
     } catch {
       toast.error("CSV ဖိုင် ဖတ်၍မရပါ");
     }
@@ -885,10 +886,7 @@ function ImportModal({
           <div className="flex justify-between pt-2">
             <button
               onClick={() =>
-                downloadCsv("sample-items.csv", [
-                  ["sku", "name", "price", "cost_price", "stock_quantity", "category"],
-                  ["SKU-001", "ဥပမာ ပစ္စည်း", "1000", "800", "50", "အထွေထွေ"],
-                ])
+                downloadCsv("sample-items.csv", SAMPLE_CSV_ROWS)
               }
               className="text-primary hover:underline"
             >

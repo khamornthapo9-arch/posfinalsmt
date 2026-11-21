@@ -74,7 +74,6 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 }
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
-function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const { store, isBranchDevice } = useAuth();
   const { role, isActive } = useRole();
   
