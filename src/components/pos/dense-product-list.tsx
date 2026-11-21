@@ -2,7 +2,9 @@ import { useMemo } from "react";
 import { Camera, Plus, Search, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { stockStatus, money } from "@/lib/pos-utils";
+import { useCachedImage } from "@/lib/use-cached-image";
 import type { CachedItem, ItemUnit } from "@/lib/pos-db";
+
 interface DenseProductListProps {
   items: CachedItem[];
   query: string;
@@ -14,6 +16,28 @@ interface DenseProductListProps {
   onCategoryChange: (c: string) => void;
   onAdd: (item: CachedItem, unit?: ItemUnit) => void;
   onScan: () => void;
+}
+
+function ItemThumbnail({
+  url,
+  name,
+  onClick,
+}: {
+  url?: string | null;
+  name: string;
+  onClick?: () => void;
+}) {
+  const src = useCachedImage(url);
+  if (!src) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-border bg-muted transition-transform active:scale-95"
+    >
+      <img src={src} alt={name} loading="lazy" className="h-full w-full object-cover" />
+    </button>
+  );
 }
 
 export function DenseProductList({
@@ -113,8 +137,19 @@ export function DenseProductList({
                 )}
               >
                 <div className="flex items-center gap-3">
+                  {/* Product Photo Thumbnail - tap to add */}
+                  {item.image_url && (
+                    <ItemThumbnail
+                      url={item.image_url}
+                      name={item.name}
+                      onClick={() => !outOfStock && onAdd(item, defaultUnit)}
+                    />
+                  )}
 
-                  <div className="min-w-0 flex-1">
+                  <div
+                    className="min-w-0 flex-1 cursor-pointer select-none"
+                    onClick={() => !outOfStock && onAdd(item, defaultUnit)}
+                  >
                     <p className="truncate text-sm font-semibold leading-6">{item.name}</p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <span
