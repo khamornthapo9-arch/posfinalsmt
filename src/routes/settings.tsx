@@ -1,8 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import {
-  Check,
   CreditCard,
   LifeBuoy,
   Loader2,
@@ -17,8 +15,6 @@ import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
-import { useRole } from "@/lib/roles";
-import { usePos } from "@/lib/pos-store";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
@@ -38,7 +34,8 @@ export const Route = createFileRoute("/settings")({
       { property: "og:title", content: "ဆိုင် ပြင်ဆင်ချက်များ — SMT POS" },
       {
         property: "og:description",
-        content: "SMT POS မှာ သင့် အမှတ်တံဆိပ်၊ အခွန်၊ လုပ်ငန်းအမျိုးအစား၊ အကောင့်နှင့် စာရင်းသွင်းမှု ပြင်ဆင်ချက်ရန်။",
+        content:
+          "SMT POS မှာ သင့် အမှတ်တံဆိပ်၊ အခွန်၊ လုပ်ငန်းအမျိုးအစား၊ အကောင့်နှင့် စာရင်းသွင်းမှု ပြင်ဆင်ချက်ရန်။",
       },
     ],
   }),
@@ -47,54 +44,24 @@ export const Route = createFileRoute("/settings")({
 
 const CURRENCIES = ["Ks", "ကျပ်", "$", "€", "£", "¥", "₹"];
 
-const PLANS = [
-  {
-    name: "အခမဲ့ အသုံပြုနေသည်",
-    price: "$0",
-    period: "အမြဲတမ်း",
-    features: ["ဆိုင် ၁ ဆိုင်", "ကုန်ပစ္စည်း ၅၀ အထိ", "အော့ဖ်လိုင်း ငွေချေစနစ်", "အခြေခံ စာရင်းဇယား Analysis"],
-    current: true,
-  },
-  {
-    name: "Pro Casher",
-    price: "$19",
-    period: "/လ",
-    features: [
-      "ဆိုင်ခွဲများ စီမံခြင်း",
-      "ကုန်ပစ္စည်း အကန့်အသတ်မရှိ",
-      "လိုဂိုနှင့် ဘောက်ချာ စိတ်ကြိုက်ပြင်ဆင်မှု",
-      "အဆင့်မြင့် အစီရင်ခံစာနှင့် EOD",
-      "Telegram နေ့ချုပ် အစီရင်ခံစာ",
-    ],
-    current: false,
-  },
-];
-
 function Section({
   title,
-  description,
   children,
 }: {
   title: string;
-  description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-border bg-card p-4 sm:p-6">
-      <div className="mb-4">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {description && <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>}
-      </div>
+    <section className="border-t border-border pt-5">
+      <h2 className="mb-3 text-base font-semibold">{title}</h2>
       {children}
-    </div>
+    </section>
   );
 }
 
 function SettingsPage() {
   const { session, store, updateStore, signOut } = useAuth();
   const { isPro, symbol } = useStoreSettings();
-  const { isOwner, isManager } = useRole();
-  const { items } = usePos();
   const logoUrl = useStoreLogo();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,7 +77,6 @@ function SettingsPage() {
   const [uploading, setUploading] = useState(false);
   const [email, setEmail] = useState("");
   const [savingEmail, setSavingEmail] = useState(false);
-  const [plansOpen, setPlansOpen] = useState(false);
   const [testingTelegram, setTestingTelegram] = useState(false);
 
   useEffect(() => {
@@ -254,7 +220,7 @@ function SettingsPage() {
   };
 
   const inputClass =
-    "h-10 w-full rounded-md border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
+    "h-10 w-full rounded-sm border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
   const telegramChatId = (store as any)?.telegram_chat_id;
   const telegramUsername = (store as any)?.telegram_username;
@@ -269,49 +235,41 @@ function SettingsPage() {
             <p className="text-sm text-muted-foreground">{store?.name ?? "သင့်ဆိုင်"}</p>
           </div>
           <button
+            type="button"
             onClick={async () => {
               await signOut();
               void navigate({ to: "/", replace: true });
             }}
-            className="inline-flex h-9 items-center gap-1.5 self-start rounded-md border border-destructive/30 px-3 text-xs font-medium text-destructive hover:bg-destructive/10 sm:self-auto"
+            className="inline-flex h-9 items-center gap-1.5 self-start rounded-sm border border-destructive/30 px-3 text-xs font-medium text-destructive hover:bg-destructive/10 sm:self-auto"
           >
             <LogOut className="h-3.5 w-3.5" /> အကောင့်ထွက်မည်
           </button>
         </div>
 
-        {/* Quick Links */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Navigation Rows */}
+        <div className="divide-y divide-border border-y border-border">
           <Link
             to="/settings/staff"
-            className="flex items-center justify-between rounded-md border border-border bg-card p-4 hover:border-primary/50 transition-colors"
+            className="flex items-center justify-between py-3.5 text-sm font-medium hover:bg-accent/40"
           >
-            <div>
-              <p className="text-sm font-semibold">ဝန်ထမ်းများနှင့် ဆိုင်ခွဲများ</p>
-              <p className="text-xs text-muted-foreground">ဆိုင်ခွဲ PIN နှင့် ဝန်ထမ်းများ</p>
-            </div>
-            <Store className="h-5 w-5 text-muted-foreground" />
+            <span>ဝန်ထမ်းများနှင့် ဆိုင်ခွဲများ</span>
+            <Store className="h-4 w-4 text-muted-foreground" />
           </Link>
 
           <Link
             to="/settings/receipt"
-            className="flex items-center justify-between rounded-md border border-border bg-card p-4 hover:border-primary/50 transition-colors"
+            className="flex items-center justify-between py-3.5 text-sm font-medium hover:bg-accent/40"
           >
-            <div>
-              <p className="text-sm font-semibold">ဘောက်ချာ စာရွက်ပုံစံ</p>
-              <p className="text-xs text-muted-foreground">ခေါင်းစဉ်၊ ခြေဆင်းနှင့် ဘားကုဒ်</p>
-            </div>
-            <Store className="h-5 w-5 text-muted-foreground" />
+            <span>ဘောက်ချာ စာရွက်ပုံစံ</span>
+            <Store className="h-4 w-4 text-muted-foreground" />
           </Link>
 
           <Link
             to="/settings/plan"
-            className="flex items-center justify-between rounded-md border border-border bg-card p-4 hover:border-primary/50 transition-colors"
+            className="flex items-center justify-between py-3.5 text-sm font-medium hover:bg-accent/40"
           >
-            <div>
-              <p className="text-sm font-semibold">အဆင့်မြှင့်တင်မှု (Pro Plan)</p>
-              <p className="text-xs text-muted-foreground">{isPro ? "Pro ဖွင့်ထားသည်" : "Free Plan"}</p>
-            </div>
-            <CreditCard className="h-5 w-5 text-muted-foreground" />
+            <span>အဆင့်မြှင့်တင်မှု (Pro Plan)</span>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </Link>
         </div>
 
@@ -319,7 +277,7 @@ function SettingsPage() {
         <Section title="ဆိုင် အချက်အလက်များ">
           <div className="space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-border bg-muted">
                 {logoUrl ? (
                   <img src={logoUrl} alt="Store logo" className="h-full w-full object-cover" />
                 ) : (
@@ -338,9 +296,10 @@ function SettingsPage() {
                   }}
                 />
                 <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading || !isPro}
-                  className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-2 rounded-sm border border-border px-3 text-xs font-medium hover:bg-accent disabled:opacity-50"
                 >
                   {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "လိုဂို ပြောင်းမည်"}
                 </button>
@@ -362,7 +321,7 @@ function SettingsPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-muted-foreground">ငွေကြေး သင်္ကေတ</label>
+                <label className="text-xs font-medium text-muted-foreground">ငွေကြေး</label>
                 <select
                   value={storeSymbol}
                   onChange={(e) => setStoreSymbol(e.target.value)}
@@ -377,7 +336,7 @@ function SettingsPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-muted-foreground">အခွန် ရာခိုင်နှုန်း (%)</label>
+                <label className="text-xs font-medium text-muted-foreground">အခွန်(%)</label>
                 <input
                   type="number"
                   min="0"
@@ -424,16 +383,18 @@ function SettingsPage() {
                         placeholder="၀၉-xxxxxxxxx"
                       />
                       <button
+                        type="button"
                         onClick={() => setPhones(phones.filter((_, i) => i !== idx))}
-                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border hover:bg-accent"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-border hover:bg-accent"
                       >
                         <X className="h-4 w-4" />
                       </button>
                     </div>
                   ))}
                   <button
+                    type="button"
                     onClick={() => setPhones((prev) => [...prev, ""])}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-border px-3 text-xs font-medium hover:bg-accent"
                   >
                     <Plus className="h-3.5 w-3.5" /> ဖုန်းနံပါတ် ထပ်ထည့်မည်
                   </button>
@@ -442,11 +403,12 @@ function SettingsPage() {
 
               <div className="sm:col-span-2">
                 <button
+                  type="button"
                   onClick={() => void saveProfile()}
                   disabled={savingProfile}
-                  className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  className="inline-flex h-10 items-center gap-2 rounded-sm bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {savingProfile && <Loader2 className="h-4 w-4 animate-spin" />} ပြောင်းလဲမှုများကို သိမ်းမည်
+                  {savingProfile && <Loader2 className="h-4 w-4 animate-spin" />} သိမ်းမည်
                 </button>
               </div>
             </div>
@@ -454,36 +416,33 @@ function SettingsPage() {
         </Section>
 
         {/* Telegram Daily Closing Integration */}
-        <Section
-          title="Telegram နေ့ချုပ် အစီရင်ခံစာ"
-          description="ဆိုင်ပိတ်ချိန် နေ့စဉ် အရောင်းနှင့် အသားတင်အမြတ် စာရင်းများကို သင့် Telegram သို့ အလိုအလျောက် ပို့ပေးပါမည်။"
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-1">
+        <Section title="Telegram နေ့ချုပ် အစီရင်ခံစာ">
+          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             {telegramChatId ? (
-              <div className="flex items-center gap-2 text-sm text-emerald-500 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="flex items-center gap-2 text-sm font-medium text-emerald-500">
+                <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
                 ချိတ်ဆက်ထားသည်: @{telegramUsername || "Telegram Account"}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                ချိတ်ဆက်ထားခြင်း မရှိသေးပါ။ ခလုတ်ကို နှိပ်ပြီး Telegram တွင် <b>Start</b> နှိပ်ပေးပါ။
-              </p>
+              <span className="text-sm text-muted-foreground">ချိတ်ဆက်မထားပါ</span>
             )}
 
             <div className="flex items-center gap-2">
               {telegramChatId ? (
                 <>
                   <button
+                    type="button"
                     onClick={() => void sendTestTelegram()}
                     disabled={testingTelegram}
-                    className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                    className="inline-flex h-9 items-center gap-2 rounded-sm border border-border px-3 text-xs font-medium hover:bg-accent disabled:opacity-50"
                   >
                     {testingTelegram && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     စမ်းသပ် ပို့ကြည့်မည်
                   </button>
                   <button
+                    type="button"
                     onClick={() => void disconnectTelegram()}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-md border border-destructive/30 px-3 text-xs font-medium text-destructive hover:bg-destructive/10"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-destructive/30 px-3 text-xs font-medium text-destructive hover:bg-destructive/10"
                   >
                     ချိတ်ဆက်မှုဖြုတ်
                   </button>
@@ -506,10 +465,10 @@ function SettingsPage() {
                       else window.location.href = url;
                     });
                   }}
-                  className="inline-flex h-9 items-center gap-2 rounded-md bg-sky-500 hover:bg-sky-600 px-4 text-xs font-medium text-white transition-colors"
+                  className="inline-flex h-9 items-center gap-2 rounded-sm bg-sky-500 px-4 text-xs font-medium text-white transition-colors hover:bg-sky-600"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  Telegram နှင့် ချိတ်ဆက်မည်
+                  Telegram နှင့် ချိတ်မည်
                 </button>
               )}
             </div>
@@ -517,21 +476,18 @@ function SettingsPage() {
         </Section>
 
         {/* Modules Section */}
-        <Section title="အသုံးပြုမည့် မော်ဂျူးများ">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">
-                အဆင့်မြင့် စာရင်းကိုင် မုဒ် (အကြွေး၊ ဝယ်ယူမှုနှင့် အသုံးစရိတ်)
-              </p>
-            </div>
+        <Section title="စနစ်အားလုံး ဖွင့်သုံးမည်">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm">အဆင့်မြင့် စာရင်းကိုင် မုဒ်</span>
             <button
+              type="button"
               role="switch"
               aria-checked={Boolean(store?.advanced_accounting_mode)}
               aria-label="အဆင့်မြင့် စာရင်းကိုင် မုဒ်"
               disabled={advancedSaving}
               onClick={() => void toggleAdvanced()}
               className={cn(
-                "relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50",
+                "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50",
                 store?.advanced_accounting_mode ? "bg-primary" : "bg-muted",
               )}
             >
@@ -546,7 +502,7 @@ function SettingsPage() {
         </Section>
 
         {/* Account Section */}
-        <Section title="အကောင့်" description="ဤဆိုင်ပိုင်ရှင်၏ ဝင်ရောက်ရန် အီးမေးလ်။">
+        <Section title="အကောင့်">
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -558,9 +514,10 @@ function SettingsPage() {
               />
             </div>
             <button
+              type="button"
               onClick={() => void saveEmail()}
               disabled={savingEmail || email === session?.user.email}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium hover:bg-accent disabled:opacity-50"
+              className="inline-flex h-10 items-center gap-2 rounded-sm border border-border px-4 text-sm font-medium hover:bg-accent disabled:opacity-50"
             >
               {savingEmail && <Loader2 className="h-4 w-4 animate-spin" />} အီးမေးလ် ပြောင်းမည်
             </button>
@@ -568,11 +525,11 @@ function SettingsPage() {
         </Section>
 
         {/* Support Section */}
-        <Section title="အကူအညီ" description="အကူအညီ လိုအပ်ပါသလား? SMT POS အကူအညီပေးရေးသို့ ဆက်သွယ်ပါ။">
+        <Section title="အကူအညီနှင့် ဆက်သွယ်ရန်">
           <div className="flex flex-wrap gap-2">
             <a
               href="mailto:support@smtpos.app"
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium hover:bg-accent"
+              className="inline-flex h-10 items-center gap-2 rounded-sm border border-border px-4 text-sm font-medium hover:bg-accent"
             >
               <LifeBuoy className="h-4 w-4" /> support@smtpos.app
             </a>
@@ -580,9 +537,9 @@ function SettingsPage() {
               href="https://t.me/smtpos"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium hover:bg-accent"
+              className="inline-flex h-10 items-center gap-2 rounded-sm border border-border px-4 text-sm font-medium hover:bg-accent"
             >
-              <Send className="h-4 w-4" /> Telegram အကူအညီ
+              <Send className="h-4 w-4" /> Telegram
             </a>
           </div>
         </Section>
