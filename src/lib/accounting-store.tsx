@@ -188,7 +188,7 @@ const AccountingContext = createContext<AccountingContextValue | null>(null);
 export function AccountingProvider({ children }: { children: ReactNode }) {
   const { store } = useAuth();
   const storeId = store?.id ?? null;
-  const enabled = true; // All-in-one store accounting enabled for all stores
+  const enabled = Boolean(store?.advanced_accounting_mode);
 
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
