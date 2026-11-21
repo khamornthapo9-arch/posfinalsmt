@@ -1,355 +1,933 @@
-import { LottiePlayer } from "@/components/landing/lottie-player";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { lazy, Suspense, useMemo, useRef, useState } from "react";
+const QRCodeCanvas = lazy(() =>
+  import("@/components/lazy/label-codes").then((m) => ({ default: m.QRCodeCanvas })),
+);
+const Barcode = lazy(() =>
+  import("@/components/lazy/label-codes").then((m) => ({ default: m.Barcode })),
+);
 import {
+  Barcode as BarcodeIcon,
+  Crown,
+  FileSpreadsheet,
   Loader2,
-  LogOut,
-  Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
+  PackagePlus,
+  Pencil,
+  Plus,
+  Printer,
+  QrCode,
+  Search,
+  Trash2,
   X,
-  ShoppingCart,
-  Boxes,
-  BarChart3,
-  Settings as SettingsIcon,
-  Users,
-  Truck,
-  Wallet,
-  Building2,
-  Wifi,
-  WifiOff,
-  RefreshCw,
+  ImagePlus,
 } from "lucide-react";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { FREE_LIMITS } from "@/lib/subscription";
+import { PosShell } from "@/components/pos/pos-shell";
 import { useAuth } from "@/lib/auth-store";
-import { AnnouncementMarquee } from "@/components/pos/announcement-marquee";
-import { useRole, ROLE_LABEL, type StoreRole } from "@/lib/roles";
 import { usePos } from "@/lib/pos-store";
-import { useStoreLogo } from "@/lib/use-store-logo";
+import { useStoreSettings } from "@/lib/use-store-settings";
+import { uploadItemImage } from "@/lib/image-store";
+import { useCachedImage } from "@/lib/use-cached-image";
+import { downloadCsv, money, stockStatus } from "@/lib/pos-utils";
+import {
+  SAMPLE_CSV_ROWS,
+  generateSku,
+  itemsToCsvRows,
+  parseItemsCsv,
+  type ParsedItemRow,
+} from "@/lib/item-csv";
+import type { CachedItem } from "@/lib/pos-db";
 import { cn } from "@/lib/utils";
 
-const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
-  sales: ShoppingCart,
-  inventory: Boxes,
-  reports: BarChart3,
-  customers: Users,
-  suppliers: Truck,
-  expenses: Wallet,
-  branches: Building2,
-  settings: SettingsIcon,
+export const Route = createFileRoute("/inventory")({
+  ssr: false,
+  head: () => ({
+    meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { title: "ကုန်ပစ္စည်းစာရင်းနှင့် လေဘယ်များ — Counter Point of Sale" },
+      {
+        name: "description",
+        content:
+          "ကုန်ပစ္စည်းများ၊ လက်ကျန်ပမာဏနှင့် အနည်းဆုံးလက်ကျန်သတ်မှတ်ချက်များကို စီမံခန့်ခွဲပြီး ၂x၁ လက်မ QR လေဘယ်များကို ရိုက်နှိပ်ပါ။",
+      },
+      { property: "og:title", content: "ကုန်ပစ္စည်းစာရင်းနှင့် လေဘယ်များ — Counter Point of Sale" },
+      {
+        property: "og:description",
+        content: "QR လေဘယ်ထုတ်လုပ်ခြင်းနှင့် ပရင်ထုတ်ခြင်းဆိုင်ရာ ကုန်ပစ္စည်း ကတ်တလောက် စီမံခန့်ခွဲမှု။",
+      },
+    ],
+  }),
+  component: InventoryPage,
+});
+
+type Filter = "all" | "low" | "out";
+
+const EMPTY = {
+  sku: "",
+  name: "",
+  price: "",
+  cost_price: "",
+  stock_quantity: "",
+  min_stock_threshold: "5",
+  barcode: "",
+  qr_value: "",
 };
 
-const NAV_ITEMS = [
-  { to: "/register", label: "အရောင်းစာရင်း", tone: "sales", branchAllowed: true },
-  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", tone: "inventory", branchAllowed: true },
-  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", tone: "reports", branchAllowed: false },
-  { to: "/customers", label: "ဖောက်သည်များ", tone: "customers", branchAllowed: true },
-  { to: "/suppliers", label: "ကုန်သွင်းသူများ", tone: "suppliers", branchAllowed: false },
-  { to: "/expenses", label: "အသုံးစရိတ်", tone: "expenses", branchAllowed: true },
-  { to: "/settings_/staff", label: "ဆိုင်ခွဲများ (Pro)", tone: "branches", branchAllowed: false },
-  { to: "/settings", label: "ပြုပြင်ခြင်း", tone: "settings", branchAllowed: false },
-] as const;
-
-function Brand({ collapsed = false }: { collapsed?: boolean }) {
-  const logo = useStoreLogo();
-  const { store } = useAuth();
-
-  return (
-    <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
-      {logo ? (
-        <img
-          src={logo}
-          alt={store ? `${store.name} logo` : "SMT POS logo"}
-          className="h-9 w-9 shrink-0 object-contain rounded-md"
-        />
-      ) : (
-        <div
-          aria-label="SMT POS"
-          className="flex h-9 w-9 shrink-0 items-center justify-center"
-        >
-          <LottiePlayer src="/animations/s-logo.json" className="h-9 w-9" />
-        </div>
-      )}
-      {!collapsed && (
-        <div className="min-w-0">
-          <p className="truncate text-sm font-bold tracking-tight text-sidebar-foreground">SMT POS</p>
-          <p className="truncate text-xs leading-5 text-sidebar-foreground/70">{store?.name ?? "Store"}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+function InventoryPage() {
+  const { items, saveItem, deleteItem, seedDemoItems } = usePos();
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [editing, setEditing] = useState<CachedItem | "new" | null>(null);
+  const [labelItem, setLabelItem] = useState<CachedItem | null>(null);
+  const [seeding, setSeeding] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [csvMenuOpen, setCsvMenuOpen] = useState(false);
+  const { isPro, fmt } = useStoreSettings();
   const { isBranchDevice } = useAuth();
 
-  const items = isBranchDevice
-    ? NAV_ITEMS.filter((item) => item.branchAllowed)
-    : NAV_ITEMS;
+  const totalStockValuation = useMemo(() => {
+    return items.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.stock_quantity) || 0), 0);
+  }, [items]);
 
-  return (
-    <nav className="flex flex-col gap-1">
-      {items.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to as string}
-          title={item.label}
-          data-tone={item.tone}
-          onClick={onNavigate}
-          activeOptions={{ exact: item.to === "/register" }}
-          activeProps={{
-            className: "",
-            "data-active": "true",
-          }}
-          className={cn(
-            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-            collapsed && "justify-center px-0",
-          )}
-        >
-          {(() => {
-            const Icon = NAV_ICONS[item.tone] ?? ShoppingCart;
-            return <Icon className="h-4 w-4 shrink-0" />;
-          })()}
-          {!collapsed && <span className="truncate leading-6">{item.label}</span>}
-        </Link>
-      ))}
-    </nav>
-  );
-}
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((item) => {
+      const matches =
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        item.sku.toLowerCase().includes(q);
+      const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
+      const passes =
+        filter === "all" || (filter === "out" ? status === "out" : status !== "ok");
+      return matches && passes;
+    });
+  }, [items, query, filter]);
 
-function UserCard({ collapsed = false }: { collapsed?: boolean }) {
-  const { session, signOut, stores, store, switchStore, isBranchDevice } = useAuth();
-  const { role } = useRole();
-  const navigate = useNavigate();
-  const email = session?.user.email ?? "";
-  const label = isBranchDevice ? (store?.name ?? "ဆိုင်ခွဲ") : (store?.name || email || "ဆိုင်ရှင်");
-  const initial = label.charAt(0).toUpperCase() || "S";
-
-  const handleSignOut = () => {
-    void (async () => {
-      await signOut();
-      void navigate({ to: "/", replace: true });
-    })();
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteItem(id);
+      toast.success("ကုန်ပစ္စည်း ဖျက်ပြီးပါပြီ");
+    } catch {
+      toast.error("ရောင်းချထားသော မှတ်တမ်းရှိသည့် ကုန်ပစ္စည်းကို ဖျက်၍မရပါ");
+    }
   };
 
-  if (collapsed) {
-    return (
-      <button
-        onClick={handleSignOut}
-        aria-label="Sign out"
-        className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive text-sm font-semibold transition-colors"
-      >
-        {initial}
-      </button>
-    );
-  }
-
   return (
-    <div className="rounded-xl border border-sidebar-border bg-sidebar-accent/50 p-2.5">
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-white shadow-xs">
-          {initial}
+    <PosShell
+      title="ကုန်ပစ္စည်းစာရင်း"
+      subtitle={
+        isBranchDevice
+          ? `ဆိုင်ခွဲ လက်ကျန်စာရင်း · ${items.length} မျိုး`
+          : `စုစုပေါင်း ${items.length} မျိုး · တန်ဖိုး ${fmt(totalStockValuation)}`
+      }
+    >
+      <div className="flex h-[calc(100dvh-64px)] flex-col bg-muted/20">
+        
+        {/* Responsive Toolbar (Moved from PosShell actions to prevent mobile overlap) */}
+        <div className="shrink-0 border-b border-border bg-card p-3 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            {/* Search Box */}
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ကုန်ပစ္စည်းရှာဖွေရန်..."
+                className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            {/* Filters & Actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Stock Filter Controls */}
+              <div className="flex flex-1 items-center rounded-md border border-border bg-background p-0.5 sm:flex-none">
+                {(["all", "low", "out"] as Filter[]).map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setFilter(f)}
+                    className={cn(
+                      "flex-1 rounded-sm px-2.5 py-1 text-xs font-medium transition-colors sm:flex-none",
+                      filter === f
+                        ? "bg-primary font-semibold text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {f === "all" ? "အားလုံး" : f === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Actions Menu */}
+                <div className="relative">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCsvMenuOpen((prev) => !prev)}
+                    className="h-9 rounded-md text-xs"
+                  >
+                    လုပ်ဆောင်ချက်များ ▾
+                  </Button>
+
+                  {csvMenuOpen && (
+                    <div className="absolute right-0 top-10 z-50 w-56 rounded-md border border-border bg-card p-1 shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCsvMenuOpen(false);
+                          downloadCsv(
+                            `items-${new Date().toISOString().slice(0, 10)}.csv`,
+                            itemsToCsvRows(items),
+                          );
+                        }}
+                        className="w-full rounded-sm px-3 py-2 text-left text-xs font-medium hover:bg-accent"
+                      >
+                        CSV ထုတ်ယူမည် (Export)
+                      </button>
+                      {!isBranchDevice && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCsvMenuOpen(false);
+                              setImportOpen(true);
+                            }}
+                            className="w-full rounded-sm px-3 py-2 text-left text-xs font-medium hover:bg-accent"
+                          >
+                            CSV ဖြင့် ထည့်သွင်းမည် (Import)
+                          </button>
+                          {items.length === 0 && (
+                            <button
+                              type="button"
+                              disabled={seeding}
+                              onClick={() => {
+                                setCsvMenuOpen(false);
+                                setSeeding(true);
+                                void seedDemoItems()
+                                  .then((count) =>
+                                    toast.success(`${count} ကုန်ပစ္စည်း ဥပမာများ ထည့်သွင်းပြီးပါပြီ`),
+                                  )
+                                  .catch(() => toast.error("ဥပမာကုန်ပစ္စည်းများ ထည့်သွင်း၍မရပါ"))
+                                  .finally(() => setSeeding(false));
+                              }}
+                              className="flex w-full items-center gap-1.5 rounded-sm px-3 py-2 text-left text-xs font-medium hover:bg-accent disabled:opacity-50"
+                            >
+                              <PackagePlus className="h-3.5 w-3.5" />
+                              {seeding ? "ထည့်သွင်းနေသည်..." : "ဥပမာကုန်ပစ္စည်းထည့်မည်"}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {!isBranchDevice && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setEditing("new")}
+                    className="h-9 gap-1 rounded-md text-xs font-semibold"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> ကုန်ပစ္စည်းသစ်
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-bold text-sidebar-accent-foreground">{label}</p>
-          <p className="text-[11px] text-sidebar-foreground/70">
-            {isBranchDevice ? "ဆိုင်ခွဲ (Branch)" : "ဆိုင်ရှင် (Shop Owner)"}
-          </p>
+
+        {/* Scrollable List Area */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Column header — desktop only */}
+          <div className="sticky top-0 z-10 hidden grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center border-b border-border bg-card/95 px-4 py-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-sm md:grid">
+            <span>ကုန်ပစ္စည်း</span>
+            <span>အမျိုးအစား / SKU</span>
+            <span>ဈေးနှုန်း</span>
+            <span>အရေအတွက်</span>
+            <span>အခြေအနေ</span>
+            <span className="text-right">လုပ်ဆောင်ချက်များ</span>
+          </div>
+
+          <div className="divide-y divide-border/60 bg-card">
+            {filtered.map((item) => {
+              const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
+              const statusLabel =
+                status === "ok" ? "ပစ္စည်းရှိသည်" : status === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်";
+              const badgeClass = cn(
+                "rounded-sm px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
+                status === "ok" && "bg-success-soft text-success",
+                status === "low" && "bg-warning-soft text-warning",
+                status === "out" && "bg-danger-soft text-destructive",
+              );
+
+              return (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-3 py-3 text-xs hover:bg-accent/40 md:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] md:gap-0 md:px-4"
+                >
+                  <div className="col-start-1 row-start-1 min-w-0 md:contents">
+                    <span className="block truncate font-semibold text-foreground">{item.name}</span>
+                    <span className="hidden truncate font-mono text-muted-foreground md:block">
+                      {item.sku || "—"}
+                    </span>
+                    <span className="hidden font-medium tabular-nums md:block">{money(item.price)}</span>
+                    <span className="hidden font-bold tabular-nums md:block">
+                      {item.stock_quantity ?? 0}
+                    </span>
+                    <span className="hidden md:block">
+                      <span className={badgeClass}>{statusLabel}</span>
+                    </span>
+                  </div>
+
+                  {/* Mobile-only meta row */}
+                  <div className="col-span-2 row-start-2 flex items-center gap-2 md:hidden">
+                    <span className="font-medium tabular-nums">{money(item.price)}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="font-bold tabular-nums">{item.stock_quantity ?? 0}</span>
+                    <span className={cn(badgeClass, "ml-auto")}>{statusLabel}</span>
+                  </div>
+
+                  <div className="col-start-2 row-start-1 flex justify-end gap-1 md:col-start-auto md:row-start-auto">
+                    <button
+                      type="button"
+                      onClick={() => setLabelItem(item)}
+                      aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
+                      className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground md:p-1"
+                    >
+                      <QrCode className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                    </button>
+                    {!isBranchDevice && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(item)}
+                          aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
+                          className="rounded-sm p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground md:p-1"
+                        >
+                          <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(item.id)}
+                          aria-label={`${item.name} ကိုဖျက်ရန်`}
+                          className="rounded-sm p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive md:p-1"
+                        >
+                          <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {filtered.length === 0 && (
+              <div className="px-4 py-12 text-center text-xs text-muted-foreground">
+                {items.length === 0 ? (
+                  <div className="space-y-2">
+                    <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
+                    {!isBranchDevice && (
+                      <p>"ကုန်ပစ္စည်းသစ်" ခလုတ် သို့မဟုတ် "လုပ်ဆောင်ချက်များ" မှ ထည့်သွင်းနိုင်ပါသည်။</p>
+                    )}
+                  </div>
+                ) : (
+                  "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
+                )}
+              </div>
+            )}
+          </div>
         </div>
-        <button
-          onClick={handleSignOut}
-          title="အကောင့်ထွက်မည်"
-          aria-label="Sign out"
-          className="rounded-md p-1.5 text-sidebar-foreground/70 transition-colors hover:bg-destructive/20 hover:text-destructive"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
       </div>
 
-      {/* Owner store switch if multi-branch */}
-      {stores.length > 1 && !isBranchDevice && (
-        <select
-          aria-label="ဆိုင် ပြောင်းရန်"
-          value={store?.id ?? ""}
-          onChange={(e) => switchStore(e.target.value)}
-          className="mt-2 w-full rounded-md border border-sidebar-border bg-sidebar px-2 py-1.5 text-xs text-sidebar-foreground"
-        >
-          {stores.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.parent_store_id ? "ဆိုင်ခွဲ · " : "ပင်မ · "}
-              {s.name}
-            </option>
-          ))}
-        </select>
+      {editing && (
+        <ProductModal
+          item={editing === "new" ? null : editing}
+          onClose={() => setEditing(null)}
+          onSave={async (values) => {
+            if (!isPro && editing === "new" && items.length >= FREE_LIMITS.items) {
+              toast.error(
+                `Standard အစီအစဉ်တွင် ကုန်ပစ္စည်း ${FREE_LIMITS.items} မျိုးသာ ထည့်နိုင်သည်။ Pro သို့ အဆင့်မြှင့်ပါ။`,
+              );
+              return;
+            }
+            try {
+              await saveItem({
+                ...values,
+                sku: values.sku.trim() || generateSku(items.map((i) => i.sku)),
+              });
+              toast.success("ကုန်ပစ္စည်း သိမ်းဆည်းပြီးပါပြီ");
+              setEditing(null);
+            } catch {
+              toast.error("သိမ်းဆည်း၍ မရပါ — SKU နံပါတ် အသုံးပြုပြီးသား ဖြစ်နိုင်ပါသည်");
+            }
+          }}
+        />
       )}
-    </div>
+
+      {importOpen && (
+        <ImportModal
+          items={items}
+          isPro={isPro}
+          onClose={() => setImportOpen(false)}
+          onImport={async (rows) => {
+            const bySku = new Map(items.map((i) => [i.sku, i]));
+            let created = 0;
+            let updated = 0;
+            for (const row of rows) {
+              const existing = bySku.get(row.sku);
+              await saveItem({
+                ...(existing ? { id: existing.id } : {}),
+                sku: row.sku,
+                name: row.name,
+                price: row.price,
+                cost_price: row.cost_price,
+                stock_quantity: row.stock_quantity,
+                min_stock_threshold: existing?.min_stock_threshold ?? 5,
+                ...(row.category ? { category: row.category } : {}),
+              });
+              if (existing) updated += 1;
+              else created += 1;
+            }
+            return { created, updated };
+          }}
+        />
+      )}
+
+      {labelItem && <LabelModal item={labelItem} onClose={() => setLabelItem(null)} />}
+    </PosShell>
   );
 }
 
-export function PosShell({
-  title,
-  subtitle,
-  actions,
-  children,
+function ProductModal({
+  item,
+  onClose,
+  onSave,
 }: {
-  title: string;
-  subtitle?: string | undefined;
-  actions?: ReactNode | undefined;
-  children: ReactNode;
+  item: CachedItem | null;
+  onClose: () => void;
+  onSave: (values: {
+    id?: string;
+    sku: string;
+    name: string;
+    price: number;
+    cost_price: number;
+    stock_quantity: number;
+    min_stock_threshold: number;
+    barcode?: string | null;
+    qr_value?: string | null;
+    image_url?: string | null;
+    units?:
+      | { unit_name: string; conversion: number; price: number; is_default?: boolean }[]
+      | undefined;
+  }) => Promise<void>;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const { session, store, loading } = useAuth();
-  const { isOwner } = useRole();
-  const { syncState, pendingCount, syncNow } = usePos();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const navigate = useNavigate();
+  const { isPro } = useStoreSettings();
+  const { store } = useAuth();
+  const [imageUrl, setImageUrl] = useState<string | null>(item?.image_url ?? null);
+  const [uploading, setUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const previewSrc = useCachedImage(imageUrl);
+  const [form, setForm] = useState<typeof EMPTY>(
+    item
+      ? {
+          sku: item.sku,
+          name: item.name,
+          price: String(item.price),
+          cost_price: String(item.cost_price ?? 0),
+          stock_quantity: String(item.stock_quantity),
+          min_stock_threshold: String(item.min_stock_threshold),
+          barcode: item.barcode ?? "",
+          qr_value: item.qr_value ?? "",
+        }
+      : EMPTY,
+  );
+  const [units, setUnits] = useState<
+    { unit_name: string; conversion: string; price: string; is_default: boolean }[]
+  >(
+    item?.units?.length
+      ? item.units.map((u) => ({
+          unit_name: u.unit_name,
+          conversion: String(u.conversion),
+          price: String(u.price),
+          is_default: Boolean(u.is_default),
+        }))
+      : [],
+  );
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !session) void navigate({ to: "/", replace: true });
-    else if (!loading && session && !store) void navigate({ to: "/login", replace: true });
-  }, [loading, session, store, navigate]);
+  const handleImagePick = async (file: File) => {
+    if (!store) {
+      toast.error("ဆိုင်အကောင့် မတွေ့ပါ");
+      return;
+    }
+    setUploading(true);
+    try {
+      const url = await uploadItemImage(file, store.id);
+      setImageUrl(url);
+      toast.success("ဓာတ်ပုံ တင်ပြီးပါပြီ");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "ဓာတ်ပုံ တင်၍မရပါ";
+      toast.error(msg);
+    } finally {
+      setUploading(false);
+    }
+  };
 
-  useEffect(() => {
-    if (loading || !session || !store) return;
-    const allowed =
-      pathname === "/register" ||
-      pathname.startsWith("/customers") ||
-      pathname.startsWith("/inventory") ||
-      pathname.startsWith("/expenses") ||
-      (pathname.startsWith("/analytics") && isOwner) ||
-      (pathname.startsWith("/suppliers") && isOwner) ||
-      ((pathname === "/settings" || pathname.startsWith("/settings/")) && isOwner);
-    if (!allowed) void navigate({ to: "/register", replace: true });
-  }, [loading, session, store, isOwner, pathname, navigate]);
+  const addUnitRow = () => {
+    setUnits((prev) => [
+      ...prev,
+      { unit_name: "", conversion: "1", price: form.price || "0", is_default: false },
+    ]);
+  };
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem("pos-sidebar-collapsed");
-    if (stored === "1") setCollapsed(true);
-  }, []);
+  const removeUnitRow = (idx: number) => {
+    setUnits((prev) => prev.filter((_, i) => i !== idx));
+  };
 
-  const toggle = () =>
-    setCollapsed((prev) => {
-      window.localStorage.setItem("pos-sidebar-collapsed", prev ? "0" : "1");
-      return !prev;
-    });
-
-  if (loading || !session || !store) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
+  const updateUnit = (
+    idx: number,
+    field: "unit_name" | "conversion" | "price" | "is_default",
+    val: string | boolean,
+  ) => {
+    setUnits((prev) =>
+      prev.map((u, i) => {
+        if (i !== idx) {
+          if (field === "is_default" && val === true) {
+            return { ...u, is_default: false };
+          }
+          return u;
+        }
+        return { ...u, [field]: val };
+      }),
     );
-  }
+  };
 
   return (
-    <div className="pos-app flex min-h-screen w-full bg-background text-foreground">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "no-print hidden shrink-0 flex-col self-start overflow-y-auto border-r border-sidebar-border bg-sidebar p-3 transition-[width] duration-200 md:sticky md:top-0 md:flex md:h-screen shadow-sm",
-          collapsed ? "w-[68px]" : "w-60",
-        )}
-      >
-        <div className="px-1 py-2">
-          <Brand collapsed={collapsed} />
-        </div>
-        <div className="my-3 h-px bg-sidebar-border" />
-        <NavList collapsed={collapsed} />
-        <div className="mt-auto space-y-2">
-          <UserCard collapsed={collapsed} />
-          <button
-            onClick={toggle}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex min-h-9 w-full items-center justify-center gap-2 rounded-md px-3 text-xs font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
-            ) : (
-              <>
-                <PanelLeftClose className="h-4 w-4" /> ဘေးဘား သိမ်းဆည်းရန်
-              </>
-            )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4">
+      <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-md border border-border bg-card p-4 shadow-lg sm:p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">
+            {item ? "ကုန်ပစ္စည်း ပြင်ဆင်ရန်" : "ကုန်ပစ္စည်း အသစ်"}
+          </h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
           </button>
         </div>
-      </aside>
 
-      {/* Mobile Drawer */}
-      {drawerOpen && (
-        <div className="no-print fixed inset-0 z-50 md:hidden">
-          <button
-            aria-label="Close menu"
-            onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs"
-          />
-          <div className="absolute inset-y-0 left-0 flex w-[264px] flex-col border-r border-sidebar-border bg-sidebar p-3 shadow-xl">
-            <div className="flex items-center justify-between px-1 py-2">
-              <Brand />
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-border bg-muted/40">
+              {previewSrc ? (
+                <img src={previewSrc} alt="Preview" className="h-full w-full object-cover" />
+              ) : (
+                <ImagePlus className="h-5 w-5 text-muted-foreground" />
+              )}
+              {uploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void handleImagePick(f);
+                }}
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => imageInputRef.current?.click()}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                >
+                  {imageUrl ? "ဓာတ်ပုံ ပြောင်းရန်" : "ဓာတ်ပုံ ထည့်ရန်"}
+                </button>
+                {imageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl(null)}
+                    className="rounded-md px-2 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+                  >
+                    ဖျက်ရန်
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-name">
+              အမည် *
+            </label>
+            <input
+              id="p-name"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-price">
+                ရောင်းဈေး *
+              </label>
+              <input
+                id="p-price"
+                type="number"
+                min="0"
+                step="any"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-cost">
+                ဝယ်ဈေး
+              </label>
+              <input
+                id="p-cost"
+                type="number"
+                min="0"
+                step="any"
+                value={form.cost_price}
+                onChange={(e) => setForm({ ...form, cost_price: e.target.value })}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-qty">
+                အရေအတွက်
+              </label>
+              <input
+                id="p-qty"
+                type="number"
+                min="0"
+                value={form.stock_quantity}
+                onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-min">
+                အနည်းဆုံး သတ်မှတ်ချက်
+              </label>
+              <input
+                id="p-min"
+                type="number"
+                min="0"
+                value={form.min_stock_threshold}
+                onChange={(e) => setForm({ ...form, min_stock_threshold: e.target.value })}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-sku">
+                SKU (ကုဒ်)
+              </label>
+              <input
+                id="p-sku"
+                placeholder="အလိုအလျောက် သတ်မှတ်မည်"
+                value={form.sku}
+                onChange={(e) => setForm({ ...form, sku: e.target.value })}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-mono outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-barcode">
+                ဘားကုဒ် (Barcode)
+              </label>
+              <input
+                id="p-barcode"
+                value={form.barcode}
+                onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-mono outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">ယူနစ် / ထုပ်ပိုးမှု</span>
               <button
-                onClick={() => setDrawerOpen(false)}
-                aria-label="Close menu"
-                className="rounded-md p-1 text-sidebar-foreground/80 hover:bg-sidebar-accent"
+                type="button"
+                onClick={addUnitRow}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
               >
-                <X className="h-5 w-5" />
+                <Plus className="h-3 w-3" /> ယူနစ်ထည့်ရန်
               </button>
             </div>
-            <div className="my-3 h-px bg-sidebar-border" />
-            <NavList onNavigate={() => setDrawerOpen(false)} />
-            <div className="mt-auto">
-              <UserCard />
-            </div>
+            {units.length > 0 && (
+              <div className="space-y-1.5 rounded-md border border-border bg-muted/20 p-2 text-xs">
+                {units.map((u, i) => (
+                  <div key={i} className="grid grid-cols-[1.5fr_1fr_1fr_auto] items-center gap-1.5">
+                    <input
+                      placeholder="ယူနစ်အမည်"
+                      value={u.unit_name}
+                      onChange={(e) => updateUnit(i, "unit_name", e.target.value)}
+                      className="h-8 min-w-0 rounded-sm border border-input bg-background px-2 text-xs"
+                    />
+                    <input
+                      type="number"
+                      placeholder="ပါဝင်မှု"
+                      value={u.conversion}
+                      onChange={(e) => updateUnit(i, "conversion", e.target.value)}
+                      className="h-8 min-w-0 rounded-sm border border-input bg-background px-2 text-xs"
+                    />
+                    <input
+                      type="number"
+                      placeholder="ဈေးနှုန်း"
+                      value={u.price}
+                      onChange={(e) => updateUnit(i, "price", e.target.value)}
+                      className="h-8 min-w-0 rounded-sm border border-input bg-background px-2 text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeUnitRow(i)}
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md shadow-xs">
-          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 sm:px-5">
-            <button
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Open menu"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/50 text-foreground md:hidden"
-            >
-              <Menu className="h-4 w-4" />
-            </button>
-            <div className="min-w-0 flex items-center gap-3">
-              <div>
-                <h1 className="truncate text-base font-bold leading-6 tracking-tight sm:text-lg">{title}</h1>
-                {subtitle && (
-                  <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-                )}
-              </div>
-              
-              {/* Online / Offline Sync Badge */}
-              <div className="hidden sm:flex items-center">
-                {syncState === "syncing" ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
-                    <RefreshCw className="h-3 w-3 animate-spin" /> ဒေတာ ချိတ်ဆက်သိမ်းဆည်းနေသည်...
-                  </span>
-                ) : syncState === "offline" || pendingCount > 0 ? (
-                  <button
-                    onClick={() => void syncNow()}
-                    title="ကွန်ရက် ပြန်ရပါက နှိပ်၍ သိမ်းပါ"
-                    className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-500/25 transition-colors"
-                  >
-                    <WifiOff className="h-3 w-3" /> အော့ဖ်လိုင်း {pendingCount > 0 && `(${pendingCount} စောင်)`}
-                  </button>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                    <Wifi className="h-3 w-3" /> အွန်လိုင်း
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {actions}
-            </div>
-          </div>
-        </header>
-
-        <AnnouncementMarquee />
-        <main className="min-w-0 flex-1">{children}</main>
+        <button
+          disabled={busy || !form.name.trim() || Number(form.price) < 0}
+          onClick={() => {
+            setBusy(true);
+            void onSave({
+              ...(item ? { id: item.id } : {}),
+              name: form.name.trim(),
+              price: Number(form.price) || 0,
+              cost_price: Number(form.cost_price) || 0,
+              stock_quantity: Number(form.stock_quantity) || 0,
+              min_stock_threshold: Number(form.min_stock_threshold) || 5,
+              sku: form.sku,
+              barcode: form.barcode.trim() || null,
+              qr_value: form.qr_value.trim() || null,
+              image_url: imageUrl,
+              units: units
+                .filter((u) => u.unit_name.trim())
+                .map((u) => ({
+                  unit_name: u.unit_name.trim(),
+                  conversion: Number(u.conversion) || 1,
+                  price: Number(u.price) || 0,
+                  is_default: u.is_default,
+                })),
+            }).finally(() => setBusy(false));
+          }}
+          className="mt-5 h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          သိမ်းဆည်းမည်
+        </button>
       </div>
     </div>
   );
 }
+
+function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }) {
+  const [format, setFormat] = useState<"qr" | "barcode">("qr");
+  const printAreaRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = () => {
+    const printContent = printAreaRef.current;
+    if (!printContent) return;
+    const w = window.open("", "_blank", "width=400,height=400");
+    if (!w) {
+      toast.error("Popup ပွင့်ရန် ခွင့်ပြုပါ");
+      return;
+    }
+    w.document.write(`
+      <html>
+        <head>
+          <title>${item.name} Label</title>
+          <style>
+            @page { size: 2in 1in; margin: 0; }
+            body { margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
+          </style>
+        </head>
+        <body>${printContent.innerHTML}</body>
+      </html>
+    `);
+    w.document.close();
+    w.focus();
+    w.print();
+    w.close();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4">
+      <div className="w-full max-w-sm rounded-md border border-border bg-card p-4 shadow-lg sm:p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">လေဘယ် ရိုက်နှိပ်ရန်</h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mb-4 flex rounded-md border border-border p-0.5">
+          <button
+            onClick={() => setFormat("qr")}
+            className={cn(
+              "flex-1 rounded-sm py-1 text-xs font-medium",
+              format === "qr" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+            )}
+          >
+            QR Code
+          </button>
+          <button
+            onClick={() => setFormat("barcode")}
+            className={cn(
+              "flex-1 rounded-sm py-1 text-xs font-medium",
+              format === "barcode" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+            )}
+          >
+            Barcode
+          </button>
+        </div>
+
+        <div
+          ref={printAreaRef}
+          className="mx-auto flex h-32 w-56 max-w-full flex-col items-center justify-center rounded-md border border-dashed border-border bg-white p-2 text-black"
+        >
+          <p className="max-w-full truncate text-center text-xs font-bold">{item.name}</p>
+          <div className="my-1">
+            <Suspense fallback={<div className="h-14 w-14 animate-pulse bg-gray-200" />}>
+              {format === "qr" ? (
+                <QRCodeCanvas value={item.qr_value || item.sku} size={64} />
+              ) : (
+                <Barcode value={item.barcode || item.sku} width={1.2} height={30} fontSize={10} />
+              )}
+            </Suspense>
+          </div>
+          <p className="text-[11px] font-semibold">{money(item.price)}</p>
+        </div>
+
+        <button
+          onClick={handlePrint}
+          className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+        >
+          <Printer className="h-4 w-4" /> လေဘယ် ပရင့်ထုတ်မည်
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ImportModal({
+  items,
+  isPro,
+  onClose,
+  onImport,
+}: {
+  items: CachedItem[];
+  isPro: boolean;
+  onClose: () => void;
+  onImport: (rows: ParsedItemRow[]) => Promise<{ created: number; updated: number }>;
+}) {
+  const [rows, setRows] = useState<ParsedItemRow[]>([]);
+  const [fileName, setFileName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const handleFile = async (file: File) => {
+    setFileName(file.name);
+    try {
+      const text = await file.text();
+      const parsed = parseItemsCsv(text, items.map((item) => item.sku));
+      setRows(parsed.rows);
+      if (parsed.errors.length > 0) toast.error(parsed.errors.join("\n"));
+    } catch {
+      toast.error("CSV ဖိုင် ဖတ်၍မရပါ");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4">
+      <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-md border border-border bg-card p-4 shadow-lg sm:p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">CSV ဖြင့် ကုန်ပစ္စည်းများ ထည့်သွင်းရန်</h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3 text-xs">
+          <div className="rounded-md border border-dashed border-border p-4 text-center">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleFile(f);
+              }}
+              className="w-full text-xs"
+            />
+          </div>
+
+          {rows.length > 0 && (
+            <p className="font-medium text-success">
+              ✓ ကုန်ပစ္စည်း {rows.length} မျိုး တွေ့ရှိပါသည်
+            </p>
+          )}
+
+          <div className="flex justify-between pt-2">
+            <button
+              onClick={() => downloadCsv("sample-items.csv", SAMPLE_CSV_ROWS)}
+              className="text-primary hover:underline"
+            >
+              နမူနာ CSV ရယူရန်
+            </button>
+          </div>
+        </div>
+
+        <button
+          disabled={busy || rows.length === 0}
+          onClick={() => {
+            if (!isPro && items.length + rows.length > FREE_LIMITS.items) {
+              toast.error(
+                `Standard အစီအစဉ်တွင် ပစ္စည်း ${FREE_LIMITS.items} သာ ထည့်သွင်းနိုင်ပါသည်။`,
+              );
+              return;
+            }
+            setBusy(true);
+            void onImport(rows)
+              .then(({ created, updated }) => {
+                toast.success(`အသစ် ${created} မျိုး၊ အဟောင်းပြင်ဆင် ${updated} မျိုး ထည့်ပြီးပါပြီ`);
+                onClose();
+              })
+              .catch(() => toast.error("ထည့်သွင်း၍ မရပါ"))
+              .finally(() => setBusy(false));
+          }}
+          className="mt-5 h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          အတည်ပြု ထည့်သွင်းမည်
+        </button>
+      </div>
+    </div>
+  );
+    }
