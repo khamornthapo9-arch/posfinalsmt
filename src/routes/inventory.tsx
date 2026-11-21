@@ -125,9 +125,9 @@ function InventoryPage() {
           : `စုစုပေါင်း ${items.length} မျိုး · တန်ဖိုး ${fmt(totalStockValuation)}`
       }
       actions={
-        <div className="flex items-center gap-2">
-          {/* 1. Search Box */}
-          <div className="relative w-44 sm:w-64">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 1. Search Box — full width on mobile, fixed on desktop */}
+          <div className="relative w-full sm:w-56 md:w-64">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="search"
@@ -138,15 +138,15 @@ function InventoryPage() {
             />
           </div>
 
-          {/* 2. Stock Filter Controls */}
-          <div className="hidden items-center rounded-md border border-border bg-background p-0.5 sm:flex">
+          {/* 2. Stock Filter Controls — always visible */}
+          <div className="flex items-center overflow-x-auto rounded-md border border-border bg-background p-0.5">
             {(["all", "low", "out"] as Filter[]).map((f) => (
               <button
                 key={f}
                 type="button"
                 onClick={() => setFilter(f)}
                 className={cn(
-                  "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
+                  "whitespace-nowrap rounded-sm px-2 py-1 text-[11px] font-medium transition-colors sm:px-2.5 sm:text-xs",
                   filter === f
                     ? "bg-primary font-semibold text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
@@ -170,7 +170,7 @@ function InventoryPage() {
             </Button>
 
             {csvMenuOpen && (
-              <div className="absolute right-0 top-10 z-50 w-56 rounded-md border border-border bg-card p-1 shadow-lg">
+              <div className="absolute right-0 top-10 z-50 w-56 max-w-[calc(100vw-1.5rem)] rounded-md border border-border bg-card p-1 shadow-lg">
                 <button
                   type="button"
                   onClick={() => {
@@ -236,27 +236,38 @@ function InventoryPage() {
         </div>
       }
     >
-      <div className="h-[calc(100vh-64px)] overflow-y-auto bg-muted/20">
-        <div className="min-w-[680px]">
-          {/* Sticky Column Header */}
-          <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center border-b border-border bg-card/95 px-4 py-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-sm">
-            <span>ကုန်ပစ္စည်း</span>
-            <span>အမျိုးအစား / SKU</span>
-            <span>ဈေးနှုန်း</span>
-            <span>အရေအတွက်</span>
-            <span>အခြေအနေ</span>
-            <span className="text-right">လုပ်ဆောင်ချက်များ</span>
-          </div>
+      <div className="h-[calc(100dvh-64px)] overflow-y-auto bg-muted/20">
+        {/* Sticky Column Header — desktop only */}
+        <div className="sticky top-0 z-10 hidden grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center border-b border-border bg-card/95 px-4 py-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-sm md:grid">
+          <span>ကုန်ပစ္စည်း</span>
+          <span>အမျိုးအစား / SKU</span>
+          <span>ဈေးနှုန်း</span>
+          <span>အရေအတွက်</span>
+          <span>အခြေအနေ</span>
+          <span className="text-right">လုပ်ဆောင်ချက်များ</span>
+        </div>
 
-          {/* Product Rows */}
-          <div className="divide-y divide-border/60 bg-card">
-            {filtered.map((item) => {
-              const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
-              return (
-                <div
-                  key={item.id}
-                  className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center px-4 py-3 text-xs hover:bg-accent/40"
-                >
+        {/* Product Rows */}
+        <div className="divide-y divide-border/60 bg-card">
+          {filtered.map((item) => {
+            const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
+            const statusLabel =
+              status === "ok"
+                ? "ပစ္စည်းရှိသည်"
+                : status === "low"
+                  ? "လက်ကျန်နည်း"
+                  : "ပစ္စည်းပြတ်";
+            const statusClass = cn(
+              "rounded-sm px-2 py-0.5 text-[11px] font-semibold",
+              status === "ok" && "bg-success-soft text-success",
+              status === "low" && "bg-warning-soft text-warning",
+              status === "out" && "bg-danger-soft text-destructive",
+            );
+
+            return (
+              <div key={item.id}>
+                {/* ── Desktop row ─────────────────────────────── */}
+                <div className="hidden grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center px-4 py-3 text-xs hover:bg-accent/40 md:grid">
                   <span className="truncate font-semibold text-foreground">{item.name}</span>
                   <span className="truncate font-mono text-muted-foreground">
                     {item.sku || "—"}
@@ -264,20 +275,7 @@ function InventoryPage() {
                   <span className="font-medium tabular-nums">{money(item.price)}</span>
                   <span className="font-bold tabular-nums">{item.stock_quantity ?? 0}</span>
                   <span>
-                    <span
-                      className={cn(
-                        "rounded-sm px-2 py-0.5 text-[11px] font-semibold",
-                        status === "ok" && "bg-success-soft text-success",
-                        status === "low" && "bg-warning-soft text-warning",
-                        status === "out" && "bg-danger-soft text-destructive",
-                      )}
-                    >
-                      {status === "ok"
-                        ? "ပစ္စည်းရှိသည်"
-                        : status === "low"
-                          ? "လက်ကျန်နည်း"
-                          : "ပစ္စည်းပြတ်"}
-                    </span>
+                    <span className={statusClass}>{statusLabel}</span>
                   </span>
                   <div className="flex justify-end gap-1">
                     <button
@@ -288,7 +286,6 @@ function InventoryPage() {
                     >
                       <QrCode className="h-3.5 w-3.5" />
                     </button>
-                    {/* ဆိုင်ခွဲစက်တွင် ပြင်/ဖျက် ခလုတ်များကို ဖျောက်ထားမည် */}
                     {!isBranchDevice && (
                       <>
                         <button
@@ -311,24 +308,81 @@ function InventoryPage() {
                     )}
                   </div>
                 </div>
-              );
-            })}
 
-            {filtered.length === 0 && (
-              <div className="px-4 py-12 text-center text-xs text-muted-foreground">
-                {items.length === 0 ? (
-                  <div className="space-y-2">
-                    <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
-                    {!isBranchDevice && (
-                      <p>"ကုန်ပစ္စည်းသစ်" ခလုတ် သို့မဟုတ် "လုပ်ဆောင်ချက်များ" မှ ထည့်သွင်းနိုင်ပါသည်။</p>
-                    )}
+                {/* ── Mobile card ─────────────────────────────── */}
+                <div className="px-3 py-3 hover:bg-accent/40 md:hidden">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
+                      <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+                        {item.sku || "—"}
+                      </p>
+                    </div>
+                    <span className={cn(statusClass, "shrink-0 text-[10px]")}>
+                      {statusLabel}
+                    </span>
                   </div>
-                ) : (
-                  "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
-                )}
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                      <span className="font-medium tabular-nums">
+                        <span className="text-muted-foreground">ဈေး </span>
+                        {money(item.price)}
+                      </span>
+                      <span className="font-bold tabular-nums">
+                        <span className="text-muted-foreground">အရေအတွက် </span>
+                        {item.stock_quantity ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setLabelItem(item)}
+                        aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
+                        className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        <QrCode className="h-4 w-4" />
+                      </button>
+                      {!isBranchDevice && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setEditing(item)}
+                            aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
+                            className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(item.id)}
+                            aria-label={`${item.name} ကိုဖျက်ရန်`}
+                            className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            );
+          })}
+
+          {filtered.length === 0 && (
+            <div className="px-4 py-12 text-center text-xs text-muted-foreground">
+              {items.length === 0 ? (
+                <div className="space-y-2">
+                  <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
+                  {!isBranchDevice && (
+                    <p>"ကုန်ပစ္စည်းသစ်" ခလုတ် သို့မဟုတ် "လုပ်ဆောင်ချက်များ" မှ ထည့်သွင်းနိုင်ပါသည်။</p>
+                  )}
+                </div>
+              ) : (
+                "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -496,8 +550,8 @@ function ProductModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-md border border-border bg-card p-5 shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4">
+      <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-md border border-border bg-card p-4 shadow-lg sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">
             {item ? "ကုန်ပစ္စည်း ပြင်ဆင်ရန်" : "ကုန်ပစ္စည်း အသစ်"}
@@ -533,7 +587,7 @@ function ProductModal({
                   if (f) void handleImagePick(f);
                 }}
               />
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   disabled={uploading}
@@ -671,29 +725,29 @@ function ProductModal({
                 {units.map((u, i) => (
                   <div key={i} className="grid grid-cols-[1.5fr_1fr_1fr_auto] items-center gap-1.5">
                     <input
-                      placeholder="ယူနစ်အမည် (ဥပမာ- ဖာ)"
+                      placeholder="ယူနစ်အမည်"
                       value={u.unit_name}
                       onChange={(e) => updateUnit(i, "unit_name", e.target.value)}
-                      className="h-8 rounded-sm border border-input bg-background px-2 text-xs"
+                      className="h-8 min-w-0 rounded-sm border border-input bg-background px-2 text-xs"
                     />
                     <input
                       type="number"
                       placeholder="ပါဝင်မှု"
                       value={u.conversion}
                       onChange={(e) => updateUnit(i, "conversion", e.target.value)}
-                      className="h-8 rounded-sm border border-input bg-background px-2 text-xs"
+                      className="h-8 min-w-0 rounded-sm border border-input bg-background px-2 text-xs"
                     />
                     <input
                       type="number"
                       placeholder="ဈေးနှုန်း"
                       value={u.price}
                       onChange={(e) => updateUnit(i, "price", e.target.value)}
-                      className="h-8 rounded-sm border border-input bg-background px-2 text-xs"
+                      className="h-8 min-w-0 rounded-sm border border-input bg-background px-2 text-xs"
                     />
                     <button
                       type="button"
                       onClick={() => removeUnitRow(i)}
-                      className="text-muted-foreground hover:text-destructive"
+                      className="shrink-0 text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -769,8 +823,8 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4">
+      <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto rounded-md border border-border bg-card p-4 shadow-lg sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">လေဘယ် ရိုက်နှိပ်ရန်</h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -801,7 +855,7 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
 
         <div
           ref={printAreaRef}
-          className="mx-auto flex h-32 w-56 flex-col items-center justify-center rounded-md border border-dashed border-border bg-white p-2 text-black"
+          className="mx-auto flex h-32 w-full max-w-[14rem] flex-col items-center justify-center rounded-md border border-dashed border-border bg-white p-2 text-black"
         >
           <p className="max-w-full truncate text-center text-xs font-bold">{item.name}</p>
           <div className="my-1">
@@ -855,8 +909,8 @@ function ImportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-md border border-border bg-card p-5 shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4">
+      <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-md border border-border bg-card p-4 shadow-lg sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold">CSV ဖြင့် ကုန်ပစ္စည်းများ ထည့်သွင်းရန်</h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
@@ -873,7 +927,7 @@ function ImportModal({
                 const f = e.target.files?.[0];
                 if (f) void handleFile(f);
               }}
-              className="text-xs"
+              className="w-full text-xs"
             />
           </div>
 
@@ -920,4 +974,4 @@ function ImportModal({
       </div>
     </div>
   );
-}
+          }
