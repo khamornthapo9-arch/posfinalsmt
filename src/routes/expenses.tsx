@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { Download, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { ProLockButton } from "@/components/pos/pro-lock";
 import { PosShell } from "@/components/pos/pos-shell";
@@ -16,7 +16,10 @@ export const Route = createFileRoute("/expenses")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { title: "အသုံးစရိတ် မှတ်တမ်း — SMT POS" },
-      { name: "description", content: "ဆိုင်၏ လည်ပတ်မှု အသုံးစရိတ်များကို မှတ်တမ်းတင်ပြီး အမြတ်တွက်ချက်မှုတွင် ထည့်သွင်းပါ။" },
+      {
+        name: "description",
+        content: "ဆိုင်၏ လည်ပတ်မှု အသုံးစရိတ်များကို မှတ်တမ်းတင်ပြီး အမြတ်တွက်ချက်မှုတွင် ထည့်သွင်းပါ။",
+      },
       { property: "og:title", content: "အသုံးစရိတ် မှတ်တမ်း — SMT POS" },
       { property: "og:description", content: "SMT POS အသုံးစရိတ် စီမံခန့်ခွဲမှု။" },
     ],
@@ -33,6 +36,33 @@ function ExpensesPage() {
   const { enabled, expenses, totalExpenses, saveExpense, deleteExpense } = useAccountingStore();
   const { fmt, isPro } = useStoreSettings();
   const [open, setOpen] = useState(false);
+
+  // အသုံးစရိတ် CSV အစီရင်ခံစာ ထုတ်ယူခြင်း
+  const exportExpensesCsv = () => {
+    if (expenses.length === 0) {
+      toast.info("အသုံးစရိတ် မှတ်တမ်း မရှိသေးပါ");
+      return;
+    }
+    const rows = [
+      ["ရက်စွဲ", "အမျိုးအစား", "မှတ်ချက်", "ပေးချေမှု နည်းလမ်း", "ပမာဏ"],
+      ...expenses.map((e) => [
+        e.spent_at ? e.spent_at.slice(0, 10) : "-",
+        e.category || "အခြား",
+        `"${(e.note || "-").replace(/"/g, '""')}"`,
+        e.paid_with || "ငွေသား",
+        e.amount.toString(),
+      ]),
+    ];
+    const csvContent =
+      "data:text/csv;charset=utf-8,\uFEFF" + rows.map((r) => r.join(",")).join("\n");
+    const link = document.createElement("a");
+    link.href = encodeURI(csvContent);
+    link.download = `expenses_report_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("အသုံးစရိတ် အစီရင်ခံစာ ထုတ်ယူပြီးပါပြီ");
+  };
 
   if (!isPro) {
     return (
@@ -64,14 +94,27 @@ function ExpensesPage() {
   }
 
   return (
-    <PosShell title="အသုံးစရိတ်" subtitle={`စုစုပေါင်း ${fmt(totalExpenses)}`}>
+    <PosShell
+      title="အသုံးစရိတ် မှတ်တမ်း"
+      subtitle={`စုစုပေါင်း ကုန်ကျငွေ ${fmt(totalExpenses)}`}
+    >
       <div className="space-y-4 p-3 sm:p-4">
-        <button
-          onClick={() => setOpen(true)}
-          className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" /> အသုံးစရိတ် ထည့်မည်
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <button
+            onClick={() => setOpen(true)}
+            className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" /> အသုံးစရိတ် ထည့်မည်
+          </button>
+
+          {/* အသုံးစရိတ် Report ထုတ်ရန် ခလုတ် */}
+          <button
+            onClick={exportExpensesCsv}
+            className="inline-flex h-11 items-center gap-1.5 rounded-md border border-border bg-card px-3.5 text-xs font-semibold hover:bg-accent"
+          >
+            <Download className="h-4 w-4" /> အစီရင်ခံစာ ထုတ်ယူရန် (CSV)
+          </button>
+        </div>
 
         <div className="overflow-x-auto rounded-md border border-border bg-card">
           <table className="w-full text-sm">
@@ -168,7 +211,9 @@ function ExpenseModal({
                   onClick={() => setCategory(c)}
                   className={cn(
                     "min-h-11 rounded-md border px-3 text-xs font-medium",
-                    category === c ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-accent",
+                    category === c
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border hover:bg-accent",
                   )}
                 >
                   {c}
@@ -177,12 +222,29 @@ function ExpenseModal({
             </div>
           </div>
           <div>
-            <label className={labelClass} htmlFor="e-amount">ပမာဏ</label>
-            <input id="e-amount" type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} />
+            <label className={labelClass} htmlFor="e-amount">
+              ပမာဏ
+            </label>
+            <input
+              id="e-amount"
+              type="number"
+              step="0.01"
+              min="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className={inputClass}
+            />
           </div>
           <div>
-            <label className={labelClass} htmlFor="e-note">မှတ်ချက်</label>
-            <input id="e-note" value={note} onChange={(e) => setNote(e.target.value)} className={inputClass} />
+            <label className={labelClass} htmlFor="e-note">
+              မှတ်ချက်
+            </label>
+            <input
+              id="e-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className={inputClass}
+            />
           </div>
           <div>
             <span className={labelClass}>ပေးချေမှု နည်းလမ်း</span>
@@ -193,7 +255,9 @@ function ExpenseModal({
                   onClick={() => setPaidWith(m)}
                   className={cn(
                     "min-h-11 rounded-md border px-2 text-xs font-medium",
-                    paidWith === m ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-accent",
+                    paidWith === m
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border hover:bg-accent",
                   )}
                 >
                   {m}
