@@ -80,8 +80,8 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
   const advanced = Boolean(store?.advanced_accounting_mode);
   const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
   
-  // ဆိုင်ခွဲစက်ဖြစ်ပါက အရောင်း၊ ကုန်ပစ္စည်း၊ ဖောက်သည်နှင့် အသုံးစရိတ်သာ ခွင့်ပြုမည်
-  const branchAllowed = ["/register", "/inventory", "/customers", "/expenses"];
+  // ဆိုင်ခွဲစက်ဖြစ်ပါက အရောင်း၊ ကုန်ပစ္စည်း၊ ဖောက်သည်၊ အသုံးစရိတ်နှင့် ပြုပြင်ခြင်း (ဘောက်ချာပုံစံ/အကူအညီ) သာ ခွင့်ပြုမည်
+  const branchAllowed = ["/register", "/inventory", "/customers", "/expenses", "/settings"];
   const items = isBranchDevice
     ? all.filter((item) => branchAllowed.includes(item.to))
     : all.filter((item) => item.roles.includes(role) && isActive);
@@ -119,7 +119,6 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
 function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   const { session, signOut, stores, store, switchStore, isBranchDevice } = useAuth();
   const { role, isActive, activeStaff, loading: roleLoading } = useRole();
-  const isPro = false;
   const [switching, setSwitching] = useState(false);
   const navigate = useNavigate();
   const email = session?.user.email ?? "";
@@ -209,7 +208,7 @@ export function PosShell({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { session, store, loading } = useAuth();
+  const { session, store, loading, isBranchDevice } = useAuth();
   const {
     role,
     isActive,
@@ -241,7 +240,7 @@ export function PosShell({
       (pathname.startsWith("/analytics") && canViewAnalytics) ||
       (pathname.startsWith("/suppliers") && canManageAccounting) ||
       (pathname.startsWith("/expenses") && canManageAccounting) ||
-      ((pathname === "/settings" || pathname.startsWith("/settings/")) && canManageSettings);
+      ((pathname === "/settings" || pathname.startsWith("/settings/")) && (canManageSettings || isBranchDevice));
     if (!allowed) void navigate({ to: "/register", replace: true });
   }, [
     loading,
@@ -249,6 +248,7 @@ export function PosShell({
     isActive,
     role,
     pathname,
+    isBranchDevice,
     canManageCustomers,
     canManageInventory,
     canViewAnalytics,
