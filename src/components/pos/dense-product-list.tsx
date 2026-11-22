@@ -3,6 +3,7 @@ import { Camera, LayoutGrid, List, Package, Plus, Search, AlertTriangle } from "
 import { cn } from "@/lib/utils";
 import { stockStatus, money } from "@/lib/pos-utils";
 import { useCachedImage } from "@/lib/use-cached-image";
+import { flyToCart } from "@/lib/fly-to-cart";
 import type { ProductViewMode } from "@/lib/use-product-view";
 import type { CachedItem, ItemUnit } from "@/lib/pos-db";
 
@@ -34,7 +35,7 @@ function ItemImage({
 }) {
   const src = useCachedImage(url);
   return (
-    <div className={cn("relative overflow-hidden bg-muted", className)}>
+    <div data-fly-source className={cn("relative overflow-hidden bg-muted", className)}>
       {src ? (
         <img
           src={src}
@@ -93,11 +94,27 @@ export function DenseProductList({
   }, [items, query, selectedCategory]);
 
   /** Enter / Space on a tappable (non-<button>) product area adds it, like a real button. */
-  const addOnKey = (event: KeyboardEvent, add: () => void) => {
+  const addOnKey = (event: KeyboardEvent<HTMLElement>, add: (el: HTMLElement) => void) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      add();
+      add(event.currentTarget);
     }
+  };
+
+  /**
+   * "Item flies into the cart" effect, started from what the cashier tapped. Taps on the card/row
+   * launch from the product photo (or its placeholder); taps on the + or unit buttons launch from
+   * that button. The flying copy shows the product's photo when it has one.
+   */
+  const fly = (clicked: HTMLElement, fromImage: boolean) => {
+    const root = clicked.closest<HTMLElement>("[data-product]");
+    const img = root?.querySelector("img") ?? null;
+    const origin = fromImage
+      ? (root?.querySelector<HTMLElement>("[data-fly-source]") ??
+        root?.querySelector<HTMLElement>("[data-add-button]") ??
+        clicked)
+      : clicked;
+    flyToCart(origin, { imageSrc: img?.currentSrc || img?.src || null });
   };
 
   /** Extra unit buttons (Pro): whole-pack / carton prices next to the default one. */
@@ -105,7 +122,10 @@ export function DenseProductList({
     <>
       <button
         type="button"
-        onClick={() => onAdd(item)}
+        onClick={(event) => {
+          onAdd(item);
+          fly(event.currentTarget, false);
+        }}
         className="press min-h-8 touch:min-h-10 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent"
       >
         အရပ် · {fmt(item.price)}
@@ -114,7 +134,10 @@ export function DenseProductList({
         <button
           key={unit.id}
           type="button"
-          onClick={() => onAdd(item, unit)}
+          onClick={(event) => {
+            onAdd(item, unit);
+            fly(event.currentTarget, false);
+          }}
           className="press min-h-8 touch:min-h-10 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10"
         >
           {unit.unit_name} x{unit.conversion} · {fmt(unit.price)}
@@ -218,11 +241,16 @@ export function DenseProductList({
               const outOfStock = item.stock_quantity <= 0;
               const units = isPro ? item.units : [];
               const defaultUnit = units.find((u) => u.is_default) ?? units[0];
-              const add = () => !outOfStock && onAdd(item, defaultUnit);
+              const add = (el: HTMLElement, fromImage: boolean) => {
+                if (outOfStock) return;
+                onAdd(item, defaultUnit);
+                fly(el, fromImage);
+              };
 
               return (
                 <div
                   key={item.id}
+                  data-product
                   className={cn(
                     "flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xs",
                     outOfStock ? "opacity-60" : "lift",
@@ -233,8 +261,10 @@ export function DenseProductList({
                     tabIndex={outOfStock ? -1 : 0}
                     aria-disabled={outOfStock}
                     aria-label={`${item.name} ထည့်ရန်`}
-                    onClick={add}
-                    onKeyDown={(event) => !outOfStock && addOnKey(event, add)}
+                    onClick={(event) => add(event.currentTarget, true)}
+                    onKeyDown={(event) =>
+                      !outOfStock && addOnKey(event, (el) => add(el, true))
+                    }
                     className="flex min-w-0 flex-1 cursor-pointer select-none flex-col focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                   >
                     <div className="relative">
@@ -292,11 +322,16 @@ export function DenseProductList({
               const outOfStock = item.stock_quantity <= 0;
               const units = isPro ? item.units : [];
               const defaultUnit = units.find((u) => u.is_default) ?? units[0];
-              const add = () => !outOfStock && onAdd(item, defaultUnit);
+              const add = (el: HTMLElement, fromImage: boolean) => {
+                if (outOfStock) return;
+                onAdd(item, defaultUnit);
+                fly(el, fromImage);
+              };
 
               return (
                 <div
                   key={item.id}
+                  data-product
                   className={cn(
                     "px-3 py-2.5 transition-colors duration-150 sm:px-4",
                     outOfStock ? "opacity-60" : "hover:bg-muted active:bg-primary-soft",
@@ -310,7 +345,7 @@ export function DenseProductList({
                         type="button"
                         tabIndex={-1}
                         aria-hidden="true"
-                        onClick={add}
+                        onClick={(event) => add(event.currentTarget, true)}
                         className="press shrink-0 overflow-hidden rounded-lg border border-border"
                       >
                         <ItemImage url={item.image_url} name={item.name} className="h-12 w-12" />
@@ -322,8 +357,10 @@ export function DenseProductList({
                       tabIndex={outOfStock ? -1 : 0}
                       aria-disabled={outOfStock}
                       className="min-w-0 flex-1 cursor-pointer select-none rounded-md focus-visible:outline-2 focus-visible:outline-ring"
-                      onClick={add}
-                      onKeyDown={(event) => !outOfStock && addOnKey(event, add)}
+                      onClick={(event) => add(event.currentTarget, true)}
+                      onKeyDown={(event) =>
+                        !outOfStock && addOnKey(event, (el) => add(el, true))
+                      }
                     >
                       <p className="truncate text-sm font-semibold leading-6">{item.name}</p>
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -345,7 +382,8 @@ export function DenseProductList({
 
                     <button
                       type="button"
-                      onClick={() => onAdd(item, defaultUnit)}
+                      data-add-button
+                      onClick={(event) => add(event.currentTarget, false)}
                       disabled={outOfStock}
                       aria-label={`${item.name} ထည့်ရန်`}
                       className="press ml-1 flex h-10 w-10 touch:h-12 touch:w-12 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-btn hover:bg-primary/90 disabled:opacity-40 disabled:shadow-none"
