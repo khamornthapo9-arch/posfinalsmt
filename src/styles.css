@@ -114,12 +114,71 @@
   --color-nav-suppliers: var(--nav-suppliers);
   --color-nav-expenses: var(--nav-expenses);
   --color-nav-admin: var(--nav-admin);
+
+  /* Top nav bar and cart panel get their own tint (the sidebar uses the --sidebar-* tokens). */
+  --color-header: var(--header);
+  --color-header-border: var(--header-border);
+  --color-cart: var(--cart);
+  --color-cart-header: var(--cart-header);
+  --color-cart-border: var(--cart-border);
+
+  /* Payment methods: base = solid fill, foreground = text on that fill, soft = idle tile,
+   * border = idle tile outline, ink = text on the soft tile. */
+  --color-pay-cash: var(--pay-cash);
+  --color-pay-cash-foreground: var(--pay-cash-foreground);
+  --color-pay-cash-soft: var(--pay-cash-soft);
+  --color-pay-cash-border: var(--pay-cash-border);
+  --color-pay-cash-ink: var(--pay-cash-ink);
+  --color-pay-kbz: var(--pay-kbz);
+  --color-pay-kbz-foreground: var(--pay-kbz-foreground);
+  --color-pay-kbz-soft: var(--pay-kbz-soft);
+  --color-pay-kbz-border: var(--pay-kbz-border);
+  --color-pay-kbz-ink: var(--pay-kbz-ink);
+  --color-pay-wave: var(--pay-wave);
+  --color-pay-wave-foreground: var(--pay-wave-foreground);
+  --color-pay-wave-soft: var(--pay-wave-soft);
+  --color-pay-wave-border: var(--pay-wave-border);
+  --color-pay-wave-ink: var(--pay-wave-ink);
+  --color-pay-credit: var(--pay-credit);
+  --color-pay-credit-foreground: var(--pay-credit-foreground);
+  --color-pay-credit-soft: var(--pay-credit-soft);
+  --color-pay-credit-border: var(--pay-credit-border);
+  --color-pay-credit-ink: var(--pay-credit-ink);
 }
 
 :root {
   --radius: 0.5rem;
-  /* Canvas: cool off-white, so white cards lift off the page without heavy borders */
-  --background: oklch(0.975 0.004 265);
+  /* Canvas: cool light grey-lavender, so white cards lift off the page without heavy borders */
+  --background: oklch(0.965 0.008 265);
+  /* Top nav bar: lavender tint (distinct from the dark sidebar and the teal cart) */
+  --header: oklch(0.925 0.045 277);
+  --header-border: oklch(0.86 0.06 277);
+  /* Cart panel: soft teal, so the payment colours (green, blue, yellow, rose) stand out on it */
+  --cart: oklch(0.955 0.03 195);
+  --cart-header: oklch(0.925 0.05 195);
+  --cart-border: oklch(0.86 0.05 195);
+  /* Payment methods */
+  --pay-cash: oklch(0.55 0.15 152);
+  --pay-cash-foreground: oklch(0.99 0.003 152);
+  --pay-cash-soft: oklch(0.955 0.05 152);
+  --pay-cash-border: oklch(0.82 0.1 152);
+  --pay-cash-ink: oklch(0.38 0.1 152);
+  --pay-kbz: oklch(0.52 0.19 255);
+  --pay-kbz-foreground: oklch(0.99 0.003 255);
+  --pay-kbz-soft: oklch(0.95 0.035 255);
+  --pay-kbz-border: oklch(0.82 0.08 255);
+  --pay-kbz-ink: oklch(0.4 0.16 255);
+  /* Wave Pay yellow: dark text on the solid fill (white on yellow is unreadable) */
+  --pay-wave: oklch(0.89 0.17 95);
+  --pay-wave-foreground: oklch(0.25 0.05 80);
+  --pay-wave-soft: oklch(0.975 0.075 98);
+  --pay-wave-border: oklch(0.85 0.15 95);
+  --pay-wave-ink: oklch(0.42 0.09 80);
+  --pay-credit: oklch(0.56 0.21 18);
+  --pay-credit-foreground: oklch(0.99 0.003 18);
+  --pay-credit-soft: oklch(0.96 0.03 18);
+  --pay-credit-border: oklch(0.84 0.08 18);
+  --pay-credit-ink: oklch(0.43 0.17 18);
   /* Ink: deep slate navy for text */
   --foreground: oklch(0.205 0.04 266);
   --card: oklch(1 0 0);
@@ -161,14 +220,15 @@
   --chart-3: oklch(0.75 0.15 75);
   --chart-4: oklch(0.65 0.14 235);
   --chart-5: oklch(0.62 0.2 15);
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.205 0.04 266);
-  --sidebar-primary: oklch(0.5 0.21 277);
-  --sidebar-primary-foreground: oklch(0.99 0.003 277);
-  --sidebar-accent: oklch(0.96 0.01 270);
-  --sidebar-accent-foreground: oklch(0.205 0.04 266);
-  --sidebar-border: oklch(0.92 0.008 265);
-  --sidebar-ring: oklch(0.55 0.2 277);
+  /* Sidebar: deep indigo-navy with light text (same family as --brand-deep) */
+  --sidebar: oklch(0.24 0.075 275);
+  --sidebar-foreground: oklch(0.93 0.015 270);
+  --sidebar-primary: oklch(0.78 0.13 277);
+  --sidebar-primary-foreground: oklch(0.2 0.05 275);
+  --sidebar-accent: oklch(0.31 0.085 275);
+  --sidebar-accent-foreground: oklch(0.99 0.003 277);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.78 0.13 277);
 }
 
 .dark {
@@ -217,6 +277,31 @@
   --chart-3: oklch(0.83 0.16 82.5);
   --chart-4: oklch(0.72 0.16 259.815);
   --chart-5: oklch(0.72 0.19 22.216);
+  --header: oklch(0.27 0.055 277);
+  --header-border: oklch(1 0 0 / 12%);
+  --cart: oklch(0.235 0.035 195);
+  --cart-header: oklch(0.285 0.05 195);
+  --cart-border: oklch(1 0 0 / 12%);
+  --pay-cash: oklch(0.7 0.16 152);
+  --pay-cash-foreground: oklch(0.15 0.03 265);
+  --pay-cash-soft: oklch(0.3 0.06 152);
+  --pay-cash-border: oklch(0.45 0.1 152);
+  --pay-cash-ink: oklch(0.86 0.12 152);
+  --pay-kbz: oklch(0.68 0.17 255);
+  --pay-kbz-foreground: oklch(0.15 0.03 265);
+  --pay-kbz-soft: oklch(0.3 0.07 255);
+  --pay-kbz-border: oklch(0.46 0.12 255);
+  --pay-kbz-ink: oklch(0.86 0.09 255);
+  --pay-wave: oklch(0.88 0.17 95);
+  --pay-wave-foreground: oklch(0.25 0.05 80);
+  --pay-wave-soft: oklch(0.33 0.07 95);
+  --pay-wave-border: oklch(0.55 0.12 95);
+  --pay-wave-ink: oklch(0.92 0.11 95);
+  --pay-credit: oklch(0.7 0.19 18);
+  --pay-credit-foreground: oklch(0.15 0.03 265);
+  --pay-credit-soft: oklch(0.31 0.08 18);
+  --pay-credit-border: oklch(0.5 0.14 18);
+  --pay-credit-ink: oklch(0.88 0.08 18);
   --sidebar: oklch(0.168 0.038 265.755);
   --sidebar-foreground: oklch(0.9 0.02 252.894);
   --sidebar-primary: oklch(0.673 0.196 277.5);
@@ -522,10 +607,12 @@
   background: var(--sidebar-accent);
   color: var(--sidebar-foreground);
 }
+/* Active tab on the dark sidebar: translucent highlight + white text (the old light-lavender
+ * pill with lavender text would be unreadable on navy). */
 .pos-nav-tab[data-active="true"] {
   font-weight: 600;
-  background: var(--primary-soft);
-  color: var(--sidebar-primary);
+  background: color-mix(in oklab, var(--sidebar-primary) 24%, transparent);
+  color: var(--sidebar-accent-foreground);
 }
 .pos-nav-tab[data-active="true"]::before {
   content: "";

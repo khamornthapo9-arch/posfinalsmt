@@ -66,10 +66,11 @@ interface KitchenTicket {
 }
 
 const PAYMENTS: { id: string; label: string; logo?: string; tone: string }[] = [
-  { id: "ငွေသား", label: "ငွေသား", tone: "bg-success" },
-  { id: "kbzpay", label: "KBZ Pay", logo: "/kbzpay.webp", tone: "bg-primary" },
-  { id: "wavepay", label: "Wave Pay", logo: "/wavepay.webp", tone: "bg-warning" },
-  { id: CREDIT_METHOD, label: CREDIT_METHOD, tone: "bg-warning" },
+  // `tone` picks the colour set in lib/payment-style.ts: cash green, KBZ blue, Wave yellow, credit rose
+  { id: "ငွေသား", label: "ငွေသား", tone: "cash" },
+  { id: "kbzpay", label: "KBZ Pay", logo: "/kbzpay.webp", tone: "kbz" },
+  { id: "wavepay", label: "Wave Pay", logo: "/wavepay.webp", tone: "wave" },
+  { id: CREDIT_METHOD, label: CREDIT_METHOD, tone: "credit" },
 ];
 
 const TABLE_COUNT = 12;

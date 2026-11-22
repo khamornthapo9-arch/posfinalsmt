@@ -60,12 +60,12 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
         <img
           src={logo}
           alt={store ? `${store.name} logo` : "SMT POS logo"}
-          className="h-9 w-9 shrink-0 object-contain"
+          className="h-10 w-10 shrink-0 rounded-xl bg-white object-contain p-1"
         />
       ) : (
         <div
           aria-label="SMT POS"
-          className="flex h-9 w-9 shrink-0 items-center justify-center"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1"
         >
           <LottiePlayer src="/animations/s-logo.json" className="h-9 w-9" />
         </div>
@@ -73,7 +73,7 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
       {!collapsed && (
         <div className="min-w-0">
           <p className="truncate text-sm font-bold tracking-tight text-sidebar-foreground">SMT POS</p>
-          <p className="truncate text-xs leading-5 text-muted-foreground">{store?.name ?? "Store"}</p>
+          <p className="truncate text-xs leading-5 text-sidebar-foreground/60">{store?.name ?? "Store"}</p>
         </div>
       )}
     </div>
@@ -422,7 +422,7 @@ export function PosShell({
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col">
         <div ref={chromeRef} className="no-print sticky top-0 z-30">
-          <header className="pt-safe border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
+          <header className="pt-safe border-b border-header-border bg-header/95 backdrop-blur-md">
             {/* Flex + wrap (not a fixed 3-column grid): a crowded toolbar drops to its own row
                 instead of pushing the page wider than the screen. */}
             <div className="flex flex-wrap items-center gap-x-2 gap-y-2 px-3 py-2.5 sm:gap-x-3 sm:px-4 sm:py-3">

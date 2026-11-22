@@ -88,11 +88,11 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
       />
       <div
         className={cn(
-          "sheet-motion absolute inset-x-0 bottom-0 top-[max(4rem,env(safe-area-inset-top))] flex flex-col rounded-t-2xl border-t border-border bg-card shadow-pop",
+          "sheet-motion absolute inset-x-0 bottom-0 top-[max(4rem,env(safe-area-inset-top))] flex flex-col rounded-t-2xl border-t border-cart-border bg-cart shadow-pop",
           open ? "translate-y-0" : "translate-y-full",
         )}
       >
-        <div className="flex items-center justify-between border-b border-border py-2 pr-2 pl-4">
+        <div className="flex items-center justify-between rounded-t-2xl border-b border-cart-border bg-cart-header py-2 pr-2 pl-4">
           {/* Grab handle: visual cue that this is a dismissible sheet. */}
           <span
             aria-hidden="true"
