@@ -60,7 +60,7 @@ function Section({
 }
 
 function SettingsPage() {
-  const { session, store, updateStore, signOut } = useAuth();
+  const { session, store, updateStore, signOut, isBranchDevice } = useAuth();
   const { isPro, symbol } = useStoreSettings();
   const logoUrl = useStoreLogo();
   const navigate = useNavigate();
@@ -226,6 +226,62 @@ function SettingsPage() {
   const telegramUsername = (store as any)?.telegram_username;
   const botUsername = import.meta.env["VITE_TELEGRAM_BOT_USERNAME"] || "Smtpos_bot";
 
+  // ဆိုင်ခွဲစက်ဖြစ်ပါက ဘောက်ချာပုံစံနှင့် Support သာ ပြသမည်
+  if (isBranchDevice) {
+    return (
+      <PosShell title="ဆိုင်ခွဲ ပြင်ဆင်ချက်များ">
+        <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">ဆိုင်ခွဲ ပြင်ဆင်ချက်များ</h1>
+              <p className="text-sm text-muted-foreground">{store?.name ?? "ဆိုင်ခွဲစက်"}</p>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                await signOut();
+                void navigate({ to: "/", replace: true });
+              }}
+              className="inline-flex h-9 items-center gap-1.5 self-start rounded-sm border border-destructive/30 px-3 text-xs font-medium text-destructive hover:bg-destructive/10 sm:self-auto"
+            >
+              <LogOut className="h-3.5 w-3.5" /> အကောင့်ထွက်မည်
+            </button>
+          </div>
+
+          <div className="divide-y divide-border border-y border-border">
+            <Link
+              to="/settings/receipt"
+              className="flex items-center justify-between py-3.5 text-sm font-medium hover:bg-accent/40"
+            >
+              <span>ဘောက်ချာ စာရွက်ပုံစံ ပြင်ဆင်ရန်</span>
+              <Store className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          </div>
+
+          <Section title="အကူအညီနှင့် ဆက်သွယ်ရန်">
+            <div className="flex flex-wrap gap-2">
+              <a
+                href="mailto:support@smtpos.app"
+                className="inline-flex h-10 items-center gap-2 rounded-sm border border-border px-4 text-sm font-medium hover:bg-accent"
+              >
+                <LifeBuoy className="h-4 w-4" /> support@smtpos.app
+              </a>
+              <a
+                href="https://t.me/smtpos"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center gap-2 rounded-sm border border-border px-4 text-sm font-medium hover:bg-accent"
+              >
+                <Send className="h-4 w-4" /> Telegram
+              </a>
+            </div>
+          </Section>
+        </div>
+      </PosShell>
+    );
+  }
+
+  // ပင်မ Owner အတွက် အပြည့်အစုံ ပြသမည်
   return (
     <PosShell title="ဆိုင် ပြင်ဆင်ချက်များ">
       <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
