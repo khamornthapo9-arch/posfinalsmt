@@ -16,6 +16,7 @@ import { FREE_LIMITS } from "@/lib/subscription";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useReceiptSettings } from "@/lib/receipt-settings";
 import { useRole } from "@/lib/roles";
+import { useAuth } from "@/lib/auth-store";
 import type { CachedItem, ItemUnit } from "@/lib/pos-db";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +101,7 @@ function RegisterPage() {
   } = useStoreSettings();
   const { customers, quickAddCustomer, postSale } = useAccountingStore();
   const { canApprove } = useRole();
+  const { isBranchDevice } = useAuth();
   const logoUrl = useStoreLogo();
   const { settings: receiptSettings } = useReceiptSettings();
 
@@ -686,6 +688,7 @@ function RegisterPage() {
       {pickerOpen && (
         <CustomerPickerModal
           customers={customers}
+          isBranchDevice={isBranchDevice}
           onClose={() => {
             setPickerOpen(false);
             if (!creditCustomer && !splitMode) setPayment("ငွေသား");
@@ -733,11 +736,12 @@ function RegisterPage() {
         <OrderHistoryDrawer
           orders={recentOrders}
           fmt={fmt}
-          canRefund={canApprove}
+          canRefund={isBranchDevice ? true : canApprove}
           isPro={isPro}
           onClose={() => setHistoryOpen(false)}
           onRefund={async (orderId, reason, note) => {
-            if (isPro) {
+            // ဆိုင်ခွဲစက်ဖြစ်ပါက မန်နေဂျာ PIN မလိုဘဲ အချိန်မရွေး ပြန်အမ်းနိုင်သည်
+            if (isPro && !isBranchDevice) {
               const approved = await new Promise<boolean>((resolve) => {
                 setPendingApproval(() => (ok: boolean) => resolve(ok));
               });
@@ -790,11 +794,13 @@ function RegisterPage() {
 
 function CustomerPickerModal({
   customers,
+  isBranchDevice = false,
   onClose,
   onPick,
   onQuickAdd,
 }: {
   customers: Customer[];
+  isBranchDevice?: boolean;
   onClose: () => void;
   onPick: (customer: Customer) => void;
   onQuickAdd: (input: { name: string; phone: string }) => Promise<Customer>;
@@ -909,13 +915,20 @@ function CustomerPickerModal({
                 </p>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4" /> ဖောက်သည် အမြန်ထည့်မည်
-            </button>
+            {/* ဆိုင်ခွဲစက်မဟုတ်မှသာ ဖောက်သည်အသစ် ထည့်သွင်းခွင့်ရှိမည် */}
+            {!isBranchDevice ? (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4" /> ဖောက်သည် အမြန်ထည့်မည်
+              </button>
+            ) : (
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                * ဆိုင်ခွဲစက်တွင် ဖောက်သည်အသစ် ထည့်သွင်းခွင့် မရှိပါ။
+              </p>
+            )}
           </>
         )}
       </div>
