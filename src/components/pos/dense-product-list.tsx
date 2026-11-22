@@ -14,6 +14,10 @@ interface DenseProductListProps {
   lowStockCount: number;
   currencySymbol: string;
   isPro: boolean;
+  /** True while the first catalog load is still running. */
+  loading?: boolean;
+  /** True when the device is offline (empty states then explain the cache). */
+  offline?: boolean;
   /** The cashier's saved choice; `null` = automatic (grid when items have photos). */
   viewMode: ProductViewMode | null;
   onViewModeChange: (mode: ProductViewMode) => void;
@@ -66,6 +70,8 @@ export function DenseProductList({
   lowStockCount,
   currencySymbol,
   isPro,
+  loading = false,
+  offline = false,
   viewMode,
   onViewModeChange,
   onQueryChange,
@@ -401,10 +407,22 @@ export function DenseProductList({
           </div>
         )}
 
-        {filtered.length === 0 && (
+        {filtered.length === 0 && loading && items.length === 0 && (
+          <div className="space-y-2 p-3" role="status" aria-label="ပစ္စည်းများ ဖတ်နေသည်">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
+            ))}
+          </div>
+        )}
+
+        {filtered.length === 0 && !(loading && items.length === 0) && (
           <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
             {items.length === 0 ? (
-              <p className="text-sm text-muted-foreground">ကုန်ပစ္စည်း စာရင်းမရှိသေးပါ။</p>
+              <p className="text-sm text-muted-foreground">
+                {offline
+                  ? "အော့ဖ်လိုင်းဖြစ်နေပြီး သိမ်းထားသော ပစ္စည်းစာရင်း မရှိသေးပါ။"
+                  : "ကုန်ပစ္စည်း စာရင်းမရှိသေးပါ။"}
+              </p>
             ) : (
               <p className="text-sm text-muted-foreground">ရှာဖွေမှုနှင့် ကိုက်ညီသော ပစ္စည်းမရှိပါ။</p>
             )}

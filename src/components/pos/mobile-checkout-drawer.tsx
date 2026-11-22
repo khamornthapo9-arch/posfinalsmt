@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CartPanel, type CartLine } from "./cart-panel";
@@ -34,8 +34,8 @@ interface MobileCheckoutDrawerProps {
   needsCreditCustomer: boolean;
   currencySymbol: string;
   payments: PaymentMethod[];
-  onChangeQty: (itemId: string, delta: number) => void;
-  onRemove: (itemId: string) => void;
+  onChangeQty: (itemId: string, delta: number, unitName?: string) => void;
+  onRemove: (itemId: string, unitName?: string) => void;
   onNotesChange: (notes: string) => void;
   onSelectPayment: (method: string) => void;
   onToggleSplit: (method: string) => void;
@@ -49,27 +49,58 @@ interface MobileCheckoutDrawerProps {
 }
 
 export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileCheckoutDrawerProps) {
-  // Escape closes the sheet, and the page behind it stops scrolling while it is open.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // While open: Escape closes, Tab is trapped inside the sheet, the page behind stops scrolling,
+  // focus moves into the sheet, and returns to whatever opened it on close.
   useEffect(() => {
     if (!open) return;
+    const trigger = document.activeElement as HTMLElement | null;
+    const focusables = () =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const nodes = focusables();
+      if (nodes.length === 0) return;
+      const first = nodes[0]!;
+      const last = nodes[nodes.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const raf = requestAnimationFrame(() => closeRef.current?.focus());
     return () => {
+      cancelAnimationFrame(raf);
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
+      if (trigger && document.contains(trigger)) trigger.focus();
     };
   }, [open, onClose]);
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="ငွေရှင်းရန်"
       aria-hidden={!open}
+      inert={!open}
       className={cn(
         "fixed inset-0 z-50 md:hidden",
         // `invisible` (after the slide finishes) removes the closed sheet from the tab order.
@@ -88,7 +119,7 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
       />
       <div
         className={cn(
-          "sheet-motion absolute inset-x-0 bottom-0 top-[max(4rem,env(safe-area-inset-top))] flex flex-col rounded-t-2xl border-t border-cart-border bg-cart shadow-pop",
+          "sheet-motion absolute inset-x-0 bottom-0 top-[max(4rem,env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] flex flex-col rounded-t-2xl border-t border-cart-border bg-cart shadow-pop",
           open ? "translate-y-0" : "translate-y-full",
         )}
       >
@@ -100,6 +131,7 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
           />
           <h2 className="pt-2 text-base font-semibold">ငွေရှင်းရန်</h2>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             tabIndex={open ? 0 : -1}
