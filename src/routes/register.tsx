@@ -534,22 +534,24 @@ function RegisterPage() {
           <button
             type="button"
             onClick={() => setHeldOpen(true)}
-            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent"
+            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
           >
             ဆိုင်းငံ့ ({heldOrders.length})
           </button>
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
-            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent"
+            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
           >
-            အရောင်းမှတ်တမ်း (ပြန်အမ်း)
+            <span className="sm:hidden">မှတ်တမ်း</span>
+            <span className="hidden sm:inline">အရောင်းမှတ်တမ်း (ပြန်အမ်း)</span>
           </button>
         </div>
       }
     >
-      {/* Desktop Split: 60% Catalog + 40% Cart */}
-      <div className="hidden h-[calc(100vh-64px)] md:grid md:grid-cols-[60fr_40fr]">
+      {/* Tablet + desktop split: flexible catalog + a cart that stays 300–400px wide, so the
+          checkout never gets squeezed (a fixed 40% left only ~210px beside the sidebar on tablets). */}
+      <div className="hidden h-[calc(100dvh-var(--pos-chrome,64px))] md:grid md:grid-cols-[minmax(0,1fr)_clamp(300px,38vw,400px)]">
         <div className="min-w-0 overflow-hidden bg-background">
           <DenseProductList
             items={items}
@@ -606,7 +608,7 @@ function RegisterPage() {
       </div>
 
       {/* Mobile: scrollable product list + sticky checkout bar */}
-      <div className="flex h-[calc(100vh-64px)] flex-col md:hidden">
+      <div className="flex h-[calc(100dvh-var(--pos-chrome,64px))] flex-col md:hidden">
         <div className="min-h-0 flex-1 overflow-y-auto">
           <DenseProductList
             items={items}

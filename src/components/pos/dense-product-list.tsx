@@ -33,7 +33,7 @@ function ItemThumbnail({
     <button
       type="button"
       onClick={onClick}
-      className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-border bg-muted transition-transform active:scale-95"
+      className="press relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-muted"
     >
       <img src={src} alt={name} loading="lazy" className="h-full w-full object-cover" />
     </button>
@@ -79,14 +79,19 @@ export function DenseProductList({
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder="ရှာဖွေရန်..."
+              type="search"
+              enterKeyHint="search"
+              aria-label="ကုန်ပစ္စည်း ရှာဖွေရန်"
               className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm shadow-xs outline-none transition-[border-color,box-shadow] hover:border-ring/40 focus:border-ring focus:ring-[3px] focus:ring-ring/25"
             />
           </div>
           <button
+            type="button"
             onClick={onScan}
-            className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow-btn hover:bg-primary/90"
+            aria-label="စကင်န်ဖတ်ရန်"
+            className="press inline-flex h-11 shrink-0 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground shadow-btn hover:bg-primary/90"
           >
-            <Camera className="h-4 w-4" />
+            <Camera className="h-5 w-5" />
             <span className="hidden sm:inline">စကင်န်ဖတ်ရန်</span>
           </button>
         </div>
@@ -100,15 +105,17 @@ export function DenseProductList({
           </div>
         )}
 
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="-mx-3 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-3 pb-1">
           {["အားလုံး", ...categories].map((cat) => (
             <button
               key={cat}
+              type="button"
               onClick={() => onCategoryChange(cat)}
+              aria-pressed={selectedCategory === cat}
               className={cn(
-                "shrink-0 rounded-md border px-3 py-1.5 text-xs font-semibold leading-5 transition-colors",
+                "press min-h-9 touch:min-h-11 shrink-0 snap-start rounded-md border px-3.5 py-1.5 text-sm font-semibold leading-5",
                 selectedCategory === cat
-                  ? "border-transparent bg-primary text-primary-foreground"
+                  ? "border-transparent bg-primary text-primary-foreground shadow-btn"
                   : "border-border bg-card hover:bg-accent",
               )}
             >
@@ -132,8 +139,8 @@ export function DenseProductList({
               <div
                 key={item.id}
                 className={cn(
-                  "px-3 py-2 transition-colors sm:px-4",
-                  outOfStock ? "opacity-60" : "hover:bg-muted",
+                  "px-3 py-2.5 transition-colors duration-150 sm:px-4",
+                  outOfStock ? "opacity-60" : "hover:bg-muted active:bg-primary-soft",
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -147,8 +154,18 @@ export function DenseProductList({
                   )}
 
                   <div
-                    className="min-w-0 flex-1 cursor-pointer select-none"
+                    role="button"
+                    tabIndex={outOfStock ? -1 : 0}
+                    aria-disabled={outOfStock}
+                    className="min-w-0 flex-1 cursor-pointer select-none rounded-md focus-visible:outline-2 focus-visible:outline-ring"
                     onClick={() => !outOfStock && onAdd(item, defaultUnit)}
+                    onKeyDown={(event) => {
+                      if (outOfStock) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onAdd(item, defaultUnit);
+                      }
+                    }}
                   >
                     <p className="truncate text-sm font-semibold leading-6">{item.name}</p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -169,28 +186,31 @@ export function DenseProductList({
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => onAdd(item, defaultUnit)}
                     disabled={outOfStock}
                     aria-label={`${item.name} ထည့်ရန်`}
-                    className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-btn transition-colors hover:bg-primary/90 disabled:opacity-40 disabled:shadow-none"
+                    className="press ml-1 flex h-10 w-10 touch:h-12 touch:w-12 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-btn hover:bg-primary/90 disabled:opacity-40 disabled:shadow-none"
                   >
                     <Plus className="h-5 w-5" />
                   </button>
                 </div>
 
                 {hasUnits && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     <button
+                      type="button"
                       onClick={() => onAdd(item)}
-                      className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium hover:bg-accent"
+                      className="press min-h-8 touch:min-h-10 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent"
                     >
                       အရပ် · {fmt(item.price)}
                     </button>
                     {units.map((unit) => (
                       <button
                         key={unit.id}
+                        type="button"
                         onClick={() => onAdd(item, unit)}
-                        className="rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10"
+                        className="press min-h-8 touch:min-h-10 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10"
                       >
                         {unit.unit_name} x{unit.conversion} · {fmt(unit.price)}
                       </button>

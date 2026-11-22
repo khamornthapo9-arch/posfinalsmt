@@ -298,7 +298,7 @@ function AnalyticsPage() {
 
   return (
     <PosShell title="အရောင်း စာရင်းဇယား Analysis">
-      <div className="min-h-[calc(100vh-64px)] space-y-4 overflow-y-auto bg-muted/30 p-3 sm:p-5">
+      <div className="min-h-[calc(100dvh-var(--pos-chrome,64px))] space-y-4 overflow-y-auto bg-muted/30 p-3 sm:p-5">
         {/* Date Filters + Compact Report Action Menu */}
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card p-2 shadow-xs">
           <div className="flex flex-wrap items-center gap-1">
