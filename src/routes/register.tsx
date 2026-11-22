@@ -7,6 +7,7 @@ import { ScannerModal } from "@/components/pos/scanner-modal";
 import { DenseProductList } from "@/components/pos/dense-product-list";
 import { CartPanel, type CartLine } from "@/components/pos/cart-panel";
 import { MobileCheckoutBar } from "@/components/pos/mobile-checkout-bar";
+import { findByCode, baseQuantityFor } from "@/lib/product-lookup";
 import { RegisterStatus } from "@/components/pos/register-status";
 import { useProductViewMode } from "@/lib/use-product-view";
 import { MobileCheckoutDrawer } from "@/components/pos/mobile-checkout-drawer";
@@ -149,7 +150,8 @@ function RegisterPage() {
           line.item_id === item.id && (line.unit_name ?? "base") === (unitName ?? "base"),
       );
       const nextQty = (existing?.quantity ?? 0) + 1;
-      const baseQty = nextQty * conversion;
+      // Every line of this item counts (e.g. 1 carton + 3 pieces), in base units.
+      const baseQty = baseQuantityFor(prev, item.id) + conversion;
       if (baseQty > item.stock_quantity) {
         toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
         return prev;
@@ -178,39 +180,79 @@ function RegisterPage() {
   }, []);
 
   const addBySku = useCallback(
-    (code: string) => {
-      const match = itemsRef.current.find(
-        (item) => item.sku.toLowerCase() === code.toLowerCase().trim(),
-      );
-      if (!match) {
-        toast.error(`"${code}" အတွက် ပစ္စည်း မတွေ့ပါ`);
+    (rawCode: string) => {
+      const result = findByCode(itemsRef.current, rawCode);
+      if (result.kind === "none") {
+        toast.error(`"${rawCode.trim()}" အတွက် ပစ္စည်း မတွေ့ပါ`);
         return;
       }
-      addToCart(match);
-      toast.success(`${match.name} ထည့်ပြီးပါပြီ`);
+      if (result.kind === "ambiguous") {
+        toast.error(
+          `"${rawCode.trim()}" ကုဒ်နှင့် ပစ္စည်း ${result.items.length} ခု ကိုက်ညီနေသည်။ ရှာဖွေရန်နေရာမှ ရွေးပါ`,
+        );
+        setQuery(rawCode.trim());
+        return;
+      }
+      if (result.item.stock_quantity <= 0) {
+        toast.error(`${result.item.name} — ပစ္စည်းပြတ်နေသည်`);
+        return;
+      }
+      addToCart(result.item);
+      toast.success(`${result.item.name} ထည့်ပြီးပါပြီ`);
     },
     [addToCart],
   );
 
+  // Keyboard-wedge barcode scanners type a fast burst of keys ending in Enter. Ignore ordinary
+  // typing (fields, dialogs, shortcuts) and pause while the camera scanner is open so one scan
+  // can never add twice.
   useEffect(() => {
+    if (scannerOpen) return;
     let buffer = "";
     let lastKey = 0;
+    let timer: number | undefined;
+    const reset = () => {
+      buffer = "";
+      window.clearTimeout(timer);
+    };
     const handler = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      if (
+        target?.closest(
+          'input,textarea,select,[contenteditable=""],[contenteditable="true"],[role="dialog"],[role="textbox"],[role="combobox"]',
+        )
+      ) {
+        reset();
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key === "Escape") {
+        reset();
+        return;
+      }
       const now = Date.now();
       if (now - lastKey > 120) buffer = "";
       lastKey = now;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(reset, 300);
       if (event.key === "Enter") {
-        if (buffer.length >= 3) addBySku(buffer);
-        buffer = "";
+        if (buffer.length >= 3) {
+          event.preventDefault();
+          addBySku(buffer);
+        }
+        reset();
         return;
       }
       if (event.key.length === 1) buffer += event.key;
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [addBySku]);
+    window.addEventListener("blur", reset);
+    return () => {
+      reset();
+      window.removeEventListener("keydown", handler);
+      window.removeEventListener("blur", reset);
+    };
+  }, [addBySku, scannerOpen]);
 
   const subtotal = cart.reduce((sum, line) => sum + line.quantity * line.unit_price, 0);
   const tax = subtotal * taxRate;
@@ -247,7 +289,8 @@ function RegisterPage() {
           const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? (line.stock ?? 0);
           const conversion = line.conversion ?? 1;
           const nextQty = line.quantity + delta;
-          if (delta > 0 && nextQty * conversion > stock) {
+          const others = prev.filter((l) => l !== line);
+          if (delta > 0 && baseQuantityFor(others, itemId) + nextQty * conversion > stock) {
             toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
             return line;
           }
@@ -305,6 +348,8 @@ function RegisterPage() {
         name: line.name,
         quantity: line.quantity,
         unit_price: line.unit_price,
+        unit_name: line.unit_name,
+        conversion: line.conversion ?? 1,
         stock: items.find((i) => i.id === line.item_id)?.stock_quantity ?? line.quantity,
       })),
     );
@@ -317,10 +362,14 @@ function RegisterPage() {
   };
 
   const validateStock = () => {
+    const seen = new Set<string>();
     for (const line of cart) {
+      if (seen.has(line.item_id)) continue;
+      seen.add(line.item_id);
       const current = items.find((item) => item.id === line.item_id);
-      const saved = activeTab?.lines.find((l) => l.item_id === line.item_id)?.quantity ?? 0;
-      const needed = line.quantity - saved;
+      // Base units already reserved by an open tab (stock was deducted when they were added).
+      const saved = baseQuantityFor(activeTab?.lines ?? [], line.item_id);
+      const needed = baseQuantityFor(cart, line.item_id) - saved;
       if (needed > 0 && (!current || current.stock_quantity < needed)) {
         toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
         return false;
@@ -570,7 +619,6 @@ function RegisterPage() {
             onCategoryChange={setCategory}
             lowStockCount={lowStockItems.length}
             currencySymbol={symbol}
-            isPro={isPro}
             loading={loading}
             offline={!isOnline}
             onScan={() => setScannerOpen(true)}
@@ -632,7 +680,6 @@ function RegisterPage() {
             onCategoryChange={setCategory}
             lowStockCount={lowStockItems.length}
             currencySymbol={symbol}
-            isPro={isPro}
             loading={loading}
             offline={!isOnline}
             onScan={() => setScannerOpen(true)}

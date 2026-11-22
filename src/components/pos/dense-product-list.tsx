@@ -1,5 +1,6 @@
 import { useMemo, type KeyboardEvent } from "react";
 import { Camera, LayoutGrid, List, Package, Plus, Search, AlertTriangle } from "lucide-react";
+import { matchesQuery } from "@/lib/product-lookup";
 import { cn } from "@/lib/utils";
 import { stockStatus, money } from "@/lib/pos-utils";
 import { useCachedImage } from "@/lib/use-cached-image";
@@ -13,7 +14,6 @@ interface DenseProductListProps {
   selectedCategory: string;
   lowStockCount: number;
   currencySymbol: string;
-  isPro: boolean;
   /** True while the first catalog load is still running. */
   loading?: boolean;
   /** True when the device is offline (empty states then explain the cache). */
@@ -69,7 +69,6 @@ export function DenseProductList({
   selectedCategory,
   lowStockCount,
   currencySymbol,
-  isPro,
   loading = false,
   offline = false,
   viewMode,
@@ -95,7 +94,7 @@ export function DenseProductList({
     return items.filter((item) => {
       if (selectedCategory !== "အားလုံး" && item.category !== selectedCategory) return false;
       if (!q) return true;
-      return item.name.toLowerCase().includes(q) || item.sku.toLowerCase().includes(q);
+      return matchesQuery(item, q);
     });
   }, [items, query, selectedCategory]);
 
@@ -123,16 +122,19 @@ export function DenseProductList({
     flyToCart(origin, { imageSrc: img?.currentSrc || img?.src || null });
   };
 
-  /** Extra unit buttons (Pro): whole-pack / carton prices next to the default one. */
-  const renderUnitButtons = (item: CachedItem, units: ItemUnit[]) => (
+  /** Extra unit buttons: whole-pack / carton prices next to the default one. */
+  const renderUnitButtons = (item: CachedItem, units: ItemUnit[]) => {
+    const soldOut = item.stock_quantity <= 0;
+    return (
     <>
       <button
         type="button"
+        disabled={soldOut}
         onClick={(event) => {
           onAdd(item);
           fly(event.currentTarget, false);
         }}
-        className="press min-h-8 touch:min-h-10 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent"
+        className="press min-h-8 touch:min-h-10 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         အရပ် · {fmt(item.price)}
       </button>
@@ -140,17 +142,19 @@ export function DenseProductList({
         <button
           key={unit.id}
           type="button"
+          disabled={soldOut}
           onClick={(event) => {
             onAdd(item, unit);
             fly(event.currentTarget, false);
           }}
-          className="press min-h-8 touch:min-h-10 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10"
+          className="press min-h-8 touch:min-h-10 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {unit.unit_name} x{unit.conversion} · {fmt(unit.price)}
         </button>
       ))}
     </>
-  );
+    );
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -162,7 +166,7 @@ export function DenseProductList({
             <input
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="ရှာဖွေရန်..."
+              placeholder="အမည်၊ SKU၊ ဘားကုဒ် ရှာရန်..."
               type="search"
               enterKeyHint="search"
               aria-label="ကုန်ပစ္စည်း ရှာဖွေရန်"
@@ -245,7 +249,7 @@ export function DenseProductList({
             {filtered.map((item) => {
               const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
               const outOfStock = item.stock_quantity <= 0;
-              const units = isPro ? item.units : [];
+              const units = item.units;
               const defaultUnit = units.find((u) => u.is_default) ?? units[0];
               const add = (el: HTMLElement, fromImage: boolean) => {
                 if (outOfStock) return;
@@ -326,7 +330,7 @@ export function DenseProductList({
             {filtered.map((item) => {
               const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
               const outOfStock = item.stock_quantity <= 0;
-              const units = isPro ? item.units : [];
+              const units = item.units;
               const defaultUnit = units.find((u) => u.is_default) ?? units[0];
               const add = (el: HTMLElement, fromImage: boolean) => {
                 if (outOfStock) return;
