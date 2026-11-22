@@ -1,6 +1,7 @@
 import { Minus, Plus, ShoppingCart, Trash2, UserCheck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { money } from "@/lib/pos-utils";
+import { paymentStyle } from "@/lib/payment-style";
 import { CREDIT_METHOD, type Customer } from "@/lib/accounting-store";
 import type { CachedItem } from "@/lib/pos-db";
 import type { PaymentSplit } from "@/lib/pos-store";
@@ -94,9 +95,9 @@ export function CartPanel({
   const checkoutDisabled = cart.length === 0 || busy || splitInvalid || needsCreditCustomer;
 
   return (
-    <aside className="flex h-full flex-col border-l border-border bg-card">
+    <aside className="flex h-full flex-col border-l border-cart-border bg-cart">
       {/* Header (ဆိုင်းငံ့နှင့် မှတ်တမ်းခလုတ်များကို Register စာမျက်နှာ ထိပ်သို့ ရွှေ့လိုက်ပါသည်) */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
+      <div className="flex shrink-0 items-center justify-between border-b border-cart-border bg-cart-header px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">လက်ရှိ ရောင်းချမှု</span>
           {/* Stable wrapper = where the fly-to-cart item lands (the badge inside re-mounts on every
@@ -171,7 +172,7 @@ export function CartPanel({
       </div>
 
       {/* Footer Totals, Split Payment & Checkout */}
-      <div className="shrink-0 space-y-2.5 border-t border-border bg-muted/20 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="shrink-0 space-y-2.5 border-t border-cart-border bg-card/70 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {isRestaurant && (
           <input
             type="text"
@@ -222,22 +223,32 @@ export function CartPanel({
 
         {!splitMode ? (
           <div className="grid grid-cols-2 gap-2">
-            {payments.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => onSelectPayment(p.id)}
-                aria-pressed={payment === p.id}
-                className={cn(
-                  "press flex h-10 touch:h-12 items-center justify-center rounded-md border text-sm font-semibold",
-                  payment === p.id
-                    ? "border-primary bg-primary text-primary-foreground shadow-btn"
-                    : "border-border bg-card text-foreground hover:bg-accent",
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
+            {payments.map((p) => {
+              const style = paymentStyle(p.tone);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => onSelectPayment(p.id)}
+                  aria-pressed={payment === p.id}
+                  className={cn(
+                    "press flex h-10 touch:h-12 items-center justify-center gap-2 rounded-md border px-2 text-sm font-semibold",
+                    payment === p.id ? style.active : style.idle,
+                  )}
+                >
+                  {p.logo && (
+                    <img
+                      src={p.logo}
+                      alt=""
+                      aria-hidden="true"
+                      draggable={false}
+                      className="h-5 w-5 shrink-0 rounded-md ring-1 ring-black/10"
+                    />
+                  )}
+                  <span className="truncate">{p.label}</span>
+                </button>
+              );
+            })}
           </div>
         ) : (
           <div className="space-y-2 rounded-md border border-border bg-background p-2">
@@ -250,13 +261,20 @@ export function CartPanel({
                     onClick={() => onToggleSplit(p.id)}
                     aria-pressed={active}
                     className={cn(
-                      "press h-10 touch:h-12 flex-1 rounded-md border px-2.5 text-left text-sm font-medium",
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card text-foreground hover:bg-accent",
+                      "press flex h-10 touch:h-12 flex-1 items-center gap-2 rounded-md border px-2.5 text-left text-sm font-medium",
+                      active ? paymentStyle(p.tone).active : paymentStyle(p.tone).idle,
                     )}
                   >
-                    {p.label}
+                    {p.logo && (
+                      <img
+                        src={p.logo}
+                        alt=""
+                        aria-hidden="true"
+                        draggable={false}
+                        className="h-5 w-5 shrink-0 rounded-md ring-1 ring-black/10"
+                      />
+                    )}
+                    <span className="truncate">{p.label}</span>
                   </button>
                   {active && (
                     <input

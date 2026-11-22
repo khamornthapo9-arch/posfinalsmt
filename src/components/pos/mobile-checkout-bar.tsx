@@ -14,7 +14,7 @@ export function MobileCheckoutBar({ cart, total, currencySymbol, onCheckout }: M
   const count = cart.reduce((sum, line) => sum + line.quantity, 0);
 
   return (
-    <div className="flex items-center gap-3 border-t border-border bg-card px-3 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-dock">
+    <div className="flex items-center gap-3 border-t border-cart-border bg-cart px-3 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-dock">
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           {/* Landing spot for the fly-to-cart effect on phones */}
