@@ -43,9 +43,6 @@ interface CartPanelProps {
   needsCreditCustomer: boolean;
   currencySymbol: string;
   payments: PaymentOption[];
-  heldCount?: number;
-  onOpenHeld?: () => void;
-  onOpenHistory?: () => void;
   onChangeQty: (itemId: string, delta: number, unitName?: string) => void;
   onRemove: (itemId: string, unitName?: string) => void;
   onNotesChange: (value: string) => void;
@@ -79,9 +76,6 @@ export function CartPanel({
   needsCreditCustomer,
   currencySymbol,
   payments,
-  heldCount = 0,
-  onOpenHeld,
-  onOpenHistory,
   onChangeQty,
   onRemove,
   onNotesChange,
@@ -101,35 +95,13 @@ export function CartPanel({
 
   return (
     <aside className="flex h-full flex-col border-l border-border bg-card">
-      {/* Header with Cart Title + Text-only Held & History buttons */}
+      {/* Header (ဆိုင်းငံ့နှင့် မှတ်တမ်းခလုတ်များကို Register စာမျက်နှာ ထိပ်သို့ ရွှေ့လိုက်ပါသည်) */}
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">လက်ရှိ ရောင်းချမှု</span>
           <span className="rounded-sm bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary tabular-nums">
             {lineCount}
           </span>
-        </div>
-
-        {/* Text-only Held & History buttons */}
-        <div className="flex items-center gap-1.5">
-          {onOpenHeld && (
-            <button
-              type="button"
-              onClick={onOpenHeld}
-              className="rounded-sm border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent"
-            >
-              ဆိုင်းထား ({heldCount})
-            </button>
-          )}
-          {onOpenHistory && (
-            <button
-              type="button"
-              onClick={onOpenHistory}
-              className="rounded-sm border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent"
-            >
-              မှတ်တမ်း
-            </button>
-          )}
         </div>
       </div>
 
@@ -300,7 +272,7 @@ export function CartPanel({
           </div>
         )}
 
-        {/* Credit Customer Selector when Credit is chosen in single or split mode */}
+        {/* Credit Customer Selector */}
         {creditPortion > 0 && (
           <button
             type="button"
