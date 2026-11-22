@@ -527,6 +527,24 @@ function RegisterPage() {
             : "အော်ဒါအသစ်"
           : `${store?.name ?? "Store"} · ${cashierName || "ကောင်တာ"}`
       }
+      actions={
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHeldOpen(true)}
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent"
+          >
+            ဆိုင်းငံ့ ({heldOrders.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent"
+          >
+            အရောင်းမှတ်တမ်း (ပြန်အမ်း)
+          </button>
+        </div>
+      }
     >
       {/* Desktop Split: 60% Catalog + 40% Cart */}
       <div className="hidden h-[calc(100vh-64px)] md:grid md:grid-cols-[60fr_40fr]">
@@ -545,7 +563,7 @@ function RegisterPage() {
           />
         </div>
 
-        {/* Right Cart Panel with text-only Held and History buttons */}
+        {/* Right Cart Panel */}
         <div className="min-w-0 border-l border-border">
           <CartPanel
             cart={cart}
@@ -567,9 +585,6 @@ function RegisterPage() {
             needsCreditCustomer={needsCreditCustomer}
             currencySymbol={symbol}
             payments={availablePayments}
-            heldCount={heldOrders.length}
-            onOpenHeld={() => setHeldOpen(true)}
-            onOpenHistory={() => setHistoryOpen(true)}
             onChangeQty={changeQty}
             onRemove={removeFromCart}
             onNotesChange={setNotes}
