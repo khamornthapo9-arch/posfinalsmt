@@ -90,7 +90,10 @@ function InventoryPage() {
 
   // ပစ္စည်းစုစုပေါင်းတန်ဖိုး တွက်ချက်ခြင်း
   const totalStockValuation = useMemo(() => {
-    return items.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.stock_quantity) || 0), 0);
+    return items.reduce(
+      (sum, i) => sum + (Number(i.price) || 0) * (Number(i.stock_quantity) || 0),
+      0,
+    );
   }, [items]);
 
   const filtered = useMemo(() => {
@@ -127,18 +130,18 @@ function InventoryPage() {
       actions={
         <div className="flex items-center gap-2">
           {/* 1. Search Box */}
-          <div className="relative w-44 sm:w-64">
+          <div className="relative w-36 sm:w-64">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="ကုန်ပစ္စည်းရှာဖွေရန်..."
+              placeholder="ရှာဖွေရန်..."
               className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
-          {/* 2. Stock Filter Controls */}
+          {/* 2. Stock Filter Controls (Desktop/Tablet) */}
           <div className="hidden items-center rounded-md border border-border bg-background p-0.5 sm:flex">
             {(["all", "low", "out"] as Filter[]).map((f) => (
               <button
@@ -237,7 +240,86 @@ function InventoryPage() {
       }
     >
       <div className="h-[calc(100vh-64px)] overflow-y-auto bg-muted/20">
-        <div className="min-w-[680px]">
+        {/* Mobile View: အလျားလိုက် Scroll လုပ်စရာမလိုသော Responsive Cards ပုံစံ */}
+        <div className="block divide-y divide-border/60 bg-card md:hidden">
+          {filtered.map((item) => {
+            const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
+            return (
+              <div key={item.id} className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
+                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                      {item.sku || "—"}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-sm px-2 py-0.5 text-[11px] font-semibold",
+                      status === "ok" && "bg-success-soft text-success",
+                      status === "low" && "bg-warning-soft text-warning",
+                      status === "out" && "bg-danger-soft text-destructive",
+                    )}
+                  >
+                    {status === "ok"
+                      ? "ပစ္စည်းရှိ"
+                      : status === "low"
+                        ? "လက်ကျန်နည်း"
+                        : "ပစ္စည်းပြတ်"}
+                  </span>
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-between border-t border-border/40 pt-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">ဈေးနှုန်း: </span>
+                    <span className="font-bold tabular-nums text-foreground">
+                      {money(item.price)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">လက်ကျန်: </span>
+                    <span className="font-bold tabular-nums text-foreground">
+                      {item.stock_quantity ?? 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setLabelItem(item)}
+                      aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
+                      className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"
+                    >
+                      <QrCode className="h-4 w-4" />
+                    </button>
+                    {!isBranchDevice && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(item)}
+                          aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDelete(item.id)}
+                          aria-label={`${item.name} ကိုဖျက်ရန်`}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop View: Full Grid Table (Desktop မျက်နှာပြင်တွင်သာ ပြသမည့် ဇယား) */}
+        <div className="hidden min-w-[680px] md:block">
           {/* Sticky Column Header */}
           <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center border-b border-border bg-card/95 px-4 py-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-sm">
             <span>ကုန်ပစ္စည်း</span>
@@ -288,7 +370,6 @@ function InventoryPage() {
                     >
                       <QrCode className="h-3.5 w-3.5" />
                     </button>
-                    {/* ဆိုင်ခွဲစက်တွင် ပြင်/ဖျက် ခလုတ်များကို ဖျောက်ထားမည် */}
                     {!isBranchDevice && (
                       <>
                         <button
@@ -313,23 +394,24 @@ function InventoryPage() {
                 </div>
               );
             })}
-
-            {filtered.length === 0 && (
-              <div className="px-4 py-12 text-center text-xs text-muted-foreground">
-                {items.length === 0 ? (
-                  <div className="space-y-2">
-                    <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
-                    {!isBranchDevice && (
-                      <p>"ကုန်ပစ္စည်းသစ်" ခလုတ် သို့မဟုတ် "လုပ်ဆောင်ချက်များ" မှ ထည့်သွင်းနိုင်ပါသည်။</p>
-                    )}
-                  </div>
-                ) : (
-                  "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
-                )}
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Empty State */}
+        {filtered.length === 0 && (
+          <div className="bg-card px-4 py-12 text-center text-xs text-muted-foreground">
+            {items.length === 0 ? (
+              <div className="space-y-2">
+                <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
+                {!isBranchDevice && (
+                  <p>"ကုန်ပစ္စည်းသစ်" ခလုတ် သို့မဟုတ် "လုပ်ဆောင်ချက်များ" မှ ထည့်သွင်းနိုင်ပါသည်။</p>
+                )}
+              </div>
+            ) : (
+              "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
+            )}
+          </div>
+        )}
       </div>
 
       {editing && (
