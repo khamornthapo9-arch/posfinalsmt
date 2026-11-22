@@ -7,6 +7,7 @@ import { ScannerModal } from "@/components/pos/scanner-modal";
 import { DenseProductList } from "@/components/pos/dense-product-list";
 import { CartPanel, type CartLine } from "@/components/pos/cart-panel";
 import { MobileCheckoutBar } from "@/components/pos/mobile-checkout-bar";
+import { RegisterStatus } from "@/components/pos/register-status";
 import { useProductViewMode } from "@/lib/use-product-view";
 import { MobileCheckoutDrawer } from "@/components/pos/mobile-checkout-drawer";
 import { usePos, type HeldOrder, type OrderSummary, type PaymentSplit } from "@/lib/pos-store";
@@ -88,6 +89,8 @@ function RegisterPage() {
     deleteHeldOrder,
     recentOrders,
     refundOrder,
+    loading,
+    isOnline,
   } = usePos();
   const {
     fmt,
@@ -524,7 +527,7 @@ function RegisterPage() {
 
   return (
     <PosShell
-      title={isRestaurant ? `စားပွဲ ${activeTable}` : "POS စာရင်းကိုင်"}
+      title={isRestaurant ? `စားပွဲ ${activeTable}` : "POS / အရောင်းစာရင်း"}
       subtitle={
         isRestaurant
           ? activeTab
@@ -534,6 +537,7 @@ function RegisterPage() {
       }
       actions={
         <div className="flex items-center gap-2">
+          <RegisterStatus />
           <button
             type="button"
             onClick={() => setHeldOpen(true)}
@@ -567,6 +571,8 @@ function RegisterPage() {
             lowStockCount={lowStockItems.length}
             currencySymbol={symbol}
             isPro={isPro}
+            loading={loading}
+            offline={!isOnline}
             onScan={() => setScannerOpen(true)}
             onAdd={addToCart}
           />
@@ -627,6 +633,8 @@ function RegisterPage() {
             lowStockCount={lowStockItems.length}
             currencySymbol={symbol}
             isPro={isPro}
+            loading={loading}
+            offline={!isOnline}
             onScan={() => setScannerOpen(true)}
             onAdd={addToCart}
           />

@@ -154,9 +154,9 @@
   --header: oklch(0.925 0.045 277);
   --header-border: oklch(0.86 0.06 277);
   /* Cart panel: soft teal, so the payment colours (green, blue, yellow, rose) stand out on it */
-  --cart: oklch(0.955 0.03 195);
-  --cart-header: oklch(0.925 0.05 195);
-  --cart-border: oklch(0.86 0.05 195);
+  --cart: oklch(0.99 0.003 265);
+  --cart-header: oklch(0.97 0.006 265);
+  --cart-border: oklch(0.91 0.01 265);
   /* Payment methods */
   --pay-cash: oklch(0.55 0.15 152);
   --pay-cash-foreground: oklch(0.99 0.003 152);
@@ -279,8 +279,8 @@
   --chart-5: oklch(0.72 0.19 22.216);
   --header: oklch(0.27 0.055 277);
   --header-border: oklch(1 0 0 / 12%);
-  --cart: oklch(0.235 0.035 195);
-  --cart-header: oklch(0.285 0.05 195);
+  --cart: oklch(0.225 0.02 265);
+  --cart-header: oklch(0.26 0.025 265);
   --cart-border: oklch(1 0 0 / 12%);
   --pay-cash: oklch(0.7 0.16 152);
   --pay-cash-foreground: oklch(0.15 0.03 265);
