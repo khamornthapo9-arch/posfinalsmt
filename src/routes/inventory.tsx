@@ -121,6 +121,7 @@ function InventoryPage() {
 
   return (
     <PosShell
+      stackActionsOnMobile
       title="ကုန်ပစ္စည်းစာရင်း"
       subtitle={
         isBranchDevice
@@ -128,16 +129,17 @@ function InventoryPage() {
           : `စုစုပေါင်း ${items.length} မျိုး · တန်ဖိုး ${fmt(totalStockValuation)}`
       }
       actions={
-        <div className="flex items-center gap-2">
-          {/* 1. Search Box */}
-          <div className="relative w-36 sm:w-64">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          {/* 1. Search Box: fills the row on phones, fixed width from `sm` up */}
+          <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="ရှာဖွေရန်..."
-              className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs outline-none focus:ring-2 focus:ring-ring"
+              aria-label="ကုန်ပစ္စည်း ရှာဖွေရန်"
+              className="h-9 touch:h-11 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
@@ -161,13 +163,13 @@ function InventoryPage() {
           </div>
 
           {/* 3. Actions Menu */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setCsvMenuOpen((prev) => !prev)}
-              className="h-9 rounded-md text-xs"
+              className="h-9 touch:h-11 rounded-md text-xs"
             >
               လုပ်ဆောင်ချက်များ ▾
             </Button>
@@ -231,15 +233,17 @@ function InventoryPage() {
               type="button"
               size="sm"
               onClick={() => setEditing("new")}
-              className="h-9 gap-1 rounded-md text-xs font-semibold"
+              aria-label="ကုန်ပစ္စည်းသစ် ထည့်ရန်"
+              className="h-9 touch:h-11 shrink-0 gap-1 rounded-md text-xs font-semibold"
             >
-              <Plus className="h-3.5 w-3.5" /> ကုန်ပစ္စည်းသစ်
+              <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+              <span className="hidden sm:inline">ကုန်ပစ္စည်းသစ်</span>
             </Button>
           )}
         </div>
       }
     >
-      <div className="h-[calc(100dvh-var(--pos-chrome,64px))] overflow-y-auto bg-muted/20">
+      <div className="h-[calc(100dvh-var(--pos-chrome,64px))] overflow-y-auto overscroll-contain bg-muted/20 max-md:overflow-x-hidden">
         {/* Mobile View: အလျားလိုက် Scroll လုပ်စရာမလိုသော Responsive Cards ပုံစံ */}
         <div className="block divide-y divide-border/60 bg-card md:hidden">
           {filtered.map((item) => {

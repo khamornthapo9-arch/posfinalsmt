@@ -7,6 +7,7 @@ import { ScannerModal } from "@/components/pos/scanner-modal";
 import { DenseProductList } from "@/components/pos/dense-product-list";
 import { CartPanel, type CartLine } from "@/components/pos/cart-panel";
 import { MobileCheckoutBar } from "@/components/pos/mobile-checkout-bar";
+import { useProductViewMode } from "@/lib/use-product-view";
 import { MobileCheckoutDrawer } from "@/components/pos/mobile-checkout-drawer";
 import { usePos, type HeldOrder, type OrderSummary, type PaymentSplit } from "@/lib/pos-store";
 import { useAccountingStore, CREDIT_METHOD, type Customer } from "@/lib/accounting-store";
@@ -105,6 +106,7 @@ function RegisterPage() {
   const logoUrl = useStoreLogo();
   const { settings: receiptSettings } = useReceiptSettings();
 
+  const [viewMode, setViewMode] = useProductViewMode();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("အားလုံး");
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -554,6 +556,8 @@ function RegisterPage() {
       <div className="hidden h-[calc(100dvh-var(--pos-chrome,64px))] md:grid md:grid-cols-[minmax(0,1fr)_clamp(300px,38vw,400px)]">
         <div className="min-w-0 overflow-hidden bg-background">
           <DenseProductList
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
             items={items}
             query={query}
             onQueryChange={setQuery}
@@ -607,10 +611,13 @@ function RegisterPage() {
         </div>
       </div>
 
-      {/* Mobile: scrollable product list + sticky checkout bar */}
-      <div className="flex h-[calc(100dvh-var(--pos-chrome,64px))] flex-col md:hidden">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+      {/* Mobile: pinned between the header and the bottom edge of the screen, so the page itself
+          never scrolls. Only the product list scrolls; the checkout bar stays put at the bottom. */}
+      <div className="fixed inset-x-0 bottom-0 top-[var(--pos-chrome,64px)] z-20 flex flex-col bg-background md:hidden">
+        <div className="min-h-0 flex-1 overflow-hidden">
           <DenseProductList
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
             items={items}
             query={query}
             onQueryChange={setQuery}

@@ -206,11 +206,14 @@ export function PosShell({
   title,
   subtitle,
   actions,
+  stackActionsOnMobile = false,
   children,
 }: {
   title: string;
   subtitle?: string | undefined;
   actions?: ReactNode | undefined;
+  /** Phones: put the actions on their own full-width row under the title (for crowded toolbars). */
+  stackActionsOnMobile?: boolean;
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -331,7 +334,7 @@ export function PosShell({
   return (
     <div
       ref={rootRef}
-      className="pos-app flex min-h-dvh w-full bg-background text-foreground"
+      className="pos-app flex min-h-dvh w-full overflow-x-clip bg-background text-foreground"
       style={{ "--pos-chrome": "64px" } as CSSProperties}
     >
       {/* Sidebar: full on desktop, icon rail on tablet, hidden on phones (see drawer) */}
@@ -420,16 +423,18 @@ export function PosShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <div ref={chromeRef} className="no-print sticky top-0 z-30">
           <header className="pt-safe border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
-            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
+            {/* Flex + wrap (not a fixed 3-column grid): a crowded toolbar drops to its own row
+                instead of pushing the page wider than the screen. */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-2 px-3 py-2.5 sm:gap-x-3 sm:px-4 sm:py-3">
               <button
                 type="button"
                 onClick={() => setDrawerOpen(true)}
                 aria-label="Open menu"
-                className="press flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden"
+                className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden"
               >
                 <Menu className="h-5 w-5" />
               </button>
-              <div className="min-w-0">
+              <div className="min-w-20 flex-1 basis-0">
                 <h1 className="truncate text-base font-semibold leading-7 tracking-tight sm:text-lg">
                   {title}
                 </h1>
@@ -437,9 +442,16 @@ export function PosShell({
                   <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
                 )}
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {actions}
-              </div>
+              {actions && (
+                <div
+                  className={cn(
+                    "flex min-w-0 items-center gap-2",
+                    stackActionsOnMobile ? "basis-full sm:basis-auto sm:shrink-0" : "shrink-0",
+                  )}
+                >
+                  {actions}
+                </div>
+              )}
             </div>
           </header>
           <AnnouncementMarquee />
