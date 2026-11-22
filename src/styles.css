@@ -4,6 +4,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Input-modality variants. `touch:` = primary input is a finger (phone / tablet),
+ * `mouse:` = primary input is a mouse or trackpad. Used to grow hit targets on touch
+ * screens without making the desktop layout looser. */
+@custom-variant touch (@media (pointer: coarse));
+@custom-variant mouse (@media (pointer: fine));
+
 /*
  * Design system definition.
  *
@@ -34,6 +40,16 @@
     inset 0 1px 0 oklch(1 0 0 / 0.14), 0 1px 2px oklch(0.3 0.15 277 / 0.35);
   --shadow-brand:
     0 1px 2px oklch(0.3 0.15 277 / 0.3), 0 10px 24px -8px oklch(0.5 0.21 277 / 0.55);
+  --shadow-dock:
+    0 -1px 0 oklch(0.21 0.04 266 / 0.06), 0 -10px 24px -12px oklch(0.21 0.04 266 / 0.22);
+
+  /* Motion tokens: one vocabulary for every transition. Fast = press / hover feedback,
+   * base = panels and list items, slow = full-height sheets. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --duration-fast: 120ms;
+  --duration-base: 220ms;
+  --duration-slow: 320ms;
 }
 
 @theme inline {
@@ -231,6 +247,12 @@
 
   ::selection {
     background: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+
+  /* Touch polish: no 300ms tap delay / double-tap zoom on controls, no grey tap flash. */
+  :where(a, button, [role="button"], input, select, textarea, label, summary) {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Keyboard focus for any control that does not style its own. Zero specificity (:where),
@@ -565,8 +587,111 @@
   -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
 }
 
+/* ---------------------------------------------------------------
+ * Responsive + touch layer (phone / tablet / desktop)
+ * ------------------------------------------------------------- */
+
+/* Respect the iPhone notch / home indicator and Android gesture bar. Needs
+ * viewport-fit=cover in the viewport meta tag (see __root.tsx). */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* iOS Safari zooms the page when a focused input is under 16px. Keep dense 12-14px
+ * inputs on desktop, but use 16px on touch devices so the layout never jumps. */
+@media (pointer: coarse) {
+  .pos-app
+    :is(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+      select,
+      textarea
+    ) {
+    font-size: 16px;
+  }
+}
+
+/* Entrance animations. Short, transform/opacity only, so they stay on the GPU. */
+@keyframes pos-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pos-line-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+    background-color: var(--primary-soft);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pos-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility animate-page-in {
+  animation: pos-page-in var(--duration-base) var(--ease-out-soft) both;
+}
+@utility animate-line-in {
+  animation: pos-line-in var(--duration-base) var(--ease-out-soft) both;
+}
+@utility animate-fade-in {
+  animation: pos-fade-in var(--duration-base) ease-out both;
+}
+
+/* Sheets and drawers share one easing so every overlay feels like the same machine. */
+@utility sheet-motion {
+  transition:
+    transform var(--duration-slow) var(--ease-out-soft),
+    opacity var(--duration-base) ease-out;
+}
+
+/* Hover lift for tappable cards (mouse only; touch gets the :active press instead). */
+@utility lift {
+  transition:
+    transform var(--duration-fast) var(--ease-out-soft),
+    box-shadow var(--duration-fast) var(--ease-out-soft),
+    border-color var(--duration-fast) ease;
+  @media (hover: hover) {
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-pop);
+    }
+  }
+  &:active {
+    transform: scale(0.985);
+  }
+}
+
+/* Users who ask the OS for less motion get instant state changes, no marquee and no
+ * entrance animation. Colour/opacity feedback is kept (0.01ms still fires the end state). */
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee {
     animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -239,7 +239,7 @@ function InventoryPage() {
         </div>
       }
     >
-      <div className="h-[calc(100vh-64px)] overflow-y-auto bg-muted/20">
+      <div className="h-[calc(100dvh-var(--pos-chrome,64px))] overflow-y-auto bg-muted/20">
         {/* Mobile View: အလျားလိုက် Scroll လုပ်စရာမလိုသော Responsive Cards ပုံစံ */}
         <div className="block divide-y divide-border/60 bg-card md:hidden">
           {filtered.map((item) => {

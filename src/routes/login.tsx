@@ -144,7 +144,7 @@ function LoginPage() {
   };
 
   return (
-    <main className="hero-glow relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10">
+    <main className="hero-glow relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-10">
       <div aria-hidden="true" className="dot-grid pointer-events-none absolute inset-0 opacity-50" />
       <div className="relative w-full max-w-md">
         <div className="mb-6 flex justify-center">

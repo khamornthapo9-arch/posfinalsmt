@@ -9,7 +9,14 @@ import {
   UserCog,
   X,
 } from "lucide-react";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useAuth } from "@/lib/auth-store";
 import { AnnouncementMarquee } from "@/components/pos/announcement-marquee";
 import { useRole, ROLE_LABEL, type StoreRole } from "@/lib/roles";
@@ -101,7 +108,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
             "data-active": "true",
           }}
           className={cn(
-            "pos-nav-tab flex min-h-10 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+            "pos-nav-tab flex min-h-10 touch:min-h-12 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
             collapsed && "justify-center px-0",
           )}
         >
@@ -208,6 +215,9 @@ export function PosShell({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const chromeRef = useRef<HTMLDivElement>(null);
   const { session, store, loading, isBranchDevice } = useAuth();
   const {
     role,
@@ -262,6 +272,48 @@ export function PosShell({
     if (stored === "1") setCollapsed(true);
   }, []);
 
+  // Tablets (768–1023px) always get the icon rail, so the register keeps room for its cart.
+  // The saved collapse preference still applies on larger screens.
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
+    const sync = () => setIsTablet(mql.matches);
+    sync();
+    mql.addEventListener("change", sync);
+    return () => mql.removeEventListener("change", sync);
+  }, []);
+
+  // Publish the real height of the header (+ announcement bar) as --pos-chrome so full-height
+  // screens can fill exactly the remaining space instead of guessing 64px.
+  useEffect(() => {
+    const chrome = chromeRef.current;
+    const root = rootRef.current;
+    if (!chrome || !root) return;
+    const apply = () =>
+      root.style.setProperty("--pos-chrome", `${Math.ceil(chrome.getBoundingClientRect().height)}px`);
+    apply();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(apply);
+    observer.observe(chrome);
+    return () => observer.disconnect();
+  }, [loading, session, store]);
+
+  // Mobile drawer: Escape closes it and the page behind it stops scrolling while it is open.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDrawerOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [drawerOpen]);
+
+  const rail = collapsed || isTablet;
+
   const toggle = () =>
     setCollapsed((prev) => {
       window.localStorage.setItem("pos-sidebar-collapsed", prev ? "0" : "1");
@@ -270,97 +322,130 @@ export function PosShell({
 
   if (loading || !session || !store) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-dvh items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="pos-app flex min-h-screen w-full bg-background text-foreground">
-      {/* Sidebar */}
+    <div
+      ref={rootRef}
+      className="pos-app flex min-h-dvh w-full bg-background text-foreground"
+      style={{ "--pos-chrome": "64px" } as CSSProperties}
+    >
+      {/* Sidebar: full on desktop, icon rail on tablet, hidden on phones (see drawer) */}
       <aside
         className={cn(
-          "no-print hidden shrink-0 flex-col self-start overflow-y-auto border-r border-sidebar-border bg-sidebar p-3 transition-[width] duration-200 md:sticky md:top-0 md:flex md:h-screen",
-          collapsed ? "w-[68px]" : "w-60",
+          "no-print hidden shrink-0 flex-col self-start overflow-y-auto border-r border-sidebar-border bg-sidebar p-3 transition-[width] duration-200 ease-[var(--ease-out-soft)] md:sticky md:top-0 md:flex md:h-dvh",
+          rail ? "w-[68px]" : "w-60",
         )}
       >
         <div className="px-1 py-2">
-          <Brand collapsed={collapsed} />
+          <Brand collapsed={rail} />
         </div>
         <div className="my-3 h-px bg-sidebar-border" />
-        <NavList collapsed={collapsed} />
+        <NavList collapsed={rail} />
         <div className="mt-auto space-y-2">
-          <UserCard collapsed={collapsed} />
-          <button
-            onClick={toggle}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex min-h-9 w-full items-center justify-center gap-2 rounded-md px-3 text-xs font-medium text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
-            ) : (
-              <>
-                <PanelLeftClose className="h-4 w-4" /> Collapse
-              </>
-            )}
-          </button>
+          <UserCard collapsed={rail} />
+          {!isTablet && (
+            <button
+              onClick={toggle}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className="flex min-h-9 w-full items-center justify-center gap-2 rounded-md px-3 text-xs font-medium text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <>
+                  <PanelLeftClose className="h-4 w-4" /> Collapse
+                </>
+              )}
+            </button>
+          )}
         </div>
       </aside>
 
-      {/* Mobile Drawer */}
-      {drawerOpen && (
-        <div className="no-print fixed inset-0 z-50 md:hidden">
-          <button
-            aria-label="Close menu"
-            onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-foreground/40 backdrop-blur-[2px]"
-          />
-          <div className="absolute inset-y-0 left-0 flex w-[264px] flex-col border-r border-sidebar-border bg-sidebar p-3 shadow-pop">
-            <div className="flex items-center justify-between px-1 py-2">
-              <Brand />
-              <button
-                onClick={() => setDrawerOpen(false)}
-                aria-label="Close menu"
-                className="text-sidebar-foreground/70"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="my-3 h-px bg-sidebar-border" />
-            <NavList onNavigate={() => setDrawerOpen(false)} />
-            <div className="mt-auto">
-              <UserCard />
-            </div>
+      {/* Mobile drawer: always mounted so it can slide; `invisible` when closed keeps it out of
+          the tab order and away from screen readers. */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
+        aria-hidden={!drawerOpen}
+        className={cn(
+          "no-print fixed inset-0 z-50 md:hidden",
+          drawerOpen
+            ? "visible"
+            : "invisible pointer-events-none [transition:visibility_0s_linear_320ms]",
+        )}
+      >
+        <button
+          type="button"
+          aria-label="Close menu"
+          tabIndex={drawerOpen ? 0 : -1}
+          onClick={() => setDrawerOpen(false)}
+          className={cn(
+            "absolute inset-0 bg-foreground/45 backdrop-blur-[2px] transition-opacity duration-[var(--duration-base)]",
+            drawerOpen ? "opacity-100" : "opacity-0",
+          )}
+        />
+        <div
+          className={cn(
+            "sheet-motion absolute inset-y-0 left-0 flex w-[min(288px,85vw)] flex-col border-r border-sidebar-border bg-sidebar px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-pop",
+            drawerOpen ? "translate-x-0" : "-translate-x-full",
+          )}
+        >
+          <div className="flex items-center justify-between px-1 py-2">
+            <Brand />
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(false)}
+              aria-label="Close menu"
+              tabIndex={drawerOpen ? 0 : -1}
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="my-3 h-px bg-sidebar-border" />
+          <NavList onNavigate={() => setDrawerOpen(false)} />
+          <div className="mt-auto">
+            <UserCard />
           </div>
         </div>
-      )}
+      </div>
 
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
-          <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
-            <button
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Open menu"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden"
-            >
-              <Menu className="h-4 w-4" />
-            </button>
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-semibold leading-7 tracking-tight">{title}</h1>
-              {subtitle && (
-                <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-              )}
+        <div ref={chromeRef} className="no-print sticky top-0 z-30">
+          <header className="pt-safe border-b border-border bg-card/85 backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                aria-label="Open menu"
+                className="press flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="min-w-0">
+                <h1 className="truncate text-base font-semibold leading-7 tracking-tight sm:text-lg">
+                  {title}
+                </h1>
+                {subtitle && (
+                  <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {actions}
+              </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {actions}
-            </div>
-          </div>
-        </header>
+          </header>
+          <AnnouncementMarquee />
+        </div>
 
-        <AnnouncementMarquee />
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="animate-page-in min-w-0 flex-1">{children}</main>
       </div>
     </div>
   );

@@ -36,7 +36,7 @@ function AdminLogin() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted p-4">
+    <div className="flex min-h-dvh items-center justify-center bg-muted p-4">
       <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
@@ -89,7 +89,7 @@ export function AdminShell({
   if (requireLogin || (!loading && (!session || !isAdmin))) return <AdminLogin />;
 
   return (
-    <div className="flex h-screen flex-col bg-muted text-foreground">
+    <div className="flex h-dvh flex-col bg-muted text-foreground">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <ShieldCheck className="h-5 w-5 shrink-0 text-primary" />
