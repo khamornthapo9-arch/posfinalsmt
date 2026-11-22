@@ -99,11 +99,15 @@ export function CartPanel({
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">လက်ရှိ ရောင်းချမှု</span>
-          <span
-            key={lineCount}
-            className="badge-pop rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary tabular-nums"
-          >
-            {lineCount}
+          {/* Stable wrapper = where the fly-to-cart item lands (the badge inside re-mounts on every
+              change to replay its pop, so it can't be the target itself). */}
+          <span data-cart-target className="inline-flex">
+            <span
+              key={lineCount}
+              className="badge-pop rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary tabular-nums"
+            >
+              {lineCount}
+            </span>
           </span>
         </div>
       </div>
