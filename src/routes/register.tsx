@@ -897,7 +897,7 @@ function RegisterPage() {
 
       {pickerOpen && (
         <CustomerPickerModal
-          customers={customers}
+          customers={customers.filter((c) => !c.archived_at)}
           isBranchDevice={isBranchDevice}
           onClose={() => {
             setPickerOpen(false);

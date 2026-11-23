@@ -36,6 +36,11 @@ export interface Customer {
   note: string | null;
   balance: number;
   customer_type: string;
+  /** CRM fields (migration 20261123000000). Absent until that migration is applied. */
+  email?: string | null;
+  address?: string | null;
+  /** Set when archived; archived customers keep their sales history but are not offered at the register. */
+  archived_at?: string | null;
 }
 
 export interface Supplier {
@@ -146,8 +151,12 @@ interface AccountingContextValue {
     name: string;
     phone: string;
     note: string;
+    email?: string;
+    address?: string;
   }) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
+  /** Archive (true) or restore (false). Never deletes, so past sales keep their customer. */
+  setCustomerArchived: (id: string, archived: boolean) => Promise<void>;
   quickAddCustomer: (input: { name: string; phone: string }) => Promise<Customer>;
   saveSupplier: (input: {
     id?: string;
@@ -211,7 +220,8 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const [c, s, p, e, l] = await Promise.all([
-        supabase.from("customers").select("id,name,phone,note,balance,customer_type").eq("store_id", storeId).order("name"),
+        // "*" so the loader keeps working before and after the CRM columns exist.
+        supabase.from("customers").select("*").eq("store_id", storeId).order("name"),
         supabase.from("suppliers").select("id,name,phone,note,balance").eq("store_id", storeId).order("name"),
         supabase
           .from("purchases")
@@ -338,16 +348,37 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   );
 
   const saveCustomer = useCallback<AccountingContextValue["saveCustomer"]>(
-    async ({ id, name, phone, note }) => {
+    async ({ id, name, phone, note, email, address }) => {
       if (!storeId) throw new Error("No active store");
-      const payload = { store_id: storeId, name, phone: phone || null, note: note || null };
+      const payload = {
+        store_id: storeId,
+        name,
+        phone: phone || null,
+        note: note || null,
+        // Only touch CRM columns when there is something to write or they already exist.
+        ...(email || address || customers.some((c) => c.id === id && "email" in c)
+          ? { email: email || null, address: address || null }
+          : {}),
+      };
       const { error } = id
         ? await supabase.from("customers").update(payload).eq("id", id)
         : await supabase.from("customers").insert(payload);
       if (error) throw error;
       await refreshAll();
     },
-    [refreshAll, storeId],
+    [customers, refreshAll, storeId],
+  );
+
+  const setCustomerArchived = useCallback<AccountingContextValue["setCustomerArchived"]>(
+    async (id, archived) => {
+      const { error } = await supabase
+        .from("customers")
+        .update({ archived_at: archived ? new Date().toISOString() : null })
+        .eq("id", id);
+      if (error) throw error;
+      await refreshAll();
+    },
+    [refreshAll],
   );
 
   const quickAddCustomer = useCallback<AccountingContextValue["quickAddCustomer"]>(
@@ -361,7 +392,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
           phone: phone || null,
           customer_type: "QUICK",
         })
-        .select("id,name,phone,note,balance,customer_type")
+        .select("*")
         .single();
       if (error || !data) throw error ?? new Error("Customer failed");
       await refreshAll();
@@ -616,6 +647,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       postSale,
       saveCustomer,
       deleteCustomer,
+      setCustomerArchived,
       quickAddCustomer,
       saveSupplier,
       deleteSupplier,
@@ -645,6 +677,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       postSale,
       saveCustomer,
       deleteCustomer,
+      setCustomerArchived,
       quickAddCustomer,
       saveSupplier,
       deleteSupplier,
