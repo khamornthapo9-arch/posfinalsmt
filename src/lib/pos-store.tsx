@@ -127,6 +127,12 @@ interface PosContextValue {
     image_url?: string | null;
     units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[] | undefined;
   }) => Promise<void>;
+  adjustStock: (input: {
+    itemId: string;
+    newQuantity: number;
+    reason: string;
+    note?: string;
+  }) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   seedDemoItems: () => Promise<number>;
 }
@@ -712,6 +718,39 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     [refreshCatalog, storeId],
   );
 
+  const adjustStock = useCallback<PosContextValue["adjustStock"]>(
+    async ({ itemId, newQuantity, reason, note }) => {
+      if (!storeId) throw new Error("No active store");
+      const target = (items ?? []).find((i) => i.id === itemId);
+      if (!target) throw new Error("Item not found");
+
+      const currentQty = target.stock_quantity;
+      const delta = newQuantity - currentQty;
+
+      // 1. Update items stock_quantity
+      const { error: itemError } = await supabase
+        .from("items")
+        .update({ stock_quantity: newQuantity })
+        .eq("id", itemId)
+        .eq("store_id", storeId);
+      if (itemError) throw itemError;
+
+      // 2. Insert into inventory_movements audit trail
+      const { error: moveError } = await supabase.from("inventory_movements").insert({
+        store_id: storeId,
+        item_id: itemId,
+        movement_type: "ADJUSTMENT",
+        quantity: delta,
+        note: `${reason}${note ? ` - ${note}` : ""}`,
+        created_by: userId,
+      });
+      if (moveError) console.error("Failed to log inventory movement:", moveError);
+
+      await refreshCatalog();
+    },
+    [items, refreshCatalog, storeId, userId],
+  );
+
   const deleteItem = useCallback(
     async (id: string) => {
       const { error } = await supabase.from("items").delete().eq("id", id);
@@ -846,7 +885,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     );
   }, [storeId]);
 
-    const refundOrder = useCallback<PosContextValue["refundOrder"]>(
+  const refundOrder = useCallback<PosContextValue["refundOrder"]>(
     async ({ orderId, reason, note }) => {
       if (!storeId) throw new Error("No active store");
       const order = recentOrders.find((o) => o.id === orderId);
@@ -877,7 +916,6 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       // Put the stock back item by item...
-
       for (const line of order.lines) {
         const { data: current } = await supabase
           .from("items")
@@ -1110,6 +1148,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       syncNow,
       recordSale,
       saveItem,
+      adjustStock,
       deleteItem,
       seedDemoItems,
     }),
@@ -1140,6 +1179,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       syncNow,
       recordSale,
       saveItem,
+      adjustStock,
       deleteItem,
       seedDemoItems,
     ],
