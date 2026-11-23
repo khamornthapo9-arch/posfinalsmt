@@ -15,7 +15,6 @@ import { usePos, type HeldOrder, type OrderSummary, type PaymentSplit } from "@/
 import { useAccountingStore, CREDIT_METHOD, type Customer } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { ManagerPinModal } from "@/components/pos/manager-pin-modal";
-import { FREE_LIMITS } from "@/lib/subscription";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { useReceiptSettings } from "@/lib/receipt-settings";
 import { useRole } from "@/lib/roles";
@@ -58,6 +57,8 @@ interface Receipt {
   customerPhone?: string | null;
   previousDebt?: number;
   newDebt?: number;
+  cashReceived?: number;
+  change?: number;
 }
 
 interface KitchenTicket {
@@ -124,12 +125,14 @@ function RegisterPage() {
   const [busy, setBusy] = useState(false);
   const [activeTable, setActiveTable] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
-  const [creditCustomer, setCreditCustomer] = useState<Customer | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [holdNoteOpen, setHoldNoteOpen] = useState(false);
   const [heldOpen, setHeldOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [cashReceived, setCashReceived] = useState("");
+  const [digitalConfirmed, setDigitalConfirmed] = useState(false);
   const [pendingApproval, setPendingApproval] = useState<((ok: boolean) => void) | null>(null);
 
   const itemsRef = useRef(items);
@@ -264,11 +267,38 @@ function RegisterPage() {
     : payment === CREDIT_METHOD
       ? total
       : 0;
-  const needsCreditCustomer = creditPortion > 0 && !creditCustomer;
+  const needsCreditCustomer = creditPortion > 0 && !customer;
+  const cents = (n: number) => Math.round(n * 100);
+  const CASH_METHOD = "ငွေသား";
+  const cashDue = splitMode ? (splits[CASH_METHOD] ?? 0) : payment === CASH_METHOD ? total : 0;
+  const digitalDue = splitMode
+    ? Object.entries(splits)
+        .filter(([method]) => method !== CASH_METHOD && method !== CREDIT_METHOD)
+        .reduce((sum, [, amount]) => sum + amount, 0)
+    : payment !== CASH_METHOD && payment !== CREDIT_METHOD
+      ? total
+      : 0;
+  const cashTendered = cashReceived.trim() === "" ? null : Number(cashReceived);
+  // Empty = exact amount handed over (fast path); a typed amount below the cash due blocks checkout.
+  const cashShort = cashDue > 0 && cashTendered != null && cents(cashTendered) < cents(cashDue);
+  const changeDue =
+    cashDue > 0 && cashTendered != null && cents(cashTendered) > cents(cashDue)
+      ? Math.round((cashTendered - cashDue) * 100) / 100
+      : 0;
+
+  // A confirmation / tendered amount belongs to one specific payment setup: reset on change.
+  const digitalCents = cents(digitalDue);
+  const totalCents = cents(total);
+  useEffect(() => {
+    setDigitalConfirmed(false);
+  }, [payment, splitMode, digitalCents]);
+  useEffect(() => {
+    setCashReceived("");
+  }, [payment, totalCents]);
 
   const toggleSplit = (methodId: string) => {
     const enabling = !splits[methodId];
-    if (enabling && methodId === CREDIT_METHOD && !creditCustomer) setPickerOpen(true);
+    if (enabling && methodId === CREDIT_METHOD && !customer) setPickerOpen(true);
     setSplits((prev) => {
       const next = { ...prev };
       if (next[methodId]) {
@@ -299,6 +329,45 @@ function RegisterPage() {
         .filter((line) => line.quantity > 0),
     );
 
+  /** Typed quantity: must be a whole number >= 1 and fit stock (all unit lines of the item, base units). */
+  const setQty = (itemId: string, qty: number, unitName?: string) => {
+    if (!Number.isInteger(qty) || qty < 1) {
+      toast.error("အရေအတွက်သည် ၁ နှင့်အထက် ကိန်းပြည့် ဖြစ်ရပါမည်");
+      return;
+    }
+    setCart((prev) => {
+      const target = prev.find(
+        (line) => line.item_id === itemId && (line.unit_name ?? "base") === (unitName ?? "base"),
+      );
+      if (!target) return prev;
+      const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? (target.stock ?? 0);
+      const others = prev.filter((l) => l !== target);
+      if (baseQuantityFor(others, itemId) + qty * (target.conversion ?? 1) > stock) {
+        toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
+        return prev;
+      }
+      return prev.map((l) => (l === target ? { ...l, quantity: qty } : l));
+    });
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    setSplits({});
+    setSplitMode(false);
+    setNotes("");
+    if (payment === CREDIT_METHOD) setPayment(CASH_METHOD);
+  };
+
+  const clearCustomer = () => {
+    setCustomer(null);
+    if (payment === CREDIT_METHOD) setPayment(CASH_METHOD);
+    setSplits((prev) => {
+      const next = { ...prev };
+      delete next[CREDIT_METHOD];
+      return next;
+    });
+  };
+
   const removeFromCart = (itemId: string, unitName?: string) =>
     setCart((prev) =>
       prev.filter(
@@ -308,22 +377,13 @@ function RegisterPage() {
     );
 
   const toggleSplitMode = () => {
-    if (!isPro) {
-      toast.error("ခွဲ၍ ငွေပေးချေမှုသည် Pro Plan တွင်သာ ရရှိနိုင်ပါသည်");
-      return;
-    }
     setSplitMode((v) => !v);
     setSplits({});
+    setCashReceived("");
   };
 
   const parkOrder = async (note: string) => {
     if (cart.length === 0) return;
-    if (!isPro && heldOrders.length >= FREE_LIMITS.heldCarts) {
-      toast.error(
-        `Standard အစီအစဉ်တွင် ဆိုင်းငံ့ ဘောက်ချာ ${FREE_LIMITS.heldCarts} ခုသာ ထားနိုင်သည်`,
-      );
-      return;
-    }
     try {
       await holdOrder({
         lines: cart.map(({ stock: _s, ...line }) => line),
@@ -378,7 +438,7 @@ function RegisterPage() {
     return true;
   };
 
-  const availablePayments = isPro ? PAYMENTS : PAYMENTS.filter((p) => p.id !== CREDIT_METHOD);
+  const availablePayments = PAYMENTS;
   const cogsFor = (lines: CartLine[]) =>
     lines.reduce(
       (sum, line) => sum + line.quantity * (items.find((i) => i.id === line.item_id)?.cost_price ?? 0),
@@ -386,21 +446,40 @@ function RegisterPage() {
     );
 
   const selectPayment = (method: string) => {
-    if (method === CREDIT_METHOD && !isPro) {
-      toast.error("အကြွေးရောင်းချမှုသည် Pro Plan တွင်သာ ရရှိနိုင်ပါသည်");
-      return;
-    }
     if (method === CREDIT_METHOD) {
       setPayment(CREDIT_METHOD);
-      setPickerOpen(true);
+      if (!customer) setPickerOpen(true);
       return;
     }
+    // A customer may stay attached to cash / digital sales; only credit requires one.
     setPayment(method);
-    setCreditCustomer(null);
   };
 
   const completeSale = async () => {
     if (cart.length === 0 || !validateStock()) return;
+    if (splitMode) {
+      const entries = Object.values(splits);
+      if (entries.some((amount) => !Number.isFinite(amount) || amount < 0)) {
+        toast.error("ခွဲပေးငွေ ပမာဏသည် အနုတ် မဖြစ်ရပါ");
+        return;
+      }
+      if (entries.every((amount) => amount === 0)) {
+        toast.error("ငွေပေးချေမှု ပမာဏ ထည့်ပါ");
+        return;
+      }
+      if (cents(entries.reduce((sum, amount) => sum + amount, 0)) !== cents(total)) {
+        toast.error("ခွဲပေးငွေ စုစုပေါင်းသည် ကျသင့်ငွေနှင့် အတိအကျ မကိုက်ညီပါ");
+        return;
+      }
+    }
+    if (cashShort) {
+      toast.error("လက်ခံရရှိငွေသည် ကျသင့်ငွေထက် နည်းနေသည်");
+      return;
+    }
+    if (digitalDue > 0 && !digitalConfirmed) {
+      toast.error("ငွေလွှဲ လက်ခံရရှိကြောင်း အတည်ပြုပါ");
+      return;
+    }
     const splitList = splitMode
       ? Object.entries(splits)
           .map(([method, amount]) => ({ method, amount }))
@@ -410,7 +489,7 @@ function RegisterPage() {
       .filter((split) => split.method === CREDIT_METHOD)
       .reduce((sum, split) => sum + split.amount, 0);
     const isCredit = creditAmount > 0;
-    if (isCredit && !creditCustomer) {
+    if (isCredit && !customer) {
       setPickerOpen(true);
       toast.error("အကြွေးရောင်းရန် ဖောက်သည် ရွေးပါ");
       return;
@@ -422,7 +501,7 @@ function RegisterPage() {
         total,
         paymentMethod: splitMode ? "SPLIT" : payment,
         paymentBreakdown: splitList,
-        customerId: isCredit ? creditCustomer!.id : null,
+        customerId: customer?.id ?? null,
         status: "COMPLETED",
         paymentStatus: !isCredit
           ? "PAID"
@@ -438,10 +517,10 @@ function RegisterPage() {
           cogs: cogsFor(cart),
           paymentMethod: splitMode ? "SPLIT" : payment,
           splits: splitList,
-          customerId: isCredit ? creditCustomer!.id : null,
+          customerId: customer?.id ?? null,
         });
       }
-      const previousDebt = creditCustomer?.balance ?? 0;
+      const previousDebt = customer?.balance ?? 0;
       setReceipt({
         lines: cart,
         subtotal,
@@ -451,20 +530,21 @@ function RegisterPage() {
         splits: splitList,
         timestamp: new Date().toLocaleString(),
         offline,
-        ...(isCredit
-          ? {
-              customerName: creditCustomer!.name,
-              customerPhone: creditCustomer!.phone ?? "",
-              previousDebt,
-              newDebt: previousDebt + creditAmount,
-            }
+        ...(customer
+          ? { customerName: customer.name, customerPhone: customer.phone ?? "" }
+          : {}),
+        ...(isCredit ? { previousDebt, newDebt: previousDebt + creditAmount } : {}),
+        ...(cashDue > 0 && cashTendered != null && !cashShort
+          ? { cashReceived: cashTendered, change: changeDue }
           : {}),
       });
       setCart([]);
-      setCreditCustomer(null);
+      setCustomer(null);
       setPayment("ငွေသား");
       setSplitMode(false);
       setSplits({});
+      setCashReceived("");
+      setDigitalConfirmed(false);
       toast.success(offline ? "အရောင်းကို အော့ဖ်လိုင်း မှတ်ထားသည်" : "ရောင်းချမှု အောင်မြင်သည်");
     } catch {
       toast.error("အရောင်းစာရင်း မသိမ်းဆည်းနိုင်ပါ");
@@ -637,7 +717,7 @@ function RegisterPage() {
             payment={payment}
             splitMode={splitMode}
             splits={splits}
-            creditCustomer={creditCustomer}
+            customer={customer}
             busy={busy}
             subtotal={subtotal}
             tax={tax}
@@ -645,6 +725,17 @@ function RegisterPage() {
             taxPercent={taxPercent}
             remaining={remaining}
             creditPortion={creditPortion}
+            cashReceived={cashReceived}
+            cashDue={cashDue}
+            cashShort={cashShort}
+            changeDue={changeDue}
+            digitalDue={digitalDue}
+            digitalConfirmed={digitalConfirmed}
+            onCashReceivedChange={setCashReceived}
+            onDigitalConfirmedChange={setDigitalConfirmed}
+            onSetQty={setQty}
+            onClear={clearCart}
+            onClearCustomer={clearCustomer}
             needsCreditCustomer={needsCreditCustomer}
             currencySymbol={symbol}
             payments={availablePayments}
@@ -705,7 +796,7 @@ function RegisterPage() {
         payment={payment}
         splitMode={splitMode}
         splits={splits}
-        creditCustomer={creditCustomer}
+        customer={customer}
         busy={busy}
         subtotal={subtotal}
         tax={tax}
@@ -713,6 +804,17 @@ function RegisterPage() {
         taxPercent={taxPercent}
         remaining={remaining}
         creditPortion={creditPortion}
+        cashReceived={cashReceived}
+        cashDue={cashDue}
+        cashShort={cashShort}
+        changeDue={changeDue}
+        digitalDue={digitalDue}
+        digitalConfirmed={digitalConfirmed}
+        onCashReceivedChange={setCashReceived}
+        onDigitalConfirmedChange={setDigitalConfirmed}
+        onSetQty={setQty}
+        onClear={clearCart}
+        onClearCustomer={clearCustomer}
         needsCreditCustomer={needsCreditCustomer}
         currencySymbol={symbol}
         payments={availablePayments}
@@ -756,11 +858,10 @@ function RegisterPage() {
           isBranchDevice={isBranchDevice}
           onClose={() => {
             setPickerOpen(false);
-            if (!creditCustomer && !splitMode) setPayment("ငွေသား");
+            if (!customer && !splitMode && payment === CREDIT_METHOD) setPayment("ငွေသား");
           }}
           onPick={(customer) => {
-            setCreditCustomer(customer);
-            if (!splitMode) setPayment(CREDIT_METHOD);
+            setCustomer(customer);
             setPickerOpen(false);
           }}
           onQuickAdd={quickAddCustomer}
@@ -1109,6 +1210,21 @@ function ReceiptModal({
           <p className="mt-2 text-xs text-muted-foreground">
             ပေးချေသည့် နည်းလမ်း: {receipt.paymentMethod}
           </p>
+          {!isCredit && receipt.customerName && (
+            <p className="text-xs text-muted-foreground">ဖောက်သည်: {receipt.customerName}</p>
+          )}
+          {receipt.cashReceived != null && (
+            <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+              <div className="flex justify-between">
+                <span>လက်ခံရရှိငွေ</span>
+                <span className="tabular-nums">{fmt(receipt.cashReceived)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>အမ်းငွေ</span>
+                <span className="tabular-nums">{fmt(receipt.change ?? 0)}</span>
+              </div>
+            </div>
+          )}
           {receipt.splits && receipt.splits.length > 1 && (
             <div className="mt-1 space-y-0.5 text-xs">
               {receipt.splits.map((split) => (
