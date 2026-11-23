@@ -516,7 +516,7 @@ function RegisterPage() {
     const clientTransactionId = txnRef.current.id;
     setBusy(true);
     try {
-      const { offline, saleId, reference } = await recordSale({
+      const { offline, saleId, reference, creditPosted } = await recordSale({
         clientTransactionId,
         customerName: customer?.name ?? null,
         cashReceived: cashDue > 0 && cashTendered != null && !cashShort ? cashTendered : null,
@@ -545,6 +545,7 @@ function RegisterPage() {
             paymentMethod: splitMode ? "SPLIT" : payment,
             splits: splitList,
             customerId: customer?.id ?? null,
+            skipCredit: creditPosted,
           });
         } catch (postError) {
           console.error("[postSale]", (postError as { message?: string })?.message);

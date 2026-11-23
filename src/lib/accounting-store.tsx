@@ -138,6 +138,8 @@ interface AccountingContextValue {
     customerId?: string | null;
     /** Payment split breakdown; when omitted the whole total lands on paymentMethod. */
     splits?: { method: string; amount: number }[];
+    /** True when the database function already applied the credit balance + debt record. */
+    skipCredit?: boolean;
   }) => Promise<void>;
   saveCustomer: (input: {
     id?: string;
@@ -291,7 +293,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   );
 
   const postSale = useCallback<AccountingContextValue["postSale"]>(
-    async ({ saleId, subtotal, tax, cogs, paymentMethod, customerId, splits }) => {
+    async ({ saleId, subtotal, tax, cogs, paymentMethod, customerId, splits, skipCredit }) => {
       if (!storeId) return;
       const total = subtotal + tax;
       const breakdown =
@@ -315,7 +317,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
         ],
         { type: "SALE", id: saleId ?? null, memo: paymentMethod },
       );
-      if (creditAmount > 0 && customerId) {
+      if (creditAmount > 0 && customerId && !skipCredit) {
         const current = customers.find((c) => c.id === customerId);
         await supabase
           .from("customers")

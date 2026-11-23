@@ -683,6 +683,7 @@ export type Database = {
           quantity: number
           sale_id: string
           unit_name: string | null
+          unit_cost: number | null
           unit_price: number
         }
         Insert: {
@@ -692,6 +693,7 @@ export type Database = {
           quantity: number
           sale_id: string
           unit_name?: string | null
+          unit_cost?: number | null
           unit_price: number
         }
         Update: {
@@ -701,6 +703,7 @@ export type Database = {
           quantity?: number
           sale_id?: string
           unit_name?: string | null
+          unit_cost?: number | null
           unit_price?: number
         }
         Relationships: [
@@ -1026,6 +1029,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      post_sale: {
+        Args: {
+          p_created_at?: string
+          p_customer_id?: string
+          p_is_offline_sync?: boolean
+          p_lines: Json
+          p_payment_breakdown: Json
+          p_payment_method: string
+          p_payment_status?: string
+          p_sale_id: string
+          p_status?: string
+          p_store_id: string
+          p_total: number
+        }
+        Returns: Json
+      }
       has_store_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

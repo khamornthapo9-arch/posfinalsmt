@@ -106,7 +106,13 @@ interface PosContextValue {
     change?: number | null;
     /** Idempotency key: reuse the same value when retrying the same checkout. */
     clientTransactionId?: string;
-  }) => Promise<{ offline: boolean; saleId: string | null; reference: string }>;
+  }) => Promise<{
+    offline: boolean;
+    saleId: string | null;
+    reference: string;
+    /** True when post_sale already applied the credit balance (skip the client credit posting). */
+    creditPosted: boolean;
+  }>;
   saveItem: (input: {
     id?: string;
     sku: string;
@@ -205,6 +211,35 @@ const SALE_ERROR_TEXT: Record<SaleFailureKind, string> = {
   unknown: "ဆာဗာ အမှားတစ်ခု ဖြစ်ပွားသည်။ ထပ်မံကြိုးစားပါ",
 };
 
+/** Maps post_sale's error codes (RAISE EXCEPTION text) to cashier-friendly Burmese messages. */
+const POST_SALE_ERRORS: [string, string][] = [
+  ["INSUFFICIENT_STOCK", "လက်ကျန် မလုံလောက်ပါ — ပစ္စည်းစာရင်း ပြန်စစ်ပါ"],
+  ["ITEM_NOT_IN_STORE", "ပစ္စည်းတစ်ခုသည် ဤဆိုင်နှင့် မသက်ဆိုင်ပါ"],
+  ["INVALID_UNIT", "ရောင်းချသည့် ယူနစ် မမှန်ကန်ပါ (ယူနစ်များ ပြောင်းလဲနေနိုင်သည်)"],
+  ["TOTAL_MISMATCH", "စုစုပေါင်း ပမာဏ မကိုက်ညီပါ (ဈေးနှုန်း/အခွန် ပြောင်းလဲနေနိုင်သည်)"],
+  ["PAYMENT_MISMATCH", "ငွေပေးချေမှု စုစုပေါင်း မကိုက်ညီပါ"],
+  ["NEGATIVE_PAYMENT", "ငွေပေးချေမှု ပမာဏ အနုတ် မဖြစ်ရပါ"],
+  ["PAYMENT_REQUIRED", "ငွေပေးချေမှု ပမာဏ ထည့်ပါ"],
+  ["CUSTOMER_REQUIRED", "အကြွေးရောင်းရန် ဖောက်သည် ရွေးပါ"],
+  ["CUSTOMER_NOT_IN_STORE", "ဖောက်သည်သည် ဤဆိုင်နှင့် မသက်ဆိုင်ပါ"],
+  ["EMPTY_SALE", "ဈေးဝယ်ခြင်းတောင်း ဗလာ ဖြစ်နေသည်"],
+  ["INVALID_QUANTITY", "အရေအတွက် မမှန်ကန်ပါ"],
+  ["INVALID_PRICE", "ဈေးနှုန်း မမှန်ကန်ပါ"],
+  ["ACCESS_DENIED", "ဤဆိုင်တွင် အရောင်းသိမ်းရန် ခွင့်ပြုချက် မရှိပါ"],
+  ["NOT_AUTHENTICATED", "ဝင်ရောက်မှု သက်တမ်းကုန်သွားပါပြီ၊ ပြန်လည် ဝင်ပါ"],
+  ["SALE_ID_CONFLICT", "အရောင်း အမှတ်စဉ် ထပ်နေသည်၊ ထပ်မံကြိုးစားပါ"],
+];
+
+/** Turns a server rejection into a SaleError with the most specific safe message available. */
+export function saleErrorFromServer(err: unknown): SaleError {
+  const kind = classifySaleError(err);
+  const raw = (err as { message?: string } | null)?.message ?? "";
+  const hit = POST_SALE_ERRORS.find(([code]) => raw.includes(code));
+  return new SaleError(kind, hit ? hit[1] : SALE_ERROR_TEXT[kind]);
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 interface ServerSaleInput {
   id: string;
   storeId: string;
@@ -226,7 +261,40 @@ interface ServerSaleInput {
  * Each step is checked before it runs, so a half-saved sale is resumed, never duplicated.
  * A non-network failure after the header exists rolls the header back (best effort).
  */
-async function postSaleToServer(input: ServerSaleInput): Promise<void> {
+async function postSaleToServer(input: ServerSaleInput): Promise<{ creditPosted: boolean }> {
+  // Preferred path: one atomic, idempotent database transaction (sale, lines, stock movements,
+  // cost snapshot and credit balance). Falls back to the step-by-step path below only when the
+  // function has not been installed in this database yet.
+  const { error: rpcError } = await supabase.rpc("post_sale", {
+    p_sale_id: input.id,
+    p_store_id: input.storeId,
+    p_lines: input.lines.map((line) => ({
+      item_id: line.item_id,
+      quantity: line.quantity,
+      unit_price: line.unit_price,
+      unit_name: line.unit_name ?? null,
+      conversion: line.conversion ?? 1,
+    })) as unknown as never,
+    p_total: round2(input.total),
+    p_payment_method: input.paymentMethod,
+    p_payment_breakdown: input.paymentBreakdown.map((part) => ({
+      method: part.method,
+      amount: round2(part.amount),
+    })) as unknown as never,
+    ...(input.customerId ? { p_customer_id: input.customerId } : {}),
+    p_status: input.status,
+    p_payment_status: input.paymentStatus,
+    p_created_at: input.createdAt,
+    p_is_offline_sync: input.isOfflineSync,
+  });
+  if (!rpcError) return { creditPosted: true };
+  const missing =
+    rpcError.code === "PGRST202" ||
+    rpcError.code === "42883" ||
+    /could not find the function/i.test(rpcError.message ?? "");
+  if (!missing) throw rpcError;
+  console.warn("[post_sale] function not installed, using step-by-step fallback");
+
   const baseQty = (line: PendingSaleLine) => line.quantity * (line.conversion ?? 1);
   const { error: headerError } = await supabase.from("sales").insert({
     id: input.id,
@@ -295,6 +363,7 @@ async function postSaleToServer(input: ServerSaleInput): Promise<void> {
     }
     throw err;
   }
+  return { creditPosted: false };
 }
 
 function PosProviderInner({ children }: { children: ReactNode }) {
@@ -438,7 +507,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         }
         await posDb.pending_sales.update(sale.localId, {
           sync_state: "failed",
-          last_error: SALE_ERROR_TEXT[kind],
+          last_error: saleErrorFromServer(err).message,
         });
       }
     }
@@ -556,13 +625,14 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           await posDb.pending_sales.add(offlineSale);
           await applyLocalStock();
         }
-        return { offline: true, saleId: null, reference: reference(true) };
+        return { offline: true, saleId: null, reference: reference(true), creditPosted: false };
       };
 
       if (!(navigator.onLine && isOnline)) return queueOffline();
 
+      let creditPosted = false;
       try {
-        await postSaleToServer({
+        ({ creditPosted } = await postSaleToServer({
           id: txnId,
           storeId,
           userId,
@@ -575,7 +645,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           paymentStatus: paymentStatus ?? "PAID",
           createdAt,
           isOfflineSync: false,
-        });
+        }));
       } catch (err) {
         const kind = classifySaleError(err);
         console.error("[recordSale]", kind, (err as { message?: string })?.message);
@@ -585,10 +655,10 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           setIsOnline(false);
           return queueOffline();
         }
-        throw new SaleError(kind, SALE_ERROR_TEXT[kind]);
+        throw saleErrorFromServer(err);
       }
       await refreshCatalog();
-      return { offline: false, saleId: txnId, reference: reference(false) };
+      return { offline: false, saleId: txnId, reference: reference(false), creditPosted };
     },
     [isOnline, refreshCatalog, storeId, userId],
   );
