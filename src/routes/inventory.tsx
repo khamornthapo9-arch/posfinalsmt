@@ -273,7 +273,7 @@ function InventoryPage() {
         </div>
       }
     >
-      <div className="h-[calc(100dvh-var(--pos-chrome,64px))] overflow-y-auto overscroll-contain bg-muted/20">
+      <div className="h-[calc(100dvh-var(--pos-chrome,64px)-var(--pos-bottom-nav,0px))] overflow-y-auto overscroll-contain bg-muted/20">
         <div className="space-y-4 p-3 md:p-5">
           {/* Summary Metric Cards */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">

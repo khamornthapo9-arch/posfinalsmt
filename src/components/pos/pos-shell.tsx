@@ -1,12 +1,13 @@
 import { LottiePlayer } from "@/components/landing/lottie-player";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
+  ChevronDown,
   Loader2,
   LogOut,
   Menu,
+  MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
-  UserCog,
   X,
 } from "lucide-react";
 import {
@@ -19,8 +20,24 @@ import {
 } from "react";
 import { useAuth } from "@/lib/auth-store";
 import { AnnouncementMarquee } from "@/components/pos/announcement-marquee";
-import { useRole, ROLE_LABEL, type StoreRole } from "@/lib/roles";
-import { useSubscription } from "@/lib/subscription";
+import { useRole, ROLE_LABEL } from "@/lib/roles";
+import {
+  isPathActive,
+  primaryItems,
+  trailFor,
+  visibleGroups,
+  type NavGroup,
+  type NavItem,
+} from "@/lib/nav-config";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StaffSwitchModal } from "@/components/pos/staff-switch-modal";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
@@ -36,19 +53,6 @@ const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   expenses: Wallet,
   admin: ShieldCheck,
 };
-
-const NAV = [
-  { to: "/register", label: "အရောင်းစာရင်း", tone: "sales", roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
-  { to: "/inventory", label: "ကုန်ပစ္စည်းများ", tone: "inventory", roles: ["OWNER", "MANAGER"] as StoreRole[] },
-  { to: "/analytics", label: "ဆန်းစစ်ခြင်း", tone: "reports", roles: ["OWNER", "MANAGER"] as StoreRole[] },
-  { to: "/settings", label: "ပြုပြင်ခြင်း", tone: "settings", roles: ["OWNER"] as StoreRole[] },
-] as const;
-
-const ADVANCED_NAV = [
-  { to: "/customers", label: "ဖောက်သည်များ", tone: "customers", roles: ["OWNER", "MANAGER", "CASHIER"] as StoreRole[] },
-  { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", tone: "suppliers", roles: ["OWNER", "MANAGER"] as StoreRole[] },
-  { to: "/expenses", label: "အသုံးစရိတ်", tone: "expenses", roles: ["OWNER", "MANAGER"] as StoreRole[] },
-] as const;
 
 function Brand({ collapsed = false }: { collapsed?: boolean }) {
   const logo = useStoreLogo();
@@ -80,46 +84,159 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
   );
 }
 
-function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+function useVisibleGroups(): NavGroup[] {
   const { store, isBranchDevice } = useAuth();
   const { role, isActive } = useRole();
-  
-  const advanced = Boolean(store?.advanced_accounting_mode);
-  const all = advanced ? [...NAV, ...ADVANCED_NAV] : [...NAV];
-  
-  // ဆိုင်ခွဲစက်ဖြစ်ပါက အရောင်း၊ ကုန်ပစ္စည်း၊ ဖောက်သည်၊ အသုံးစရိတ်နှင့် ပြုပြင်ခြင်း (ဘောက်ချာပုံစံ/အကူအညီ) သာ ခွင့်ပြုမည်
-  const branchAllowed = ["/register", "/inventory", "/customers", "/expenses", "/settings"];
-  const items = isBranchDevice
-    ? all.filter((item) => branchAllowed.includes(item.to))
-    : all.filter((item) => item.roles.includes(role) && isActive);
+  return visibleGroups({
+    advanced: Boolean(store?.advanced_accounting_mode),
+    isBranchDevice,
+    role,
+    isActive,
+  });
+}
+
+function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+  const groups = useVisibleGroups();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Parents with children auto-expand on their own routes; the chevron overrides that.
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
+
+  const renderLink = (item: { to: string; label: string; tone?: string; exact?: boolean }, Icon?: ComponentType<{ className?: string }>, child = false) => {
+    const link = (
+      <Link
+        key={item.to}
+        to={item.to as string}
+        title={collapsed ? undefined : item.label}
+        aria-label={collapsed ? item.label : undefined}
+        data-tone={item.tone ?? "settings"}
+        onClick={onNavigate}
+        activeOptions={{ exact: item.exact ?? false }}
+        activeProps={{ className: "", "data-active": "true" }}
+        className={cn(
+          "pos-nav-tab flex min-h-10 touch:min-h-12 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+          child && "min-h-9 py-2 pl-10 text-[13px]",
+          collapsed && "justify-center px-0",
+        )}
+      >
+        {Icon && <Icon className="h-4 w-4 shrink-0" />}
+        {!collapsed && <span className="truncate leading-6">{item.label}</span>}
+      </Link>
+    );
+    if (!collapsed) return link;
+    return (
+      <Tooltip key={item.to}>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right">{item.label}</TooltipContent>
+      </Tooltip>
+    );
+  };
 
   return (
-    <nav className="flex flex-col gap-0.5">
-      {items.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to as string}
-          title={item.label}
-          data-tone={item.tone}
-          onClick={onNavigate}
-          activeOptions={{ exact: item.to === "/register" }}
-          activeProps={{
-            className: "",
-            "data-active": "true",
-          }}
-          className={cn(
-            "pos-nav-tab flex min-h-10 touch:min-h-12 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
-            collapsed && "justify-center px-0",
-          )}
-        >
-          {(() => {
-            const Icon = NAV_ICONS[item.tone] ?? ShoppingCart;
-            return <Icon className="h-4 w-4 shrink-0" />;
-          })()}
-          {!collapsed && <span className="truncate leading-6">{item.label}</span>}
-        </Link>
-      ))}
+    <TooltipProvider delayDuration={150}>
+      <nav aria-label="Main" className="flex flex-col gap-3">
+        {groups.map((group, index) => (
+          <div key={group.id} className="flex flex-col gap-0.5">
+            {collapsed ? (
+              index > 0 && <div className="mx-2 mb-1 h-px bg-sidebar-border" />
+            ) : (
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/50">
+                {group.label}
+              </p>
+            )}
+            {group.items.map((item: NavItem) => {
+              const Icon = NAV_ICONS[item.tone] ?? ShoppingCart;
+              const children = item.children ?? [];
+              if (collapsed || children.length === 0) {
+                return renderLink(item, Icon);
+              }
+              const underParent = isPathActive(pathname, item.to) ;
+              const open = toggled[item.to] ?? underParent;
+              return (
+                <div key={item.to} className="flex flex-col gap-0.5">
+                  <div className="relative">
+                    {renderLink(item, Icon)}
+                    <button
+                      type="button"
+                      aria-label={open ? `${item.label} ချုံ့မည်` : `${item.label} ဖြန့်မည်`}
+                      aria-expanded={open}
+                      onClick={() => setToggled((prev) => ({ ...prev, [item.to]: !open }))}
+                      className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent/60"
+                    >
+                      <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+                    </button>
+                  </div>
+                  {open && children.map((child) => renderLink({ ...child, exact: true }, undefined, true))}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+    </TooltipProvider>
+  );
+}
+
+/** Phone-only bottom bar. More opens the existing menu drawer, which lists every destination. */
+function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean }) {
+  const groups = useVisibleGroups();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const items = primaryItems(groups);
+  const tab =
+    "press touch:min-h-14 flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium text-muted-foreground transition-colors";
+  return (
+    <nav
+      aria-label="Primary"
+      className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-header-border bg-header/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+    >
+      {items.map((item) => {
+        const Icon = NAV_ICONS[item.tone] ?? ShoppingCart;
+        const active = isPathActive(pathname, item.to, item.exact);
+        return (
+          <Link
+            key={item.to}
+            to={item.to as string}
+            aria-current={active ? "page" : undefined}
+            className={cn(tab, active && "text-primary")}
+          >
+            <Icon className="h-5 w-5" />
+            <span className="max-w-full truncate">{item.short}</span>
+          </Link>
+        );
+      })}
+      <button
+        type="button"
+        onClick={onMore}
+        aria-haspopup="dialog"
+        aria-expanded={moreOpen}
+        className={cn(tab, moreOpen && "text-primary")}
+      >
+        <MoreHorizontal className="h-5 w-5" />
+        <span>နောက်ထပ်</span>
+      </button>
     </nav>
+  );
+}
+
+function PageBreadcrumb({ pathname }: { pathname: string }) {
+  const trail = trailFor(pathname);
+  if (trail.length === 0) return null;
+  return (
+    <Breadcrumb className="mb-0.5">
+      <BreadcrumbList className="gap-1 text-xs sm:gap-1.5">
+        {trail.map((crumb, i) => (
+          <BreadcrumbItem key={crumb.label}>
+            {crumb.to ? (
+              <BreadcrumbLink asChild>
+                <Link to={crumb.to as string}>{crumb.label}</Link>
+              </BreadcrumbLink>
+            ) : (
+              <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+            )}
+            {i < trail.length - 1 && <BreadcrumbSeparator />}
+          </BreadcrumbItem>
+        ))}
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 }
 
@@ -220,6 +337,7 @@ export function PosShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement>(null);
   const chromeRef = useRef<HTMLDivElement>(null);
   const { session, store, loading, isBranchDevice } = useAuth();
   const {
@@ -307,15 +425,20 @@ export function PosShell({
       if (event.key === "Escape") setDrawerOpen(false);
     };
     document.addEventListener("keydown", onKey);
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    drawerCloseRef.current?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
+      opener?.focus();
     };
   }, [drawerOpen]);
 
   const rail = collapsed || isTablet;
+  // The register keeps its own pinned checkout bar, so the bottom nav is not stacked on top of it.
+  const showBottomNav = pathname !== "/register";
 
   const toggle = () =>
     setCollapsed((prev) => {
@@ -334,7 +457,10 @@ export function PosShell({
   return (
     <div
       ref={rootRef}
-      className="pos-app flex min-h-dvh w-full overflow-x-clip bg-background text-foreground"
+      className={cn(
+        "pos-app flex min-h-dvh w-full overflow-x-clip bg-background text-foreground",
+        showBottomNav && "max-md:[--pos-bottom-nav:calc(3.5rem_+_env(safe-area-inset-bottom))]",
+      )}
       style={{ "--pos-chrome": "64px" } as CSSProperties}
     >
       {/* Sidebar: full on desktop, icon rail on tablet, hidden on phones (see drawer) */}
@@ -402,6 +528,7 @@ export function PosShell({
           <div className="flex items-center justify-between px-1 py-2">
             <Brand />
             <button
+              ref={drawerCloseRef}
               type="button"
               onClick={() => setDrawerOpen(false)}
               aria-label="Close menu"
@@ -412,8 +539,10 @@ export function PosShell({
             </button>
           </div>
           <div className="my-3 h-px bg-sidebar-border" />
-          <NavList onNavigate={() => setDrawerOpen(false)} />
-          <div className="mt-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <NavList onNavigate={() => setDrawerOpen(false)} />
+          </div>
+          <div className="mt-auto pt-3">
             <UserCard />
           </div>
         </div>
@@ -430,11 +559,15 @@ export function PosShell({
                 type="button"
                 onClick={() => setDrawerOpen(true)}
                 aria-label="Open menu"
-                className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden"
+                className={cn(
+                  "press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden",
+                  showBottomNav && "hidden",
+                )}
               >
                 <Menu className="h-5 w-5" />
               </button>
               <div className="min-w-20 flex-1 basis-0">
+                <PageBreadcrumb pathname={pathname} />
                 <h1 className="truncate text-base font-semibold leading-7 tracking-tight sm:text-lg">
                   {title}
                 </h1>
@@ -457,8 +590,9 @@ export function PosShell({
           <AnnouncementMarquee />
         </div>
 
-        <main className="animate-page-in min-w-0 flex-1">{children}</main>
+        <main className="animate-page-in min-w-0 flex-1 pb-[var(--pos-bottom-nav,0px)]">{children}</main>
       </div>
+      {showBottomNav && <BottomNav onMore={() => setDrawerOpen(true)} moreOpen={drawerOpen} />}
     </div>
   );
 }
