@@ -23,7 +23,7 @@ interface MobileCheckoutDrawerProps {
   payment: string;
   splitMode: boolean;
   splits: Record<string, number>;
-  creditCustomer: Customer | null;
+  customer: Customer | null;
   busy: boolean;
   subtotal: number;
   tax: number;
@@ -31,6 +31,17 @@ interface MobileCheckoutDrawerProps {
   taxPercent: number;
   remaining: number;
   creditPortion: number;
+  cashReceived: string;
+  cashDue: number;
+  cashShort: boolean;
+  changeDue: number;
+  digitalDue: number;
+  digitalConfirmed: boolean;
+  onCashReceivedChange: (value: string) => void;
+  onDigitalConfirmedChange: (value: boolean) => void;
+  onSetQty: (itemId: string, qty: number, unitName?: string) => void;
+  onClear: () => void;
+  onClearCustomer: () => void;
   needsCreditCustomer: boolean;
   currencySymbol: string;
   payments: PaymentMethod[];
