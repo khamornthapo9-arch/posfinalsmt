@@ -7,6 +7,7 @@ import { ScannerModal } from "@/components/pos/scanner-modal";
 import { DenseProductList } from "@/components/pos/dense-product-list";
 import { CartPanel, type CartLine } from "@/components/pos/cart-panel";
 import { MobileCheckoutBar } from "@/components/pos/mobile-checkout-bar";
+import { SaleError } from "@/lib/pos-store";
 import { findByCode, baseQuantityFor } from "@/lib/product-lookup";
 import { RegisterStatus } from "@/components/pos/register-status";
 import { useProductViewMode } from "@/lib/use-product-view";
@@ -59,6 +60,8 @@ interface Receipt {
   newDebt?: number;
   cashReceived?: number;
   change?: number;
+  /** Server sale reference, or a clearly marked local OFF- reference for queued sales. */
+  reference?: string;
 }
 
 interface KitchenTicket {
@@ -133,6 +136,10 @@ function RegisterPage() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [cashReceived, setCashReceived] = useState("");
   const [digitalConfirmed, setDigitalConfirmed] = useState(false);
+  // One idempotency key per checkout attempt. It is reused on retry of the same cart and replaced
+  // when the cart, payment or customer changes, so a double click can never post two sales.
+  const txnRef = useRef<{ id: string; sig: string } | null>(null);
+  const submitLock = useRef(false);
   const [pendingApproval, setPendingApproval] = useState<((ok: boolean) => void) | null>(null);
 
   const itemsRef = useRef(items);
@@ -494,9 +501,26 @@ function RegisterPage() {
       toast.error("အကြွေးရောင်းရန် ဖောက်သည် ရွေးပါ");
       return;
     }
+    if (submitLock.current) return;
+    submitLock.current = true;
+    const signature = JSON.stringify([
+      cart.map((l) => [l.item_id, l.unit_name ?? "", l.quantity, l.unit_price]),
+      total,
+      splitMode ? "SPLIT" : payment,
+      splitList,
+      customer?.id ?? null,
+    ]);
+    if (txnRef.current?.sig !== signature) {
+      txnRef.current = { id: crypto.randomUUID(), sig: signature };
+    }
+    const clientTransactionId = txnRef.current.id;
     setBusy(true);
     try {
-      const { offline, saleId } = await recordSale({
+      const { offline, saleId, reference } = await recordSale({
+        clientTransactionId,
+        customerName: customer?.name ?? null,
+        cashReceived: cashDue > 0 && cashTendered != null && !cashShort ? cashTendered : null,
+        change: cashDue > 0 && cashTendered != null && !cashShort ? changeDue : null,
         lines: cart.map(({ stock: _stock, ...line }) => line),
         total,
         paymentMethod: splitMode ? "SPLIT" : payment,
@@ -510,15 +534,24 @@ function RegisterPage() {
             : "PARTIAL",
       });
       if (!offline) {
-        await postSale({
-          saleId,
-          subtotal,
-          tax,
-          cogs: cogsFor(cart),
-          paymentMethod: splitMode ? "SPLIT" : payment,
-          splits: splitList,
-          customerId: customer?.id ?? null,
-        });
+        // The sale itself is already saved. If the accounting/credit posting fails, say so rather
+        // than reporting the sale as failed (which would invite the cashier to ring it up twice).
+        try {
+          await postSale({
+            saleId,
+            subtotal,
+            tax,
+            cogs: cogsFor(cart),
+            paymentMethod: splitMode ? "SPLIT" : payment,
+            splits: splitList,
+            customerId: customer?.id ?? null,
+          });
+        } catch (postError) {
+          console.error("[postSale]", (postError as { message?: string })?.message);
+          toast.warning(
+            `ရောင်းချမှု သိမ်းပြီးပါပြီ (#${reference}) သို့သော် စာရင်းကိုင် မှတ်သွင်းမှု မအောင်မြင်ပါ။ စာရင်းကို စစ်ဆေးပါ`,
+          );
+        }
       }
       const previousDebt = customer?.balance ?? 0;
       setReceipt({
@@ -530,6 +563,7 @@ function RegisterPage() {
         splits: splitList,
         timestamp: new Date().toLocaleString(),
         offline,
+        reference,
         ...(customer
           ? { customerName: customer.name, customerPhone: customer.phone ?? "" }
           : {}),
@@ -538,6 +572,8 @@ function RegisterPage() {
           ? { cashReceived: cashTendered, change: changeDue }
           : {}),
       });
+      // The sale is durably saved (server or local queue): only now reset the checkout state.
+      txnRef.current = null;
       setCart([]);
       setCustomer(null);
       setPayment("ငွေသား");
@@ -546,9 +582,15 @@ function RegisterPage() {
       setCashReceived("");
       setDigitalConfirmed(false);
       toast.success(offline ? "အရောင်းကို အော့ဖ်လိုင်း မှတ်ထားသည်" : "ရောင်းချမှု အောင်မြင်သည်");
-    } catch {
-      toast.error("အရောင်းစာရင်း မသိမ်းဆည်းနိုင်ပါ");
+    } catch (err) {
+      // The cart is kept, and the same key is reused if the cashier retries the same checkout.
+      toast.error(
+        err instanceof SaleError
+          ? `အရောင်းစာရင်း မသိမ်းဆည်းနိုင်ပါ — ${err.message}`
+          : "အရောင်းစာရင်း မသိမ်းဆည်းနိုင်ပါ",
+      );
     } finally {
+      submitLock.current = false;
       setBusy(false);
     }
   };
@@ -1166,6 +1208,12 @@ function ReceiptModal({
             </p>
           )}
         </div>
+
+        {receipt.reference && (
+          <p className="mt-1 text-center text-xs tabular-nums text-muted-foreground">
+            ပြေစာ #{receipt.reference}
+          </p>
+        )}
 
         <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
 

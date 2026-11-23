@@ -60,7 +60,14 @@ interface PosContextValue {
   loading: boolean;
   isOnline: boolean;
   syncState: SyncState;
+  /** Unsynced sales for the active store (queued, syncing or failed). */
   pendingCount: number;
+  /** Subset of pendingCount whose last sync attempt failed and will be retried. */
+  failedSyncCount: number;
+  /** Legacy queued sales with no reliable store: held for review, never posted automatically. */
+  reviewCount: number;
+  /** Unsynced sales that belong to a different store than the active one. */
+  otherStorePendingCount: number;
   lowStockCount: number;
   lowStockItems: CachedItem[];
   openTabs: OpenTab[];
@@ -94,7 +101,12 @@ interface PosContextValue {
     customerId?: string | null;
     status?: string;
     paymentStatus?: string;
-  }) => Promise<{ offline: boolean; saleId: string | null }>;
+    customerName?: string | null;
+    cashReceived?: number | null;
+    change?: number | null;
+    /** Idempotency key: reuse the same value when retrying the same checkout. */
+    clientTransactionId?: string;
+  }) => Promise<{ offline: boolean; saleId: string | null; reference: string }>;
   saveItem: (input: {
     id?: string;
     sku: string;
@@ -154,6 +166,137 @@ function mapLines(rows: SaleItemRow[] | null): OpenTabLine[] {
   return [...merged.values()];
 }
 
+export type SaleFailureKind = "network" | "permission" | "validation" | "unknown";
+
+/** A checkout failure with a cashier-safe message. Technical detail goes to the console only. */
+export class SaleError extends Error {
+  kind: SaleFailureKind;
+  constructor(kind: SaleFailureKind, message: string) {
+    super(message);
+    this.kind = kind;
+  }
+}
+
+/** Only a real "could not reach the server" failure may be queued offline. */
+export function classifySaleError(err: unknown): SaleFailureKind {
+  const e = err as { code?: string; message?: string; status?: number } | null;
+  const code = e?.code ?? "";
+  const message = e?.message ?? String(err ?? "");
+  if (
+    !code &&
+    (err instanceof TypeError ||
+      /failed to fetch|networkerror|network request failed|load failed|timed? ?out|aborted/i.test(
+        message,
+      ))
+  ) {
+    return "network";
+  }
+  if (code === "42501" || e?.status === 401 || e?.status === 403 || /row-level security|permission denied/i.test(message)) {
+    return "permission";
+  }
+  if (/^(22|23|P0001|PGRST)/.test(code)) return "validation";
+  return "unknown";
+}
+
+const SALE_ERROR_TEXT: Record<SaleFailureKind, string> = {
+  network: "ဆာဗာသို့ ချိတ်ဆက်၍ မရပါ",
+  permission: "ဤအရောင်းကို သိမ်းရန် ခွင့်ပြုချက် မရှိပါ",
+  validation: "အရောင်းဒေတာ မမှန်ကန်ပါ (လက်ကျန် သို့မဟုတ် ဆိုင်စာရင်း ပြောင်းလဲနေနိုင်သည်)",
+  unknown: "ဆာဗာ အမှားတစ်ခု ဖြစ်ပွားသည်။ ထပ်မံကြိုးစားပါ",
+};
+
+interface ServerSaleInput {
+  id: string;
+  storeId: string;
+  userId: string | null;
+  lines: PendingSaleLine[];
+  total: number;
+  paymentMethod: string;
+  paymentBreakdown: PaymentSplit[];
+  customerId: string | null;
+  status: string;
+  paymentStatus: string;
+  createdAt: string;
+  isOfflineSync: boolean;
+}
+
+/**
+ * Saves one sale idempotently. The client-generated key IS the sale id, so a retry (double click,
+ * timeout after commit, offline sync) hits the primary key instead of creating a second sale.
+ * Each step is checked before it runs, so a half-saved sale is resumed, never duplicated.
+ * A non-network failure after the header exists rolls the header back (best effort).
+ */
+async function postSaleToServer(input: ServerSaleInput): Promise<void> {
+  const baseQty = (line: PendingSaleLine) => line.quantity * (line.conversion ?? 1);
+  const { error: headerError } = await supabase.from("sales").insert({
+    id: input.id,
+    total_amount: input.total,
+    payment_method: input.paymentMethod,
+    payment_breakdown: input.paymentBreakdown as unknown as never,
+    is_offline_sync: input.isOfflineSync,
+    created_at: input.createdAt,
+    store_id: input.storeId,
+    customer_id: input.customerId,
+    status: input.status,
+    payment_status: input.paymentStatus,
+  });
+  // 23505 = this key was already saved by an earlier attempt: carry on from where it stopped.
+  const createdNow = !headerError;
+  if (headerError && headerError.code !== "23505") throw headerError;
+
+  try {
+    const { count: lineCount, error: lineCountError } = await supabase
+      .from("sale_items")
+      .select("id", { count: "exact", head: true })
+      .eq("sale_id", input.id);
+    if (lineCountError) throw lineCountError;
+    if (!lineCount) {
+      const { error } = await supabase.from("sale_items").insert(
+        input.lines.map((line) => ({
+          sale_id: input.id,
+          item_id: line.item_id,
+          quantity: line.quantity,
+          unit_price: line.unit_price,
+          unit_name: line.unit_name ?? null,
+          conversion: line.conversion ?? 1,
+        })),
+      );
+      if (error) throw error;
+    }
+
+    const { count: movementCount, error: movementCountError } = await supabase
+      .from("inventory_movements")
+      .select("id", { count: "exact", head: true })
+      .eq("reference_id", input.id)
+      .eq("movement_type", "SALE");
+    if (movementCountError) throw movementCountError;
+    if (!movementCount) {
+      const { error } = await supabase.from("inventory_movements").insert(
+        input.lines.map((line) => ({
+          store_id: input.storeId,
+          item_id: line.item_id,
+          movement_type: "SALE",
+          quantity: -baseQty(line),
+          reference_id: input.id,
+          created_by: input.userId,
+        })),
+      );
+      if (error) throw error;
+    }
+  } catch (err) {
+    if (createdNow && classifySaleError(err) !== "network") {
+      // The sale was rejected, not lost: remove the partial header so no half-posted sale remains.
+      try {
+        await supabase.from("sale_items").delete().eq("sale_id", input.id);
+        await supabase.from("sales").delete().eq("id", input.id);
+      } catch {
+        /* best effort */
+      }
+    }
+    throw err;
+  }
+}
+
 function PosProviderInner({ children }: { children: ReactNode }) {
   const { store, session } = useAuth();
   const storeId = store?.id ?? null;
@@ -167,7 +310,15 @@ function PosProviderInner({ children }: { children: ReactNode }) {
 
   const items = useLiveQuery(() => posDb.cached_items.orderBy("name").toArray(), [], []);
   const pending = useLiveQuery(() => posDb.pending_sales.toArray(), [], []);
-  const pendingCount = pending?.length ?? 0;
+  const activePending = (pending ?? []).filter(
+    (sale) => sale.sync_state !== "needs_review" && sale.store_id === storeId,
+  );
+  const pendingCount = activePending.length;
+  const failedSyncCount = activePending.filter((sale) => sale.sync_state === "failed").length;
+  const reviewCount = (pending ?? []).filter((sale) => sale.sync_state === "needs_review").length;
+  const otherStorePendingCount = (pending ?? []).filter(
+    (sale) => sale.sync_state !== "needs_review" && sale.store_id && sale.store_id !== storeId,
+  ).length;
 
   const refreshCatalog = useCallback(async () => {
     if (!storeId) {
@@ -246,42 +397,52 @@ function PosProviderInner({ children }: { children: ReactNode }) {
 
   const pushPendingSales = useCallback(async () => {
     if (!storeId) return;
-    const queued = await posDb.pending_sales.toArray();
+    // Only this store's own queued sales, and never the quarantined legacy rows.
+    const queued = (await posDb.pending_sales.toArray()).filter(
+      (sale) =>
+        // A row left "syncing" by a closed tab is retried too: the key makes that safe.
+        sale.store_id === storeId && sale.sync_state !== "needs_review",
+    );
     for (const sale of queued) {
-      const { data: saleRow, error } = await supabase
-        .from("sales")
-        .insert({
-          total_amount: sale.total_amount,
-          payment_method: sale.payment_method,
-          is_offline_sync: true,
-          created_at: sale.created_at,
-          store_id: storeId,
-        })
-        .select("id")
-        .single();
-      if (error || !saleRow) throw error ?? new Error("Sale sync failed");
-      const { error: lineError } = await supabase.from("sale_items").insert(
-        sale.lines.map((line) => ({
-          sale_id: saleRow.id,
-          item_id: line.item_id,
-          quantity: line.quantity,
-          unit_price: line.unit_price,
-          unit_name: line.unit_name ?? null,
-          conversion: line.conversion ?? 1,
-        })),
-      );
-      if (lineError) throw lineError;
-      await logMovements(
-        sale.lines.map((line) => ({
-          item_id: line.item_id,
-          quantity: line.quantity * (line.conversion ?? 1),
-        })),
-        "SALE",
-        saleRow.id as string,
-      );
-      if (sale.localId != null) await posDb.pending_sales.delete(sale.localId);
+      if (sale.localId == null || !sale.client_transaction_id) continue;
+      await posDb.pending_sales.update(sale.localId, {
+        sync_state: "syncing",
+        attempts: (sale.attempts ?? 0) + 1,
+        last_attempt_at: new Date().toISOString(),
+      });
+      try {
+        await postSaleToServer({
+          id: sale.client_transaction_id,
+          storeId: sale.store_id!,
+          userId: sale.user_id ?? userId,
+          lines: sale.lines,
+          total: sale.total_amount,
+          paymentMethod: sale.payment_method,
+          paymentBreakdown: sale.payment_breakdown ?? [
+            { method: sale.payment_method, amount: sale.total_amount },
+          ],
+          customerId: sale.customer_id ?? null,
+          status: sale.status ?? "COMPLETED",
+          paymentStatus: sale.payment_status ?? "PAID",
+          createdAt: sale.created_at,
+          isOfflineSync: true,
+        });
+        await posDb.pending_sales.delete(sale.localId);
+      } catch (err) {
+        const kind = classifySaleError(err);
+        console.error("[sync] pending sale failed", kind, (err as { message?: string })?.message);
+        if (kind === "network") {
+          // Outcome unknown: keep it queued with the same key; the next sync resumes safely.
+          await posDb.pending_sales.update(sale.localId, { sync_state: "queued" });
+          throw err;
+        }
+        await posDb.pending_sales.update(sale.localId, {
+          sync_state: "failed",
+          last_error: SALE_ERROR_TEXT[kind],
+        });
+      }
     }
-  }, [logMovements, storeId]);
+  }, [storeId, userId]);
 
   const syncNow = useCallback(async () => {
     if (syncing || !storeId) return;
@@ -324,9 +485,26 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   }, [storeId]);
 
   const recordSale = useCallback<PosContextValue["recordSale"]>(
-    async ({ lines, total, paymentMethod, paymentBreakdown, customerId, status, paymentStatus }) => {
+    async ({
+      lines,
+      total,
+      paymentMethod,
+      paymentBreakdown,
+      customerId,
+      customerName,
+      status,
+      paymentStatus,
+      cashReceived,
+      change,
+      clientTransactionId,
+    }) => {
+      if (!storeId) throw new SaleError("validation", "ဆိုင် မရွေးရသေးပါ");
       const createdAt = new Date().toISOString();
+      const txnId = clientTransactionId ?? crypto.randomUUID();
+      const breakdown = paymentBreakdown ?? [{ method: paymentMethod, amount: total }];
       const baseQty = (line: PendingSaleLine) => line.quantity * (line.conversion ?? 1);
+      const reference = (offline: boolean) =>
+        offline ? `OFF-${txnId.slice(0, 8).toUpperCase()}` : txnId.slice(0, 8).toUpperCase();
 
       const applyLocalStock = async () => {
         await posDb.transaction("rw", posDb.cached_items, async () => {
@@ -342,60 +520,77 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         });
       };
 
-      if (navigator.onLine && isOnline && storeId) {
-        try {
-          const { data: saleRow, error } = await supabase
-            .from("sales")
-            .insert({
-              total_amount: total,
-              payment_method: paymentMethod,
-              payment_breakdown: (paymentBreakdown ?? [
-                { method: paymentMethod, amount: total },
-              ]) as unknown as never,
-              is_offline_sync: false,
-              created_at: createdAt,
-              store_id: storeId,
-              customer_id: customerId ?? null,
-              status: status ?? "COMPLETED",
-              payment_status: paymentStatus ?? "PAID",
-            })
-            .select("id")
-            .single();
-          if (error || !saleRow) throw error ?? new Error("Sale failed");
-          const { error: lineError } = await supabase.from("sale_items").insert(
-            lines.map((line) => ({
-              sale_id: saleRow.id,
-              item_id: line.item_id,
-              quantity: line.quantity,
-              unit_price: line.unit_price,
-              unit_name: line.unit_name ?? null,
-              conversion: line.conversion ?? 1,
-            })),
+      const queueOffline = async () => {
+        // Credit changes a customer's balance and the ledger, which are only posted online.
+        if (breakdown.some((part) => part.method === CREDIT_METHOD && part.amount > 0)) {
+          throw new SaleError(
+            "network",
+            "အကြွေးရောင်းချမှုကို အွန်လိုင်းတွင်သာ သိမ်းနိုင်သည်။ ချိတ်ဆက်မှု ပြန်ရမှ ထပ်ကြိုးစားပါ",
           );
-          if (lineError) throw lineError;
-          await logMovements(
-            lines.map((line) => ({ item_id: line.item_id, quantity: baseQty(line) })),
-            "SALE",
-            saleRow.id as string,
-          );
-          await refreshCatalog();
-          return { offline: false, saleId: saleRow.id as string };
-        } catch {
-          setIsOnline(false);
         }
-      }
-
-      const offlineSale: PendingSale = {
-        total_amount: total,
-        payment_method: paymentMethod,
-        created_at: createdAt,
-        lines,
+        const existing = await posDb.pending_sales
+          .where("client_transaction_id")
+          .equals(txnId)
+          .first();
+        if (!existing) {
+          const offlineSale: PendingSale = {
+            total_amount: total,
+            payment_method: paymentMethod,
+            created_at: createdAt,
+            lines,
+            client_transaction_id: txnId,
+            store_id: storeId,
+            user_id: userId,
+            payment_breakdown: breakdown,
+            customer_id: customerId ?? null,
+            customer_name: customerName ?? null,
+            status: status ?? "COMPLETED",
+            payment_status: paymentStatus ?? "PAID",
+            cash_received: cashReceived ?? null,
+            change: change ?? null,
+            sync_state: "queued",
+            attempts: 0,
+            last_error: null,
+            last_attempt_at: null,
+          };
+          await posDb.pending_sales.add(offlineSale);
+          await applyLocalStock();
+        }
+        return { offline: true, saleId: null, reference: reference(true) };
       };
-      await posDb.pending_sales.add(offlineSale);
-      await applyLocalStock();
-      return { offline: true, saleId: null };
+
+      if (!(navigator.onLine && isOnline)) return queueOffline();
+
+      try {
+        await postSaleToServer({
+          id: txnId,
+          storeId,
+          userId,
+          lines,
+          total,
+          paymentMethod,
+          paymentBreakdown: breakdown,
+          customerId: customerId ?? null,
+          status: status ?? "COMPLETED",
+          paymentStatus: paymentStatus ?? "PAID",
+          createdAt,
+          isOfflineSync: false,
+        });
+      } catch (err) {
+        const kind = classifySaleError(err);
+        console.error("[recordSale]", kind, (err as { message?: string })?.message);
+        if (kind === "network") {
+          // Unknown whether the server committed. Queue under the SAME key so sync resolves it
+          // instead of creating a second sale.
+          setIsOnline(false);
+          return queueOffline();
+        }
+        throw new SaleError(kind, SALE_ERROR_TEXT[kind]);
+      }
+      await refreshCatalog();
+      return { offline: false, saleId: txnId, reference: reference(false) };
     },
-    [isOnline, logMovements, refreshCatalog, storeId],
+    [isOnline, refreshCatalog, storeId, userId],
   );
 
   const saveItem = useCallback<PosContextValue["saveItem"]>(
@@ -825,6 +1020,9 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       isOnline,
       syncState,
       pendingCount,
+      failedSyncCount,
+      reviewCount,
+      otherStorePendingCount,
       lowStockCount,
       lowStockItems,
       openTabs,
@@ -852,6 +1050,9 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       isOnline,
       syncState,
       pendingCount,
+      failedSyncCount,
+      reviewCount,
+      otherStorePendingCount,
       lowStockCount,
       lowStockItems,
       openTabs,
