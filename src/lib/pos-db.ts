@@ -35,12 +35,30 @@ export interface PendingSaleLine {
   conversion?: number | undefined;
 }
 
+export type PendingSyncState = "queued" | "syncing" | "failed" | "needs_review";
+
 export interface PendingSale {
   localId?: number;
   total_amount: number;
   payment_method: string;
   created_at: string;
   lines: PendingSaleLine[];
+  /** Stable idempotency key. It is also used as the server `sales.id`, so a retry can never create a second sale. */
+  client_transaction_id?: string;
+  /** Store the sale was rung up in. Sync always uses this, never the currently selected store. */
+  store_id?: string | null;
+  user_id?: string | null;
+  payment_breakdown?: { method: string; amount: number }[];
+  customer_id?: string | null;
+  customer_name?: string | null;
+  status?: string;
+  payment_status?: string;
+  cash_received?: number | null;
+  change?: number | null;
+  sync_state?: PendingSyncState;
+  last_error?: string | null;
+  attempts?: number;
+  last_attempt_at?: string | null;
 }
 
 export interface CachedImage {
@@ -119,6 +137,26 @@ class PosDatabase extends Dexie {
       pending_sales: "++localId, created_at",
       cached_images: "url, cached_at",
     });
+    // v7: pending sales carry their own store, key and full payment/customer snapshot.
+    // Rows queued before this version have no reliable store, so they are quarantined for review
+    // instead of being posted to whichever store happens to be active.
+    this.version(7)
+      .stores({
+        cached_items: "id, sku, name, category",
+        pending_sales: "++localId, created_at, store_id, client_transaction_id, sync_state",
+        cached_images: "url, cached_at",
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table("pending_sales")
+          .toCollection()
+          .modify((sale: Partial<PendingSale>) => {
+            if (!sale.client_transaction_id) sale.client_transaction_id = crypto.randomUUID();
+            if (sale.store_id === undefined) sale.store_id = null;
+            if (!sale.sync_state) sale.sync_state = sale.store_id ? "queued" : "needs_review";
+            if (sale.attempts == null) sale.attempts = 0;
+          });
+      });
   }
 }
 

@@ -155,10 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     window.localStorage.removeItem(ACTIVE_STORE_KEY);
-    await posDb.transaction("rw", posDb.cached_items, posDb.pending_sales, async () => {
-      await posDb.cached_items.clear();
-      await posDb.pending_sales.clear();
-    });
+    // Only the catalog cache is cleared. Queued sales are real transactions: they stay on this
+    // device, tagged with their own store, and sync when that store is signed in again.
+    await posDb.cached_items.clear();
     await supabase.auth.signOut();
     setSession(null);
     setStore(null);
