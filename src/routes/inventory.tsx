@@ -17,9 +17,14 @@ import {
   Printer,
   QrCode,
   Search,
+  SlidersHorizontal,
   Trash2,
   X,
   ImagePlus,
+  AlertTriangle,
+  Boxes,
+  TrendingDown,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -50,37 +55,39 @@ export const Route = createFileRoute("/inventory")({
       { title: "ကုန်ပစ္စည်းစာရင်းနှင့် လေဘယ်များ — Counter Point of Sale" },
       {
         name: "description",
-        content:
-          "ကုန်ပစ္စည်းများ၊ လက်ကျန်ပမာဏနှင့် အနည်းဆုံးလက်ကျန်သတ်မှတ်ချက်များကို စီမံခန့်ခွဲပြီး ၂x၁ လက်မ QR လေဘယ်များကို ရိုက်နှိပ်ပါ။",
+        content: "ကုန်ပစ္စည်းစာရင်း၊ စာရင်းချိန်ညှိမှု၊ ဘားကုဒ်နှင့် QR လေဘယ်များ ထုတ်ယူရန် စနစ်။",
       },
       { property: "og:title", content: "ကုန်ပစ္စည်းစာရင်းနှင့် လေဘယ်များ — Counter Point of Sale" },
       {
         property: "og:description",
-        content: "QR လေဘယ်ထုတ်လုပ်ခြင်းနှင့် ပရင်ထုတ်ခြင်းဆိုင်ရာ ကုန်ပစ္စည်း ကတ်တလောက် စီမံခန့်ခွဲမှု။",
+        content: "ကုန်ပစ္စည်းစာရင်း၊ စာရင်းချိန်ညှိမှု၊ ဘားကုဒ်နှင့် QR လေဘယ်များ ထုတ်ယူရန် စနစ်။",
       },
     ],
   }),
   component: InventoryPage,
 });
 
-type Filter = "all" | "low" | "out";
+type Filter = "all" | "in_stock" | "low" | "out";
 
-const EMPTY = {
+const EMPTY_ITEM = {
   sku: "",
   name: "",
   price: "",
-  cost_price: "",
-  stock_quantity: "",
+  cost_price: "0",
+  stock_quantity: "0",
   min_stock_threshold: "5",
+  category: "အထွေထွေ",
   barcode: "",
   qr_value: "",
 };
 
 function InventoryPage() {
-  const { items, saveItem, deleteItem, seedDemoItems } = usePos();
+  const { items, categories, saveItem, deleteItem, seedDemoItems, adjustStock } = usePos();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [editing, setEditing] = useState<CachedItem | "new" | null>(null);
+  const [adjustingItem, setAdjustingItem] = useState<CachedItem | null>(null);
   const [labelItem, setLabelItem] = useState<CachedItem | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -88,34 +95,76 @@ function InventoryPage() {
   const { isPro, fmt } = useStoreSettings();
   const { isBranchDevice } = useAuth();
 
-  // ပစ္စည်းစုစုပေါင်းတန်ဖိုး တွက်ချက်ခြင်း
-  const totalStockValuation = useMemo(() => {
-    return items.reduce(
-      (sum, i) => sum + (Number(i.price) || 0) * (Number(i.stock_quantity) || 0),
-      0,
-    );
+  // Summary Metrics
+  const metrics = useMemo(() => {
+    let inStock = 0;
+    let lowStock = 0;
+    let outStock = 0;
+    let totalRetailValuation = 0;
+    let totalCostValuation = 0;
+
+    for (const item of items) {
+      const qty = Number(item.stock_quantity) || 0;
+      const min = Number(item.min_stock_threshold) || 0;
+      const price = Number(item.price) || 0;
+      const cost = Number(item.cost_price) || 0;
+
+      if (qty <= 0) {
+        outStock++;
+      } else if (qty <= min) {
+        lowStock++;
+      } else {
+        inStock++;
+      }
+
+      totalRetailValuation += price * qty;
+      totalCostValuation += cost * qty;
+    }
+
+    return {
+      totalItems: items.length,
+      inStock,
+      lowStock,
+      outStock,
+      totalRetailValuation,
+      totalCostValuation,
+    };
   }, [items]);
 
+  // Filtered Items
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((item) => {
-      const matches =
+      const matchesSearch =
         !q ||
         item.name.toLowerCase().includes(q) ||
-        item.sku.toLowerCase().includes(q);
-      const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
-      const passes =
-        filter === "all" || (filter === "out" ? status === "out" : status !== "ok");
-      return matches && passes;
+        item.sku.toLowerCase().includes(q) ||
+        (item.barcode && item.barcode.toLowerCase().includes(q)) ||
+        (item.qr_value && item.qr_value.toLowerCase().includes(q));
+
+      const matchesCategory =
+        selectedCategory === "all" ||
+        (item.category || "အထွေထွေ") === selectedCategory;
+
+      const qty = Number(item.stock_quantity) || 0;
+      const min = Number(item.min_stock_threshold) || 0;
+
+      let passesFilter = true;
+      if (filter === "in_stock") passesFilter = qty > min;
+      else if (filter === "low") passesFilter = qty > 0 && qty <= min;
+      else if (filter === "out") passesFilter = qty <= 0;
+
+      return matchesSearch && matchesCategory && passesFilter;
     });
-  }, [items, query, filter]);
+  }, [items, query, filter, selectedCategory]);
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm("ဤကုန်ပစ္စည်းကို ဖျက်ရန် သေချာပါသလား?")) return;
     try {
       await deleteItem(id);
       toast.success("ကုန်ပစ္စည်း ဖျက်ပြီးပါပြီ");
     } catch {
-      toast.error("ရောင်းချထားသော မှတ်တမ်းရှိသည့် ကုန်ပစ္စည်းကို ဖျက်၍မရပါ");
+      toast.error("ရောင်းချထားသော သမိုင်းမှတ်တမ်းရှိသည့် ကုန်ပစ္စည်းကို ဖျက်၍မရပါ");
     }
   };
 
@@ -125,51 +174,32 @@ function InventoryPage() {
       title="ကုန်ပစ္စည်းစာရင်း"
       subtitle={
         isBranchDevice
-          ? `ဆိုင်ခွဲ လက်ကျန်စာရင်း · ${items.length} မျိုး`
-          : `စုစုပေါင်း ${items.length} မျိုး · တန်ဖိုး ${fmt(totalStockValuation)}`
+          ? `ဆိုင်ခွဲ လက်ကျန်စာရင်း · စုစုပေါင်း ${items.length} မျိုး`
+          : `စုစုပေါင်း ${items.length} မျိုး · ရောင်းရငွေခန့်မှန်းတန်ဖိုး ${fmt(metrics.totalRetailValuation)}`
       }
       actions={
         <div className="flex w-full items-center gap-2 sm:w-auto">
-          {/* 1. Search Box: fills the row on phones, fixed width from `sm` up */}
+          {/* Search Box */}
           <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="ရှာဖွေရန်..."
+              placeholder="အမည်/SKU/Barcode..."
               aria-label="ကုန်ပစ္စည်း ရှာဖွေရန်"
-              className="h-9 touch:h-11 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs outline-none focus:ring-2 focus:ring-ring"
+              className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
-          {/* 2. Stock Filter Controls (Desktop/Tablet) */}
-          <div className="hidden items-center rounded-md border border-border bg-background p-0.5 sm:flex">
-            {(["all", "low", "out"] as Filter[]).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={cn(
-                  "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
-                  filter === f
-                    ? "bg-primary font-semibold text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {f === "all" ? "အားလုံး" : f === "low" ? "လက်ကျန်နည်း" : "ပစ္စည်းပြတ်"}
-              </button>
-            ))}
-          </div>
-
-          {/* 3. Actions Menu */}
+          {/* Actions Dropdown */}
           <div className="relative shrink-0">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setCsvMenuOpen((prev) => !prev)}
-              className="h-9 touch:h-11 rounded-md text-xs"
+              className="h-9 rounded-md text-xs"
             >
               လုပ်ဆောင်ချက်များ ▾
             </Button>
@@ -227,14 +257,14 @@ function InventoryPage() {
             )}
           </div>
 
-          {/* ဆိုင်ခွဲစက်မဟုတ်သော Owner သာ ပစ္စည်းသစ် ထည့်သွင်းခွင့်ရှိမည် */}
+          {/* New Product Button */}
           {!isBranchDevice && (
             <Button
               type="button"
               size="sm"
               onClick={() => setEditing("new")}
               aria-label="ကုန်ပစ္စည်းသစ် ထည့်ရန်"
-              className="h-9 touch:h-11 shrink-0 gap-1 rounded-md text-xs font-semibold"
+              className="h-9 shrink-0 gap-1 rounded-md text-xs font-semibold"
             >
               <Plus className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
               <span className="hidden sm:inline">ကုန်ပစ္စည်းသစ်</span>
@@ -243,205 +273,325 @@ function InventoryPage() {
         </div>
       }
     >
-      <div className="h-[calc(100dvh-var(--pos-chrome,64px))] overflow-y-auto overscroll-contain bg-muted/20 max-md:overflow-x-hidden">
-        {/* Mobile View: အလျားလိုက် Scroll လုပ်စရာမလိုသော Responsive Cards ပုံစံ */}
-        <div className="block divide-y divide-border/60 bg-card md:hidden">
-          {filtered.map((item) => {
-            const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
-            return (
-              <div key={item.id} className="p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
-                    <p className="mt-0.5 font-mono text-xs text-muted-foreground">
-                      {item.sku || "—"}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-sm px-2 py-0.5 text-[11px] font-semibold",
-                      status === "ok" && "bg-success-soft text-success",
-                      status === "low" && "bg-warning-soft text-warning",
-                      status === "out" && "bg-danger-soft text-destructive",
-                    )}
-                  >
-                    {status === "ok"
-                      ? "ပစ္စည်းရှိ"
-                      : status === "low"
-                        ? "လက်ကျန်နည်း"
-                        : "ပစ္စည်းပြတ်"}
-                  </span>
+      <div className="h-[calc(100dvh-var(--pos-chrome,64px))] overflow-y-auto overscroll-contain bg-muted/20">
+        <div className="space-y-4 p-3 md:p-5">
+          {/* Summary Metric Cards */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+            <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
+              <p className="text-[11px] font-medium text-muted-foreground">ပစ္စည်း စုစုပေါင်း</p>
+              <p className="mt-1 text-lg font-bold text-foreground">{metrics.totalItems}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
+              <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">လက်ကျန်ရှိ</p>
+              <p className="mt-1 text-lg font-bold text-foreground">{metrics.inStock}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
+              <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">လက်ကျန်နည်း</p>
+              <p className="mt-1 text-lg font-bold text-foreground">{metrics.lowStock}</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
+              <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">ပစ္စည်းပြတ်</p>
+              <p className="mt-1 text-lg font-bold text-foreground">{metrics.outStock}</p>
+            </div>
+            {!isBranchDevice && (
+              <>
+                <div className="col-span-2 rounded-lg border border-border bg-card p-3 shadow-xs sm:col-span-2 lg:col-span-1">
+                  <p className="text-[11px] font-medium text-muted-foreground">ခန့်မှန်းရောင်းတန်ဖိုး</p>
+                  <p className="mt-1 truncate text-base font-bold text-foreground">{fmt(metrics.totalRetailValuation)}</p>
                 </div>
-
-                <div className="mt-2.5 flex items-center justify-between border-t border-border/40 pt-2 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">ဈေးနှုန်း: </span>
-                    <span className="font-bold tabular-nums text-foreground">
-                      {money(item.price)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">လက်ကျန်: </span>
-                    <span className="font-bold tabular-nums text-foreground">
-                      {item.stock_quantity ?? 0}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setLabelItem(item)}
-                      aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
-                      className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"
-                    >
-                      <QrCode className="h-4 w-4" />
-                    </button>
-                    {!isBranchDevice && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setEditing(item)}
-                          aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(item.id)}
-                          aria-label={`${item.name} ကိုဖျက်ရန်`}
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
+                <div className="col-span-2 rounded-lg border border-border bg-card p-3 shadow-xs sm:col-span-2 lg:col-span-1">
+                  <p className="text-[11px] font-medium text-muted-foreground">ဝယ်ရင်းတန်ဖိုး</p>
+                  <p className="mt-1 truncate text-base font-bold text-foreground">{fmt(metrics.totalCostValuation)}</p>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Desktop View: Full Grid Table (Desktop မျက်နှာပြင်တွင်သာ ပြသမည့် ဇယား) */}
-        <div className="hidden min-w-[680px] md:block">
-          {/* Sticky Column Header */}
-          <div className="sticky top-0 z-10 grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center border-b border-border bg-card/95 px-4 py-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-sm">
-            <span>ကုန်ပစ္စည်း</span>
-            <span>အမျိုးအစား / SKU</span>
-            <span>ဈေးနှုန်း</span>
-            <span>အရေအတွက်</span>
-            <span>အခြေအနေ</span>
-            <span className="text-right">လုပ်ဆောင်ချက်များ</span>
-          </div>
-
-          {/* Product Rows */}
-          <div className="divide-y divide-border/60 bg-card">
-            {filtered.map((item) => {
-              const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
-              return (
-                <div
-                  key={item.id}
-                  className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_1fr] items-center px-4 py-3 text-xs hover:bg-accent/40"
-                >
-                  <span className="truncate font-semibold text-foreground">{item.name}</span>
-                  <span className="truncate font-mono text-muted-foreground">
-                    {item.sku || "—"}
-                  </span>
-                  <span className="font-medium tabular-nums">{money(item.price)}</span>
-                  <span className="font-bold tabular-nums">{item.stock_quantity ?? 0}</span>
-                  <span>
-                    <span
-                      className={cn(
-                        "rounded-sm px-2 py-0.5 text-[11px] font-semibold",
-                        status === "ok" && "bg-success-soft text-success",
-                        status === "low" && "bg-warning-soft text-warning",
-                        status === "out" && "bg-danger-soft text-destructive",
-                      )}
-                    >
-                      {status === "ok"
-                        ? "ပစ္စည်းရှိသည်"
-                        : status === "low"
-                          ? "လက်ကျန်နည်း"
-                          : "ပစ္စည်းပြတ်"}
-                    </span>
-                  </span>
-                  <div className="flex justify-end gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setLabelItem(item)}
-                      aria-label={`${item.name} အတွက် QR ထုတ်ရန်`}
-                      className="rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                    >
-                      <QrCode className="h-3.5 w-3.5" />
-                    </button>
-                    {!isBranchDevice && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setEditing(item)}
-                          aria-label={`${item.name} ကိုပြင်ဆင်ရန်`}
-                          className="rounded-sm p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(item.id)}
-                          aria-label={`${item.name} ကိုဖျက်ရန်`}
-                          className="rounded-sm p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Empty State */}
-        {filtered.length === 0 && (
-          <div className="bg-card px-4 py-12 text-center text-xs text-muted-foreground">
-            {items.length === 0 ? (
-              <div className="space-y-2">
-                <p>ကုန်ပစ္စည်း မရှိသေးပါ။</p>
-                {!isBranchDevice && (
-                  <p>"ကုန်ပစ္စည်းသစ်" ခလုတ် သို့မဟုတ် "လုပ်ဆောင်ချက်များ" မှ ထည့်သွင်းနိုင်ပါသည်။</p>
-                )}
-              </div>
-            ) : (
-              "ကုန်ပစ္စည်း ရှာမတွေ့ပါ။"
+              </>
             )}
           </div>
-        )}
+
+          {/* Filter Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card p-2 shadow-xs">
+            {/* Status Tabs */}
+            <div className="flex flex-wrap items-center gap-1">
+              {(
+                [
+                  { key: "all", label: "အားလုံး" },
+                  { key: "in_stock", label: "လက်ကျန်ရှိ" },
+                  { key: "low", label: "လက်ကျန်နည်း" },
+                  { key: "out", label: "ပစ္စည်းပြတ်" },
+                ] as { key: Filter; label: string }[]
+              ).map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setFilter(tab.key)}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    filter === tab.key
+                      ? "bg-primary font-semibold text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Category Dropdown */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">အမျိုးအစား:</span>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="all">အားလုံး ({items.length})</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Mobile Product Cards (< md) */}
+          <div className="block divide-y divide-border/60 overflow-hidden rounded-lg border border-border bg-card md:hidden">
+            {filtered.length === 0 ? (
+              <div className="p-8 text-center text-xs text-muted-foreground">
+                ကိုက်ညီသော ကုန်ပစ္စည်း မတွေ့ရှိပါ
+              </div>
+            ) : (
+              filtered.map((item) => {
+                const qty = Number(item.stock_quantity) || 0;
+                const min = Number(item.min_stock_threshold) || 0;
+                const status = qty <= 0 ? "out" : qty <= min ? "low" : "ok";
+
+                return (
+                  <div key={item.id} className="p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
+                        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-mono">{item.sku || "—"}</span>
+                          <span>·</span>
+                          <span>{item.category || "အထွေထွေ"}</span>
+                        </div>
+                      </div>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                          status === "out"
+                            ? "bg-destructive/10 text-destructive"
+                            : status === "low"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                        )}
+                      >
+                        {status === "out" ? "ပြတ်" : status === "low" ? "နည်း" : "ရှိ"} ({item.stock_quantity})
+                      </span>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-muted-foreground">ရောင်းဈေး: </span>
+                        <span className="font-semibold">{fmt(item.price)}</span>
+                      </div>
+                      {!isBranchDevice && (
+                        <div>
+                          <span className="text-muted-foreground">ဝယ်ရင်း: </span>
+                          <span>{fmt(item.cost_price || 0)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="mt-3 flex items-center justify-end gap-1.5 border-t border-border/40 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setLabelItem(item)}
+                        className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                      >
+                        လေဘယ်
+                      </button>
+                      {!isBranchDevice && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setAdjustingItem(item)}
+                            className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                          >
+                            လက်ကျန်ချိန်ရန်
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditing(item)}
+                            className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                          >
+                            ပြင်ဆင်ရန်
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.id)}
+                            className="rounded-md px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+                          >
+                            ဖျက်ရန်
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop Product Table (>= md) */}
+          <div className="hidden overflow-hidden rounded-lg border border-border bg-card shadow-xs md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-border bg-muted/40 text-[11px] font-semibold text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3">ကုန်ပစ္စည်း</th>
+                    <th className="px-3 py-3">အမျိုးအစား</th>
+                    <th className="px-3 py-3 text-right">ရောင်းဈေး</th>
+                    {!isBranchDevice && <th className="px-3 py-3 text-right">ဝယ်ရင်းဈေး</th>}
+                    <th className="px-3 py-3 text-right">လက်ကျန်</th>
+                    <th className="px-3 py-3 text-center">အခြေအနေ</th>
+                    <th className="px-4 py-3 text-right">လုပ်ဆောင်ချက်</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={isBranchDevice ? 6 : 7} className="px-4 py-8 text-center text-muted-foreground">
+                        ကိုက်ညီသော ကုန်ပစ္စည်း မတွေ့ရှိပါ
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((item) => {
+                      const qty = Number(item.stock_quantity) || 0;
+                      const min = Number(item.min_stock_threshold) || 0;
+                      const status = qty <= 0 ? "out" : qty <= min ? "low" : "ok";
+
+                      return (
+                        <tr key={item.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-3">
+                            <p className="font-semibold text-foreground">{item.name}</p>
+                            <p className="font-mono text-[11px] text-muted-foreground">{item.sku || "—"}</p>
+                          </td>
+                          <td className="px-3 py-3 text-muted-foreground">
+                            {item.category || "အထွေထွေ"}
+                          </td>
+                          <td className="px-3 py-3 text-right font-semibold text-foreground">
+                            {fmt(item.price)}
+                          </td>
+                          {!isBranchDevice && (
+                            <td className="px-3 py-3 text-right text-muted-foreground">
+                              {fmt(item.cost_price || 0)}
+                            </td>
+                          )}
+                          <td className="px-3 py-3 text-right font-mono font-medium">
+                            {item.stock_quantity}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span
+                              className={cn(
+                                "inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                                status === "out"
+                                  ? "bg-destructive/10 text-destructive"
+                                  : status === "low"
+                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                              )}
+                            >
+                              {status === "out" ? "ပြတ်" : status === "low" ? "နည်း" : "ရှိ"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setLabelItem(item)}
+                                className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                              >
+                                လေဘယ်
+                              </button>
+                              {!isBranchDevice && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAdjustingItem(item)}
+                                    className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                                  >
+                                    လက်ကျန်ချိန်ရန်
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditing(item)}
+                                    className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                                  >
+                                    ပြင်ဆင်ရန်
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDelete(item.id)}
+                                    className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Modals */}
       {editing && (
         <ProductModal
           item={editing === "new" ? null : editing}
+          existingCategories={categories}
           onClose={() => setEditing(null)}
           onSave={async (values) => {
-            if (!isPro && editing === "new" && items.length >= FREE_LIMITS.items) {
-              toast.error(
-                `Standard အစီအစဉ်တွင် ကုန်ပစ္စည်း ${FREE_LIMITS.items} မျိုးသာ ထည့်နိုင်သည်။ Pro သို့ အဆင့်မြှင့်ပါ။`,
-              );
-              return;
-            }
-            try {
-              await saveItem({
-                ...values,
-                sku: values.sku.trim() || generateSku(items.map((i) => i.sku)),
-              });
-              toast.success("ကုန်ပစ္စည်း သိမ်းဆည်းပြီးပါပြီ");
-              setEditing(null);
-            } catch {
-              toast.error("သိမ်းဆည်း၍ မရပါ — SKU နံပါတ် အသုံးပြုပြီးသား ဖြစ်နိုင်ပါသည်");
-            }
+            await saveItem(values);
+            setEditing(null);
+            toast.success("ကုန်ပစ္စည်း သိမ်းဆည်းပြီးပါပြီ");
           }}
         />
       )}
+
+      {adjustingItem && (
+        <StockAdjustmentModal
+          item={adjustingItem}
+          onClose={() => setAdjustingItem(null)}
+          onAdjust={async (newQty, reason, note) => {
+            if (adjustStock) {
+              await adjustStock({
+                itemId: adjustingItem.id,
+                newQuantity: newQty,
+                reason,
+                note,
+              });
+            } else {
+              await saveItem({
+                ...adjustingItem,
+                stock_quantity: newQty,
+              });
+            }
+            setAdjustingItem(null);
+            toast.success("လက်ကျန်စာရင်း ချိန်ညှိပြီးပါပြီ");
+          }}
+        />
+      )}
+
+      {labelItem && <LabelModal item={labelItem} onClose={() => setLabelItem(null)} />}
 
       {importOpen && (
         <ImportModal
@@ -449,40 +599,51 @@ function InventoryPage() {
           isPro={isPro}
           onClose={() => setImportOpen(false)}
           onImport={async (rows) => {
-            const bySku = new Map(items.map((i) => [i.sku, i]));
             let created = 0;
             let updated = 0;
-            for (const row of rows) {
-              const existing = bySku.get(row.sku);
-              await saveItem({
-                ...(existing ? { id: existing.id } : {}),
-                sku: row.sku,
-                name: row.name,
-                price: row.price,
-                cost_price: row.cost_price,
-                stock_quantity: row.stock_quantity,
-                min_stock_threshold: existing?.min_stock_threshold ?? 5,
-                ...(row.category ? { category: row.category } : {}),
-              });
-              if (existing) updated += 1;
-              else created += 1;
+            const skuMap = new Map(items.map((i) => [i.sku, i]));
+
+            for (const r of rows) {
+              const existing = skuMap.get(r.sku);
+              if (existing) {
+                await saveItem({
+                  ...existing,
+                  name: r.name,
+                  price: r.price,
+                  cost_price: r.cost_price,
+                  category: r.category || existing.category,
+                });
+                updated++;
+              } else {
+                await saveItem({
+                  sku: r.sku || generateSku(),
+                  name: r.name,
+                  price: r.price,
+                  cost_price: r.cost_price,
+                  stock_quantity: r.stock_quantity,
+                  min_stock_threshold: r.min_stock_threshold || 5,
+                  category: r.category || "အထွေထွေ",
+                });
+                created++;
+              }
             }
             return { created, updated };
           }}
         />
       )}
-
-      {labelItem && <LabelModal item={labelItem} onClose={() => setLabelItem(null)} />}
     </PosShell>
   );
 }
 
+// Product Create/Edit Modal with Grouped Sections & Live Margin
 function ProductModal({
   item,
+  existingCategories,
   onClose,
   onSave,
 }: {
   item: CachedItem | null;
+  existingCategories: string[];
   onClose: () => void;
   onSave: (values: {
     id?: string;
@@ -492,21 +653,20 @@ function ProductModal({
     cost_price: number;
     stock_quantity: number;
     min_stock_threshold: number;
+    category?: string;
     barcode?: string | null;
     qr_value?: string | null;
     image_url?: string | null;
-    units?:
-      | { unit_name: string; conversion: number; price: number; is_default?: boolean }[]
-      | undefined;
+    units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[];
   }) => Promise<void>;
 }) {
-  const { isPro } = useStoreSettings();
   const { store } = useAuth();
   const [imageUrl, setImageUrl] = useState<string | null>(item?.image_url ?? null);
   const [uploading, setUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const previewSrc = useCachedImage(imageUrl);
-  const [form, setForm] = useState<typeof EMPTY>(
+
+  const [form, setForm] = useState(
     item
       ? {
           sku: item.sku,
@@ -515,11 +675,13 @@ function ProductModal({
           cost_price: String(item.cost_price ?? 0),
           stock_quantity: String(item.stock_quantity),
           min_stock_threshold: String(item.min_stock_threshold),
+          category: item.category || "အထွေထွေ",
           barcode: item.barcode ?? "",
           qr_value: item.qr_value ?? "",
         }
-      : EMPTY,
+      : { ...EMPTY_ITEM, sku: generateSku() },
   );
+
   const [units, setUnits] = useState<
     { unit_name: string; conversion: string; price: string; is_default: boolean }[]
   >(
@@ -532,7 +694,14 @@ function ProductModal({
         }))
       : [],
   );
+
   const [busy, setBusy] = useState(false);
+
+  // Derived Gross Profit & Margin
+  const sellPriceNum = Number(form.price) || 0;
+  const costPriceNum = Number(form.cost_price) || 0;
+  const grossProfit = sellPriceNum - costPriceNum;
+  const grossMarginPct = sellPriceNum > 0 ? (grossProfit / sellPriceNum) * 100 : 0;
 
   const handleImagePick = async (file: File) => {
     if (!store) {
@@ -545,8 +714,7 @@ function ProductModal({
       setImageUrl(url);
       toast.success("ဓာတ်ပုံ တင်ပြီးပါပြီ");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "ဓာတ်ပုံ တင်၍မရပါ";
-      toast.error(msg);
+      toast.error(e instanceof Error ? e.message : "ဓာတ်ပုံ တင်၍မရပါ");
     } finally {
       setUploading(false);
     }
@@ -571,9 +739,7 @@ function ProductModal({
     setUnits((prev) =>
       prev.map((u, i) => {
         if (i !== idx) {
-          if (field === "is_default" && val === true) {
-            return { ...u, is_default: false };
-          }
+          if (field === "is_default" && val === true) return { ...u, is_default: false };
           return u;
         }
         return { ...u, [field]: val };
@@ -582,19 +748,19 @@ function ProductModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-md border border-border bg-card p-5 shadow-lg">
-        <div className="mb-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
+      <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
           <h2 className="text-sm font-semibold">
-            {item ? "ကုန်ပစ္စည်း ပြင်ဆင်ရန်" : "ကုန်ပစ္စည်း အသစ်"}
+            {item ? "ကုန်ပစ္စည်း အချက်အလက် ပြင်ဆင်ရန်" : "ကုန်ပစ္စည်း အသစ် ထည့်ရန်"}
           </h2>
-          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="space-y-3">
-          {/* Photo Section */}
+        <div className="space-y-4">
+          {/* Photo & Basic Details */}
           <div className="flex items-center gap-3">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-border bg-muted/40">
               {previewSrc ? (
@@ -641,278 +807,350 @@ function ProductModal({
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-name">
-              အမည် *
-            </label>
-            <input
-              id="p-name"
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
+          {/* Group A: Basic Information */}
+          <div className="space-y-3 rounded-md border border-border/70 p-3 bg-muted/10">
+            <p className="text-xs font-semibold text-foreground">အခြေခံ အချက်အလက်များ</p>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-price">
-                ရောင်းဈေး *
-              </label>
+              <label className="mb-1 block text-xs font-medium text-foreground">ကုန်ပစ္စည်း အမည် *</label>
               <input
-                id="p-price"
-                type="number"
-                min="0"
-                step="any"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                type="text"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="ဥပမာ - ရွှေဖလား လက်ဖက်ရည်"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-cost">
-                ဝယ်ဈေး
-              </label>
-              <input
-                id="p-cost"
-                type="number"
-                min="0"
-                step="any"
-                value={form.cost_price}
-                onChange={(e) => setForm({ ...form, cost_price: e.target.value })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground">SKU (ကုဒ်)</label>
+                <input
+                  type="text"
+                  value={form.sku}
+                  onChange={(e) => setForm({ ...form, sku: e.target.value })}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 font-mono text-xs outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground">အမျိုးအစား (Category)</label>
+                <input
+                  type="text"
+                  list="category-suggestions"
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  placeholder="ဥပမာ - အချိုရည်"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-ring"
+                />
+                <datalist id="category-suggestions">
+                  {existingCategories.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-qty">
-                အရေအတွက်
-              </label>
-              <input
-                id="p-qty"
-                type="number"
-                min="0"
-                value={form.stock_quantity}
-                onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-min">
-                အနည်းဆုံး သတ်မှတ်ချက်
-              </label>
-              <input
-                id="p-min"
-                type="number"
-                min="0"
-                value={form.min_stock_threshold}
-                onChange={(e) => setForm({ ...form, min_stock_threshold: e.target.value })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground">Barcode (ဘားကုဒ်)</label>
+                <input
+                  type="text"
+                  value={form.barcode}
+                  onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                  placeholder="ဘားကုဒ် ရိုက်ထည့်ပါ"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 font-mono text-xs outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground">QR Value</label>
+                <input
+                  type="text"
+                  value={form.qr_value}
+                  onChange={(e) => setForm({ ...form, qr_value: e.target.value })}
+                  placeholder="QR တန်ဖိုး"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 font-mono text-xs outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-sku">
-                SKU (ကုဒ်)
-              </label>
-              <input
-                id="p-sku"
-                placeholder="အလိုအလျောက် သတ်မှတ်မည်"
-                value={form.sku}
-                onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-mono outline-none focus:ring-2 focus:ring-ring"
-              />
+          {/* Group B: Pricing & Margins */}
+          <div className="space-y-3 rounded-md border border-border/70 p-3 bg-muted/10">
+            <p className="text-xs font-semibold text-foreground">ဈေးနှုန်းနှင့် အမြတ်သတ်မှတ်ခြင်း</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground">ရောင်းဈေး (Selling Price) *</label>
+                <input
+                  type="number"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground">ဝယ်ရင်းဈေး (Cost Price)</label>
+                <input
+                  type="number"
+                  value={form.cost_price}
+                  onChange={(e) => setForm({ ...form, cost_price: e.target.value })}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="p-barcode">
-                ဘားကုဒ် (Barcode)
-              </label>
-              <input
-                id="p-barcode"
-                value={form.barcode}
-                onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-mono outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
+            {sellPriceNum > 0 && (
+              <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">အမြတ်ငွေ: </span>
+                  <span className={cn("font-bold", grossProfit >= 0 ? "text-emerald-600" : "text-destructive")}>
+                    {grossProfit.toLocaleString()} ကျပ်
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">အမြတ်ရာခိုင်နှုန်း: </span>
+                  <span className={cn("font-bold", grossMarginPct >= 0 ? "text-emerald-600" : "text-destructive")}>
+                    {grossMarginPct.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Multi-unit Packaging (Pro) */}
-          <div className="pt-2">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">ယူနစ် / ထုပ်ပိုးမှု</span>
+          {/* Group C: Units & Packaging */}
+          <div className="space-y-3 rounded-md border border-border/70 p-3 bg-muted/10">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-foreground">ထုပ်ပိုးမှုယူနစ်များ (Packaging Units)</p>
               <button
                 type="button"
                 onClick={addUnitRow}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                className="text-xs font-medium text-primary hover:underline"
               >
-                <Plus className="h-3 w-3" /> ယူနစ်ထည့်ရန်
+                + ယူနစ်ထည့်ရန်
               </button>
             </div>
-            {units.length > 0 && (
-              <div className="space-y-1.5 rounded-md border border-border bg-muted/20 p-2 text-xs">
-                {units.map((u, i) => (
-                  <div key={i} className="grid grid-cols-[1.5fr_1fr_1fr_auto] items-center gap-1.5">
+            {units.length === 0 ? (
+              <p className="text-xs text-muted-foreground">အခြေခံယူနစ်ဖြင့်သာ သတ်မှတ်ထားပါသည်</p>
+            ) : (
+              <div className="space-y-2">
+                {units.map((u, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
                     <input
-                      placeholder="ယူနစ်အမည် (ဥပမာ- ဖာ)"
+                      type="text"
+                      placeholder="ယူနစ်အမည် (ဥပမာ - ကတ်တွန်)"
                       value={u.unit_name}
-                      onChange={(e) => updateUnit(i, "unit_name", e.target.value)}
-                      className="h-8 rounded-sm border border-input bg-background px-2 text-xs"
+                      onChange={(e) => updateUnit(idx, "unit_name", e.target.value)}
+                      className="h-8 flex-1 rounded border border-input bg-background px-2 text-xs"
                     />
                     <input
                       type="number"
-                      placeholder="ပါဝင်မှု"
+                      placeholder="အချိုး"
                       value={u.conversion}
-                      onChange={(e) => updateUnit(i, "conversion", e.target.value)}
-                      className="h-8 rounded-sm border border-input bg-background px-2 text-xs"
+                      onChange={(e) => updateUnit(idx, "conversion", e.target.value)}
+                      className="h-8 w-16 rounded border border-input bg-background px-2 text-xs"
                     />
                     <input
                       type="number"
-                      placeholder="ဈေးနှုန်း"
+                      placeholder="ရောင်းဈေး"
                       value={u.price}
-                      onChange={(e) => updateUnit(i, "price", e.target.value)}
-                      className="h-8 rounded-sm border border-input bg-background px-2 text-xs"
+                      onChange={(e) => updateUnit(idx, "price", e.target.value)}
+                      className="h-8 w-24 rounded border border-input bg-background px-2 text-xs"
                     />
                     <button
                       type="button"
-                      onClick={() => removeUnitRow(i)}
+                      onClick={() => removeUnitRow(idx)}
                       className="text-muted-foreground hover:text-destructive"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Group D & E: Stock Control */}
+          <div className="space-y-3 rounded-md border border-border/70 p-3 bg-muted/10">
+            <p className="text-xs font-semibold text-foreground">လက်ကျန်နှင့် အနိမ့်ဆုံးသတိပေးချက်</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground">
+                  {item ? "လက်ရှိလက်ကျန် (အပြောင်းအလဲမပြုလုပ်နိုင်ပါ)" : "အစပျိုးလက်ကျန် (Opening Stock)"}
+                </label>
+                <input
+                  type="number"
+                  disabled={Boolean(item)}
+                  value={form.stock_quantity}
+                  onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-ring disabled:bg-muted/50"
+                />
+                {item && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    လက်ကျန်ပြင်ရန် ပင်မစာရင်းရှိ "လက်ကျန်ချိန်ရန်" ကို နှိပ်ပါ
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground">အနိမ့်ဆုံး သတိပေးလက်ကျန်</label>
+                <input
+                  type="number"
+                  value={form.min_stock_threshold}
+                  onChange={(e) => setForm({ ...form, min_stock_threshold: e.target.value })}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
-        <button
-          disabled={busy || !form.name.trim() || Number(form.price) < 0}
-          onClick={() => {
-            setBusy(true);
-            void onSave({
-              ...(item ? { id: item.id } : {}),
-              name: form.name.trim(),
-              price: Number(form.price) || 0,
-              cost_price: Number(form.cost_price) || 0,
-              stock_quantity: Number(form.stock_quantity) || 0,
-              min_stock_threshold: Number(form.min_stock_threshold) || 5,
-              sku: form.sku,
-              barcode: form.barcode.trim() || null,
-              qr_value: form.qr_value.trim() || null,
-              image_url: imageUrl,
-              units: units
-                .filter((u) => u.unit_name.trim())
-                .map((u) => ({
-                  unit_name: u.unit_name.trim(),
-                  conversion: Number(u.conversion) || 1,
-                  price: Number(u.price) || 0,
-                  is_default: u.is_default,
-                })),
-            }).finally(() => setBusy(false));
-          }}
-          className="mt-5 h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          သိမ်းဆည်းမည်
-        </button>
+        {/* Modal Actions */}
+        <div className="mt-5 flex justify-end gap-2 border-t border-border pt-3">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={busy}>
+            မလုပ်တော့ပါ
+          </Button>
+          <Button
+            size="sm"
+            disabled={busy || !form.name.trim() || !form.price}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onSave({
+                  ...(item ? { id: item.id } : {}),
+                  sku: form.sku.trim() || generateSku(),
+                  name: form.name.trim(),
+                  price: Number(form.price),
+                  cost_price: Number(form.cost_price) || 0,
+                  stock_quantity: Number(form.stock_quantity) || 0,
+                  min_stock_threshold: Number(form.min_stock_threshold) || 5,
+                  category: form.category.trim() || "အထွေထွေ",
+                  barcode: form.barcode.trim() || null,
+                  qr_value: form.qr_value.trim() || null,
+                  image_url: imageUrl,
+                  units: units
+                    .filter((u) => u.unit_name.trim() && Number(u.conversion) > 0)
+                    .map((u) => ({
+                      unit_name: u.unit_name.trim(),
+                      conversion: Number(u.conversion),
+                      price: Number(u.price),
+                      is_default: u.is_default,
+                    })),
+                });
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "သိမ်းဆည်း၍မရပါ");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? "သိမ်းဆည်းနေသည်..." : "သိမ်းဆည်းမည်"}
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
-function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }) {
-  const [format, setFormat] = useState<"qr" | "barcode">("qr");
-  const printAreaRef = useRef<HTMLDivElement>(null);
+// Dedicated Stock Adjustment Modal with Reasons
+function StockAdjustmentModal({
+  item,
+  onClose,
+  onAdjust,
+}: {
+  item: CachedItem;
+  onClose: () => void;
+  onAdjust: (newQty: number, reason: string, note?: string) => Promise<void>;
+}) {
+  const [newQuantity, setNewQuantity] = useState(String(item.stock_quantity));
+  const [reason, setReason] = useState("စာရင်းစစ် ပြင်ဆင်ခြင်း");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const handlePrint = () => {
-    const printContent = printAreaRef.current;
-    if (!printContent) return;
-    const w = window.open("", "_blank", "width=400,height=400");
-    if (!w) {
-      toast.error("Popup ပွင့်ရန် ခွင့်ပြုပါ");
-      return;
-    }
-    w.document.write(`
-      <html>
-        <head>
-          <title>${item.name} Label</title>
-          <style>
-            @page { size: 2in 1in; margin: 0; }
-            body { margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
-          </style>
-        </head>
-        <body>${printContent.innerHTML}</body>
-      </html>
-    `);
-    w.document.close();
-    w.focus();
-    w.print();
-    w.close();
-  };
+  const delta = (Number(newQuantity) || 0) - (Number(item.stock_quantity) || 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">လေဘယ် ရိုက်နှိပ်ရန်</h2>
-          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
+      <div className="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
+          <div>
+            <h2 className="text-sm font-semibold">လက်ကျန်စာရင်း ချိန်ညှိခြင်း</h2>
+            <p className="text-xs text-muted-foreground">{item.name} ({item.sku})</p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="mb-4 flex rounded-md border border-border p-0.5">
-          <button
-            onClick={() => setFormat("qr")}
-            className={cn(
-              "flex-1 rounded-sm py-1 text-xs font-medium",
-              format === "qr" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
-            )}
-          >
-            QR Code
-          </button>
-          <button
-            onClick={() => setFormat("barcode")}
-            className={cn(
-              "flex-1 rounded-sm py-1 text-xs font-medium",
-              format === "barcode" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
-            )}
-          >
-            Barcode
-          </button>
-        </div>
-
-        <div
-          ref={printAreaRef}
-          className="mx-auto flex h-32 w-56 flex-col items-center justify-center rounded-md border border-dashed border-border bg-white p-2 text-black"
-        >
-          <p className="max-w-full truncate text-center text-xs font-bold">{item.name}</p>
-          <div className="my-1">
-            <Suspense fallback={<div className="h-14 w-14 animate-pulse bg-gray-200" />}>
-              {format === "qr" ? (
-                <QRCodeCanvas value={item.qr_value || item.sku} size={64} />
-              ) : (
-                <Barcode value={item.barcode || item.sku} width={1.2} height={30} fontSize={10} />
-              )}
-            </Suspense>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-md bg-muted/40 p-3 text-xs">
+            <span className="text-muted-foreground">လက်ရှိ စနစ်တွင်းလက်ကျန်:</span>
+            <span className="font-bold text-foreground font-mono">{item.stock_quantity}</span>
           </div>
-          <p className="text-[11px] font-semibold">{money(item.price)}</p>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-foreground">အမှန်တကယ်ရှိသော လက်ကျန်အရေအတွက် *</label>
+            <input
+              type="number"
+              value={newQuantity}
+              onChange={(e) => setNewQuantity(e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 font-mono text-sm outline-none focus:ring-1 focus:ring-ring"
+            />
+            <p className="mt-1 text-xs">
+              ကွာခြားချက် (Delta):{" "}
+              <span className={cn("font-bold font-mono", delta > 0 ? "text-emerald-600" : delta < 0 ? "text-destructive" : "text-muted-foreground")}>
+                {delta > 0 ? `+${delta}` : delta}
+              </span>
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-foreground">ချိန်ညှိရသည့် အကြောင်းပြချက် *</label>
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="စာရင်းစစ် ပြင်ဆင်ခြင်း">စာရင်းစစ် ပြင်ဆင်ခြင်း (Stock Count Correction)</option>
+              <option value="ပျက်စီးဆုံးရှုံးခြင်း">ပျက်စီးဆုံးရှုံးခြင်း (Damaged Stock)</option>
+              <option value="ပျောက်ဆုံးခြင်း">ပျောက်ဆုံးခြင်း (Lost / Missing)</option>
+              <option value="လက်ကျန်ဖွင့်လှစ်ခြင်း">လက်ကျန်ဖွင့်လှစ်ခြင်း (Opening Balance)</option>
+              <option value="အခြား">အခြား (Other)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-foreground">မှတ်ချက် (ရွေးချယ်ရန်)</label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="အသေးစိတ်မှတ်ချက် ရေးသွင်းပါ"
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
         </div>
 
-        <button
-          onClick={handlePrint}
-          className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          <Printer className="h-4 w-4" /> လေဘယ် ပရင့်ထုတ်မည်
-        </button>
+        <div className="mt-5 flex justify-end gap-2 border-t border-border pt-3">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={busy}>
+            မလုပ်တော့ပါ
+          </Button>
+          <Button
+            size="sm"
+            disabled={busy || newQuantity === "" || Number(newQuantity) < 0}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onAdjust(Number(newQuantity), reason, note.trim() || undefined);
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "ချိန်ညှိ၍မရပါ");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? "ချိန်ညှိနေသည်..." : "အတည်ပြုမည်"}
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
+// Review-first CSV Import Modal
 function ImportModal({
   items,
   isPro,
@@ -925,6 +1163,7 @@ function ImportModal({
   onImport: (rows: ParsedItemRow[]) => Promise<{ created: number; updated: number }>;
 }) {
   const [rows, setRows] = useState<ParsedItemRow[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
   const [fileName, setFileName] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -934,23 +1173,23 @@ function ImportModal({
       const text = await file.text();
       const parsed = parseItemsCsv(text, items.map((item) => item.sku));
       setRows(parsed.rows);
-      if (parsed.errors.length > 0) toast.error(parsed.errors.join("\n"));
+      setErrors(parsed.errors || []);
     } catch {
       toast.error("CSV ဖိုင် ဖတ်၍မရပါ");
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-md border border-border bg-card p-5 shadow-lg">
-        <div className="mb-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
           <h2 className="text-sm font-semibold">CSV ဖြင့် ကုန်ပစ္စည်းများ ထည့်သွင်းရန်</h2>
-          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="space-y-3 text-xs">
+        <div className="space-y-4 text-xs">
           <div className="rounded-md border border-dashed border-border p-4 text-center">
             <input
               type="file"
@@ -963,46 +1202,177 @@ function ImportModal({
             />
           </div>
 
-          {rows.length > 0 && (
-            <p className="font-medium text-success">
-              ✓ ကုန်ပစ္စည်း {rows.length} မျိုး တွေ့ရှိပါသည်
-            </p>
+          {errors.length > 0 && (
+            <div className="rounded-md bg-destructive/10 p-3 text-destructive">
+              <p className="font-semibold">သတိပေးချက်များ:</p>
+              <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                {errors.slice(0, 3).map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </div>
           )}
 
-          <div className="flex justify-between pt-2">
-            <button
-              onClick={() =>
-                downloadCsv("sample-items.csv", SAMPLE_CSV_ROWS)
+          {rows.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-emerald-600">✓ ကုန်ပစ္စည်း {rows.length} မျိုး စစ်ဆေးတွေ့ရှိပါသည်</p>
+                <button
+                  type="button"
+                  onClick={() => downloadCsv("sample-items.csv", SAMPLE_CSV_ROWS)}
+                  className="text-primary hover:underline"
+                >
+                  နမူနာ CSV ရယူရန်
+                </button>
+              </div>
+
+              {/* Preview Table */}
+              <div className="max-h-56 overflow-auto rounded border border-border">
+                <table className="w-full text-left text-[11px]">
+                  <thead className="bg-muted/40 font-semibold text-muted-foreground sticky top-0">
+                    <tr>
+                      <th className="px-2 py-1.5">SKU</th>
+                      <th className="px-2 py-1.5">အမည်</th>
+                      <th className="px-2 py-1.5 text-right">ရောင်းဈေး</th>
+                      <th className="px-2 py-1.5 text-right">ဝယ်ရင်းဈေး</th>
+                      <th className="px-2 py-1.5 text-right">လက်ကျန်</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {rows.slice(0, 10).map((r, i) => (
+                      <tr key={i}>
+                        <td className="px-2 py-1 font-mono">{r.sku}</td>
+                        <td className="px-2 py-1">{r.name}</td>
+                        <td className="px-2 py-1 text-right">{r.price}</td>
+                        <td className="px-2 py-1 text-right">{r.cost_price}</td>
+                        <td className="px-2 py-1 text-right font-mono">{r.stock_quantity}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {rows.length > 10 && (
+                <p className="text-[11px] text-muted-foreground text-center">... အခြား {rows.length - 10} မျိုး ပါဝင်ပါသည်</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2 border-t border-border pt-3">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={busy}>
+            မလုပ်တော့ပါ
+          </Button>
+          <Button
+            size="sm"
+            disabled={busy || rows.length === 0}
+            onClick={async () => {
+              if (!isPro && items.length + rows.length > FREE_LIMITS.items) {
+                toast.error(`Standard အစီအစဉ်တွင် ပစ္စည်း ${FREE_LIMITS.items} သာ ထည့်သွင်းနိုင်ပါသည်`);
+                return;
               }
-              className="text-primary hover:underline"
+              setBusy(true);
+              try {
+                const res = await onImport(rows);
+                toast.success(`အသစ် ${res.created} မျိုး၊ ပြင်ဆင်မှု ${res.updated} မျိုး ထည့်သွင်းပြီးပါပြီ`);
+                onClose();
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "ထည့်သွင်း၍မရပါ");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? "ထည့်သွင်းနေသည်..." : `အတည်ပြုထည့်မည် (${rows.length})`}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Label Printing Modal
+function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }) {
+  const [mode, setMode] = useState<"barcode" | "qr">("barcode");
+  const [count, setCount] = useState(1);
+  const printRef = useRef<HTMLDivElement>(null);
+  const codeValue = (mode === "barcode" ? item.barcode || item.sku : item.qr_value || item.sku).trim();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
+          <h2 className="text-sm font-semibold">လေဘယ် ထုတ်ယူရန်</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-4 text-xs">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMode("barcode")}
+              className={cn(
+                "flex-1 rounded py-1.5 font-medium border text-center transition-colors",
+                mode === "barcode" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted",
+              )}
             >
-              နမူနာ CSV ရယူရန်
+              Barcode
             </button>
+            <button
+              type="button"
+              onClick={() => setMode("qr")}
+              className={cn(
+                "flex-1 rounded py-1.5 font-medium border text-center transition-colors",
+                mode === "qr" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted",
+              )}
+            >
+              QR Code
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">အရေအတွက်:</span>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={count}
+              onChange={(e) => setCount(Math.max(1, Number(e.target.value) || 1))}
+              className="h-8 w-20 rounded border border-input bg-background px-2 text-right font-mono text-xs"
+            />
+          </div>
+
+          {/* Label Preview */}
+          <div ref={printRef} className="rounded border border-border bg-white p-4 text-black text-center space-y-2">
+            <p className="font-bold text-sm truncate">{item.name}</p>
+            <div className="flex justify-center my-2">
+              <Suspense fallback={<div className="h-12 w-32 animate-pulse bg-gray-200" />}>
+                {mode === "barcode" ? (
+                  <Barcode value={codeValue} width={1.4} height={40} fontSize={10} />
+                ) : (
+                  <QRCodeCanvas value={codeValue} size={90} />
+                )}
+              </Suspense>
+            </div>
+            <p className="font-bold text-xs">{money(item.price)} ကျပ်</p>
           </div>
         </div>
 
-        <button
-          disabled={busy || rows.length === 0}
-          onClick={() => {
-            if (!isPro && items.length + rows.length > FREE_LIMITS.items) {
-              toast.error(
-                `Standard အစီအစဉ်တွင် ပစ္စည်း ${FREE_LIMITS.items} သာ ထည့်သွင်းနိုင်ပါသည်။`,
-              );
-              return;
-            }
-            setBusy(true);
-            void onImport(rows)
-              .then(({ created, updated }) => {
-                toast.success(`အသစ် ${created} မျိုး၊ အဟောင်းပြင်ဆင် ${updated} မျိုး ထည့်ပြီးပါပြီ`);
-                onClose();
-              })
-              .catch(() => toast.error("ထည့်သွင်း၍ မရပါ"))
-              .finally(() => setBusy(false));
-          }}
-          className="mt-5 h-11 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          အတည်ပြု ထည့်သွင်းမည်
-        </button>
+        <div className="mt-5 flex justify-end gap-2 border-t border-border pt-3">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            ပိတ်မည်
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              window.print();
+            }}
+          >
+            <Printer className="mr-1.5 h-3.5 w-3.5" />
+            Print ထုတ်မည်
+          </Button>
+        </div>
       </div>
     </div>
   );
