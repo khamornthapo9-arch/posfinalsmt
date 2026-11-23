@@ -126,6 +126,9 @@ export interface Crumb {
 /** Breadcrumb trail for nested pages; empty for top-level pages. */
 export function trailFor(pathname: string): Crumb[] {
   const key = pathname.replace(/\/+$/, "");
+  if (key.startsWith("/customers/")) {
+    return [{ label: "ဖောက်သည်များ", to: "/customers" }, { label: "ဖောက်သည် အချက်အလက်" }];
+  }
   const nested = NESTED[key];
   if (!nested) return [];
   const parent = NAV_GROUPS.flatMap((g) => g.items).find((i) => i.to === nested.parent);

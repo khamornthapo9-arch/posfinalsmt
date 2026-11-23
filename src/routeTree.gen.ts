@@ -23,6 +23,7 @@ import { Route as AdminAdminRouteImport } from './routes/admin_.admin'
 import { Route as SettingsPlanRouteImport } from './routes/settings_.plan'
 import { Route as SettingsReceiptRouteImport } from './routes/settings_.receipt'
 import { Route as SettingsStaffRouteImport } from './routes/settings_.staff'
+import { Route as CustomersCustomerIdRouteImport } from './routes/customers_.$customerId'
 import { Route as ApiPublicTelegramRouteImport } from './routes/api/public/telegram'
 import { Route as ApiPublicSbSplatRouteImport } from './routes/api/public/sb/$'
 
@@ -96,6 +97,11 @@ const SettingsStaffRoute = SettingsStaffRouteImport.update({
   path: '/settings/staff',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustomersCustomerIdRoute = CustomersCustomerIdRouteImport.update({
+  id: '/customers_/$customerId',
+  path: '/customers/$customerId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTelegramRoute = ApiPublicTelegramRouteImport.update({
   id: '/api/public/telegram',
   path: '/api/public/telegram',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/settings/plan': typeof SettingsPlanRoute
   '/settings/receipt': typeof SettingsReceiptRoute
   '/settings/staff': typeof SettingsStaffRoute
+  '/customers/$customerId': typeof CustomersCustomerIdRoute
   '/api/public/telegram': typeof ApiPublicTelegramRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
 }
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/settings/plan': typeof SettingsPlanRoute
   '/settings/receipt': typeof SettingsReceiptRoute
   '/settings/staff': typeof SettingsStaffRoute
+  '/customers/$customerId': typeof CustomersCustomerIdRoute
   '/api/public/telegram': typeof ApiPublicTelegramRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
 }
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/settings_/plan': typeof SettingsPlanRoute
   '/settings_/receipt': typeof SettingsReceiptRoute
   '/settings_/staff': typeof SettingsStaffRoute
+  '/customers_/$customerId': typeof CustomersCustomerIdRoute
   '/api/public/telegram': typeof ApiPublicTelegramRoute
   '/api/public/sb/$': typeof ApiPublicSbSplatRoute
 }
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/settings/plan'
     | '/settings/receipt'
     | '/settings/staff'
+    | '/customers/$customerId'
     | '/api/public/telegram'
     | '/api/public/sb/$'
   fileRoutesByTo: FileRoutesByTo
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/settings/plan'
     | '/settings/receipt'
     | '/settings/staff'
+    | '/customers/$customerId'
     | '/api/public/telegram'
     | '/api/public/sb/$'
   id:
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/settings_/plan'
     | '/settings_/receipt'
     | '/settings_/staff'
+    | '/customers_/$customerId'
     | '/api/public/telegram'
     | '/api/public/sb/$'
   fileRoutesById: FileRoutesById
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   SettingsPlanRoute: typeof SettingsPlanRoute
   SettingsReceiptRoute: typeof SettingsReceiptRoute
   SettingsStaffRoute: typeof SettingsStaffRoute
+  CustomersCustomerIdRoute: typeof CustomersCustomerIdRoute
   ApiPublicTelegramRoute: typeof ApiPublicTelegramRoute
   ApiPublicSbSplatRoute: typeof ApiPublicSbSplatRoute
 }
@@ -338,6 +351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsStaffRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/customers_/$customerId': {
+      id: '/customers_/$customerId'
+      path: '/customers/$customerId'
+      fullPath: '/customers/$customerId'
+      preLoaderRoute: typeof CustomersCustomerIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/telegram': {
       id: '/api/public/telegram'
       path: '/api/public/telegram'
@@ -370,6 +390,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsPlanRoute: SettingsPlanRoute,
   SettingsReceiptRoute: SettingsReceiptRoute,
   SettingsStaffRoute: SettingsStaffRoute,
+  CustomersCustomerIdRoute: CustomersCustomerIdRoute,
   ApiPublicTelegramRoute: ApiPublicTelegramRoute,
   ApiPublicSbSplatRoute: ApiPublicSbSplatRoute,
 }
