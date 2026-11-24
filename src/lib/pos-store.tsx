@@ -129,9 +129,12 @@ interface PosContextValue {
   }) => Promise<void>;
   adjustStock: (input: {
     itemId: string;
+    /** The count the user entered; sent to the database as a delta against what they saw. */
     newQuantity: number;
     reason: string;
     note?: string;
+    /** Stable per attempt so a retry or double-click can never apply the adjustment twice. */
+    requestId?: string;
   }) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   seedDemoItems: () => Promise<number>;
@@ -234,6 +237,17 @@ const POST_SALE_ERRORS: [string, string][] = [
   ["ACCESS_DENIED", "ဤဆိုင်တွင် အရောင်းသိမ်းရန် ခွင့်ပြုချက် မရှိပါ"],
   ["NOT_AUTHENTICATED", "ဝင်ရောက်မှု သက်တမ်းကုန်သွားပါပြီ၊ ပြန်လည် ဝင်ပါ"],
   ["SALE_ID_CONFLICT", "အရောင်း အမှတ်စဉ် ထပ်နေသည်၊ ထပ်မံကြိုးစားပါ"],
+];
+
+/** Maps adjust_stock's error codes to Burmese messages. */
+const ADJUST_STOCK_ERRORS: [string, string][] = [
+  ["NEGATIVE_STOCK", "လက်ကျန်သည် အနုတ် မဖြစ်ရပါ — ပမာဏ ပြန်စစ်ပါ"],
+  ["REASON_REQUIRED", "ချိန်ညှိရသည့် အကြောင်းရင်း ထည့်ပါ"],
+  ["ITEM_NOT_FOUND", "ပစ္စည်း မတွေ့ပါ (သို့) ဤဆိုင်နှင့် မသက်ဆိုင်ပါ"],
+  ["ACCESS_DENIED", "လက်ကျန် ချိန်ညှိရန် ခွင့်ပြုချက် မရှိပါ"],
+  ["NOT_AUTHENTICATED", "ဝင်ရောက်မှု သက်တမ်းကုန်သွားပါပြီ၊ ပြန်လည် ဝင်ပါ"],
+  ["QUANTITY_NOT_REPRESENTABLE", "ဤပစ္စည်းအတွက် ဒသမ ပမာဏ မသုံးနိုင်ပါ"],
+  ["INVALID_DELTA", "ပြောင်းလဲမှု ပမာဏ မမှန်ကန်ပါ"],
 ];
 
 /** Turns a server rejection into a SaleError with the most specific safe message available. */
@@ -719,36 +733,32 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   );
 
   const adjustStock = useCallback<PosContextValue["adjustStock"]>(
-    async ({ itemId, newQuantity, reason, note }) => {
+    async ({ itemId, newQuantity, reason, note, requestId }) => {
       if (!storeId) throw new Error("No active store");
       const target = (items ?? []).find((i) => i.id === itemId);
       if (!target) throw new Error("Item not found");
 
-      const currentQty = target.stock_quantity;
-      const delta = newQuantity - currentQty;
+      // The database applies a DELTA to its own current stock and writes the movement in the
+      // same transaction (adjust_stock); the browser never writes an absolute quantity.
+      const delta = newQuantity - target.stock_quantity;
+      if (delta === 0) return;
 
-      // 1. Update items stock_quantity
-      const { error: itemError } = await supabase
-        .from("items")
-        .update({ stock_quantity: newQuantity })
-        .eq("id", itemId)
-        .eq("store_id", storeId);
-      if (itemError) throw itemError;
-
-      // 2. Insert into inventory_movements audit trail
-      const { error: moveError } = await supabase.from("inventory_movements").insert({
-        store_id: storeId,
-        item_id: itemId,
-        movement_type: "ADJUSTMENT",
-        quantity: delta,
-        note: `${reason}${note ? ` - ${note}` : ""}`,
-        created_by: userId,
+      const { error } = await supabase.rpc("adjust_stock", {
+        p_store_id: storeId,
+        p_item_id: itemId,
+        p_delta: delta,
+        p_reason: reason,
+        p_note: note ?? null,
+        p_request_id: requestId ?? crypto.randomUUID(),
       });
-      if (moveError) console.error("Failed to log inventory movement:", moveError);
-
+      if (error) {
+        const raw = error.message ?? "";
+        const hit = ADJUST_STOCK_ERRORS.find(([code]) => raw.includes(code));
+        throw new Error(hit ? hit[1] : "လက်ကျန်စာရင်း ချိန်ညှိ၍ မရပါ — ထပ်ကြိုးစားပါ");
+      }
       await refreshCatalog();
     },
-    [items, refreshCatalog, storeId, userId],
+    [items, refreshCatalog, storeId],
   );
 
   const deleteItem = useCallback(

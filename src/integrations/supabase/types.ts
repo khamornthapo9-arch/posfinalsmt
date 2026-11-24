@@ -1047,6 +1047,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_stock: {
+        Args: {
+          p_delta: number
+          p_item_id: string
+          p_note: string | null
+          p_reason: string
+          p_request_id: string
+          p_store_id: string
+        }
+        Returns: Json
+      }
       post_sale: {
         Args: {
           p_created_at?: string
