@@ -25,6 +25,16 @@ export const Route = createFileRoute("/suppliers")({
   component: SuppliersPage,
 });
 
+const PURCHASE_STATUS_LABEL: Record<string, { label: string; color: string }> = {
+  DRAFT: { label: "မူကြမ်း", color: "bg-muted text-muted-foreground" },
+  ORDERED: { label: "အော်ဒါတင်ပြီး", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  စောင့်ဆိုင်းဆဲ: { label: "စောင့်ဆိုင်းဆဲ", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  PARTIALLY_RECEIVED: { label: "တစ်စိတ်တစ်ပိုင်း ရရှိပြီး", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
+  ရရှိပြီး: { label: "ရရှိပြီး", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  RECEIVED: { label: "ရရှိပြီး", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
+  CANCELLED: { label: "ပယ်ဖျက်ပြီး", color: "bg-destructive/10 text-destructive border-destructive/20" },
+};
+
 const inputClass =
   "h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring";
 const labelClass = "mb-1.5 block text-xs font-medium text-muted-foreground";
@@ -134,13 +144,19 @@ function SuppliersPage() {
           )}
           {purchases.map((purchase) => {
             const supplier = suppliers.find((s) => s.id === purchase.supplier_id);
+            const statusMeta = PURCHASE_STATUS_LABEL[purchase.status] || PURCHASE_STATUS_LABEL.ORDERED;
             return (
               <div key={purchase.id} className="rounded-md border border-border bg-card p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">{supplier?.name ?? "ကုန်သွင်းသူ မသတ်မှတ်"}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium">{supplier?.name ?? "ကုန်သွင်းသူ မသတ်မှတ်"}</p>
+                      <span className={cn("inline-block rounded-full px-2 py-0.5 text-[11px] font-medium border", statusMeta.color)}>
+                        {statusMeta.label}
+                      </span>
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      {purchase.created_at.slice(0, 10)} · {purchase.status} · {fmt(purchase.total_amount)}
+                      {purchase.created_at.slice(0, 10)} · {statusMeta.label} · {fmt(purchase.total_amount)}
                     </p>
                   </div>
                   <div className="flex gap-1">
@@ -166,7 +182,12 @@ function SuppliersPage() {
                 <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                   {purchase.lines.map((line, i) => (
                     <li key={i}>
-                      {line.name || "—"} × {line.quantity} @ {fmt(line.unit_cost)}
+                      {line.name || "—"} × {line.quantity} {line.unit_name ? `(${line.unit_name})` : "ခု"} @ {fmt(line.unit_cost)}
+                      {line.conversion && line.conversion > 1 && (
+                        <span className="ml-1 text-[11px] text-muted-foreground/80">
+                          (စုစုပေါင်း {line.quantity * line.conversion} ခု)
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -193,7 +214,12 @@ function SuppliersPage() {
       {purchaseOpen && (
         <PurchaseModal
           suppliers={suppliers}
-          items={items.map((i) => ({ id: i.id, name: i.name, cost: i.cost_price }))}
+          items={items.map((i) => ({
+            id: i.id,
+            name: i.name,
+            cost: i.cost_price,
+            units: i.units || [],
+          }))}
           onClose={() => setPurchaseOpen(false)}
           onSave={async (values) => {
             await createPurchase(values);
@@ -268,6 +294,13 @@ function SupplierModal({
   );
 }
 
+interface PurchaseItemOption {
+  id: string;
+  name: string;
+  cost: number;
+  units: { id?: string; unit_name: string; conversion: number; price?: number }[];
+}
+
 function PurchaseModal({
   suppliers,
   items,
@@ -275,23 +308,77 @@ function PurchaseModal({
   onSave,
 }: {
   suppliers: Supplier[];
-  items: { id: string; name: string; cost: number }[];
+  items: PurchaseItemOption[];
   onClose: () => void;
   onSave: (values: {
     supplierId: string | null;
-    lines: { item_id: string; quantity: number; unit_cost: number }[];
+    lines: {
+      item_id: string;
+      quantity: number;
+      unit_cost: number;
+      unit_name?: string | null;
+      conversion: number;
+    }[];
     amountPaid: number;
     notes: string;
   }) => Promise<void>;
 }) {
   const [supplierId, setSupplierId] = useState<string>(suppliers[0]?.id ?? "");
   const [itemId, setItemId] = useState<string>(items[0]?.id ?? "");
+  const [selectedUnitName, setSelectedUnitName] = useState<string>("");
   const [qty, setQty] = useState("1");
   const [cost, setCost] = useState(String(items[0]?.cost ?? 0));
-  const [lines, setLines] = useState<{ item_id: string; quantity: number; unit_cost: number }[]>([]);
+  const [lines, setLines] = useState<{
+    item_id: string;
+    name: string;
+    quantity: number;
+    unit_cost: number;
+    unit_name?: string | null;
+    conversion: number;
+  }[]>([]);
   const [amountPaid, setAmountPaid] = useState("0");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const currentItem = items.find((i) => i.id === itemId);
+  const currentUnits = currentItem?.units || [];
+  const selectedUnit = currentUnits.find((u) => u.unit_name === selectedUnitName);
+  const conversion = selectedUnit ? selectedUnit.conversion : 1;
+
+  // Auto-update default unit cost when item or unit changes
+  const handleItemChange = (newItemId: string) => {
+    setItemId(newItemId);
+    setSelectedUnitName("");
+    const found = items.find((i) => i.id === newItemId);
+    setCost(String(found?.cost ?? 0));
+  };
+
+  const handleUnitChange = (unitName: string) => {
+    setSelectedUnitName(unitName);
+    const u = currentUnits.find((unit) => unit.unit_name === unitName);
+    const conv = u ? u.conversion : 1;
+    const baseCost = currentItem?.cost ?? 0;
+    setCost(String(baseCost * conv));
+  };
+
+  const addLine = () => {
+    if (!currentItem) return;
+    const quantityNum = Math.trunc(Number(qty) || 1);
+    const unitCostNum = Number(cost) || 0;
+    setLines((prev) => [
+      ...prev,
+      {
+        item_id: currentItem.id,
+        name: currentItem.name,
+        quantity: quantityNum,
+        unit_cost: unitCostNum,
+        unit_name: selectedUnitName || null,
+        conversion: conversion,
+      },
+    ]);
+    setQty("1");
+  };
+
   const total = lines.reduce((sum, l) => sum + l.quantity * l.unit_cost, 0);
 
   return (
@@ -313,72 +400,121 @@ function PurchaseModal({
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <div className="sm:col-span-3">
-              <label className={labelClass} htmlFor="p-item">ကုန်ပစ္စည်း</label>
-              <select
-                id="p-item"
-                value={itemId}
-                onChange={(e) => {
-                  setItemId(e.target.value);
-                  const found = items.find((i) => i.id === e.target.value);
-                  if (found) setCost(String(found.cost));
-                }}
-                className={inputClass}
-              >
-                {items.map((i) => (
-                  <option key={i.id} value={i.id}>{i.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass} htmlFor="p-qty">အရေအတွက်</label>
-              <input id="p-qty" type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass} htmlFor="p-cost">အရင်းစျေး</label>
-              <input id="p-cost" type="number" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} className={inputClass} />
-            </div>
-            <div className="flex items-end">
-              <button
-                disabled={!itemId}
-                onClick={() =>
-                  setLines((prev) => [
-                    ...prev,
-                    { item_id: itemId, quantity: Math.trunc(Number(qty) || 1), unit_cost: Number(cost) || 0 },
-                  ])
-                }
-                className="h-11 w-full rounded-md border border-border text-xs font-medium hover:bg-accent disabled:opacity-50"
-              >
-                စာရင်းထည့်မည်
-              </button>
-            </div>
-          </div>
 
-          <ul className="space-y-1 text-xs text-muted-foreground">
-            {lines.map((line, i) => (
-              <li key={i} className="flex items-center justify-between">
-                <span>{items.find((it) => it.id === line.item_id)?.name} × {line.quantity}</span>
+          <div className="rounded-md border border-border p-3 space-y-3 bg-muted/20">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div>
+                <label className={labelClass} htmlFor="p-item">ကုန်ပစ္စည်း</label>
+                <select id="p-item" value={itemId} onChange={(e) => handleItemChange(e.target.value)} className={inputClass}>
+                  {items.map((i) => (
+                    <option key={i.id} value={i.id}>{i.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="p-unit">ဝယ်ယူသည့် ယူနစ်</label>
+                <select id="p-unit" value={selectedUnitName} onChange={(e) => handleUnitChange(e.target.value)} className={inputClass}>
+                  <option value="">အခြေခံယူနစ် (၁ ခု)</option>
+                  {currentUnits.map((u) => (
+                    <option key={u.unit_name} value={u.unit_name}>
+                      {u.unit_name} ({u.conversion} ခုပါ)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div>
+                <label className={labelClass} htmlFor="p-qty">အရေအတွက်</label>
+                <input id="p-qty" type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="p-cost">ဝယ်ယူသည့် ယူနစ်စျေး</label>
+                <input id="p-cost" type="number" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} className={inputClass} />
+              </div>
+              <div className="flex items-end">
                 <button
-                  onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}
-                  aria-label="ဖျက်ရန"
-                  className="text-muted-foreground hover:text-destructive"
+                  type="button"
+                  disabled={!itemId}
+                  onClick={addLine}
+                  className="h-11 w-full rounded-md border border-border bg-background text-xs font-medium hover:bg-accent disabled:opacity-50"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  + ထည့်မည်
                 </button>
-              </li>
-            ))}
-          </ul>
+              </div>
+            </div>
 
-          <div>
-            <label className={labelClass} htmlFor="p-paid">ပေးချေပြီး ပမာဏ</label>
-            <input id="p-paid" type="number" step="0.01" min="0" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} className={inputClass} />
+            {conversion > 1 && (
+              <p className="text-[11px] text-muted-foreground">
+                စုစုပေါင်း အခြေခံအရေအတွက်: <span className="font-semibold text-foreground">{(Number(qty) || 0) * conversion} ခု</span> (အခြေခံ ၁ ခုလျှင် အရင်း {(Number(cost) / conversion).toFixed(2)} Ks)
+              </p>
+            )}
           </div>
-          <div>
-            <label className={labelClass} htmlFor="p-notes">မှတ်ချက်</label>
-            <input id="p-notes" value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} />
+
+          {lines.length > 0 && (
+            <div className="rounded-md border border-border">
+              <table className="w-full text-xs">
+                <thead className="border-b border-border bg-muted/40 text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 text-left">ပစ္စည်း</th>
+                    <th className="px-3 py-2 text-center">အရေအတွက်</th>
+                    <th className="px-3 py-2 text-right">ယူနစ်စျေး</th>
+                    <th className="px-3 py-2 text-right">စုစုပေါင်း</th>
+                    <th className="px-2 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((l, i) => (
+                    <tr key={i} className="border-b border-border last:border-0">
+                      <td className="px-3 py-2 font-medium">
+                        {l.name}
+                        {l.unit_name && <span className="ml-1 text-[10px] text-muted-foreground">({l.unit_name})</span>}
+                      </td>
+                      <td className="px-3 py-2 text-center tabular-nums">{l.quantity}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{l.unit_cost.toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right font-medium tabular-nums">{(l.quantity * l.unit_cost).toLocaleString()}</td>
+                      <td className="px-2 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div>
+              <label className={labelClass} htmlFor="p-paid">ကြိုတင်ပေးငွေ</label>
+              <input
+                id="p-paid"
+                type="number"
+                step="0.01"
+                min="0"
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="p-notes">မှတ်ချက်</label>
+              <input id="p-notes" value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} />
+            </div>
+          </div>
+
+          <div className="rounded-md bg-muted/50 p-3 text-right">
+            <span className="text-xs text-muted-foreground">ကျသင့်ငွေ စုစုပေါင်း: </span>
+            <span className="text-base font-bold tabular-nums">{total.toLocaleString()} Ks</span>
           </div>
         </div>
+
         <button
           disabled={busy || lines.length === 0}
           onClick={() => {
@@ -392,7 +528,7 @@ function PurchaseModal({
           }}
           className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          သိမ်းဆည်းမည် ({total.toFixed(2)})
+          အော်ဒါ အတည်ပြုမည်
         </button>
       </div>
     </div>
