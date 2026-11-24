@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Archive, ArchiveRestore, ChevronDown, Loader2, Mail, MapPin, Pencil, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
@@ -74,6 +74,13 @@ function CustomerDetailPage() {
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const historyRequest = useRef(0);
+
+  // Opening a different customer must not keep the previous customer's page or open row.
+  useEffect(() => {
+    setPage(0);
+    setExpanded(null);
+  }, [customerId]);
 
   // Both queries are filtered by store here and again by RLS on the server.
   useEffect(() => {
@@ -100,6 +107,7 @@ function CustomerDetailPage() {
 
   const loadHistory = useCallback(async () => {
     if (!storeId) return;
+    const request = ++historyRequest.current;
     setHistory(null);
     setHistoryError(false);
     const { data, error, count } = await supabase
@@ -112,6 +120,8 @@ function CustomerDetailPage() {
       .eq("customer_id", customerId)
       .order("created_at", { ascending: false })
       .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+    // A newer page/customer was requested while this one loaded: drop the stale answer.
+    if (request !== historyRequest.current) return;
     if (error) {
       setHistoryError(true);
       return;
