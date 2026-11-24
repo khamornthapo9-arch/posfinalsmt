@@ -64,6 +64,12 @@ BEGIN
   IF p_opening_stock IS NULL OR p_opening_stock < 0 THEN
     RAISE EXCEPTION 'INVALID_OPENING_STOCK';
   END IF;
+  -- items.stock_quantity and items.min_stock_threshold are INTEGER columns (verified live):
+  -- reject fractions instead of letting PostgreSQL round them silently.
+  IF p_opening_stock <> pg_catalog.trunc(p_opening_stock)
+     OR p_min_stock_threshold <> pg_catalog.trunc(p_min_stock_threshold) THEN
+    RAISE EXCEPTION 'QUANTITY_NOT_REPRESENTABLE';
+  END IF;
   IF p_units IS NOT NULL AND pg_catalog.jsonb_typeof(p_units) <> 'array' THEN
     RAISE EXCEPTION 'INVALID_ITEM';
   END IF;
