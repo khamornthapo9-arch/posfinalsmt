@@ -18,7 +18,7 @@ import {
   QrCode,
   Search,
   SlidersHorizontal,
-  Trash2,
+  Archive,
   X,
   ImagePlus,
   AlertTriangle,
@@ -82,10 +82,11 @@ const EMPTY_ITEM = {
 };
 
 function InventoryPage() {
-  const { items, categories, saveItem, deleteItem, seedDemoItems, adjustStock } = usePos();
+  const { items, archivedItems, categories, saveItem, setItemArchived, seedDemoItems, adjustStock } = usePos();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [showArchived, setShowArchived] = useState(false);
   const [editing, setEditing] = useState<CachedItem | "new" | null>(null);
   const [adjustingItem, setAdjustingItem] = useState<CachedItem | null>(null);
   const [labelItem, setLabelItem] = useState<CachedItem | null>(null);
@@ -134,7 +135,7 @@ function InventoryPage() {
   // Filtered Items
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((item) => {
+    return (showArchived ? archivedItems : items).filter((item) => {
       const matchesSearch =
         !q ||
         item.name.toLowerCase().includes(q) ||
@@ -156,15 +157,22 @@ function InventoryPage() {
 
       return matchesSearch && matchesCategory && passesFilter;
     });
-  }, [items, query, filter, selectedCategory]);
+  }, [items, archivedItems, showArchived, query, filter, selectedCategory]);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("ဤကုန်ပစ္စည်းကို ဖျက်ရန် သေချာပါသလား?")) return;
+  // Items are archived, never hard-deleted: sales, purchase and stock history stay intact.
+  const handleArchive = async (id: string, archive: boolean) => {
+    if (
+      archive &&
+      !window.confirm(
+        "ဤကုန်ပစ္စည်းကို သိမ်းထားမလား? အရောင်းစာရင်း၊ ကုန်သွင်းမှတ်တမ်းများ ဆက်လက်ရှိနေပြီး ရောင်းချရာတွင် မပြတော့ပါ။ နောက်မှ ပြန်ဖွင့်နိုင်သည်။",
+      )
+    )
+      return;
     try {
-      await deleteItem(id);
-      toast.success("ကုန်ပစ္စည်း ဖျက်ပြီးပါပြီ");
+      await setItemArchived(id, archive);
+      toast.success(archive ? "ကုန်ပစ္စည်းကို သိမ်းထားပြီးပါပြီ" : "ကုန်ပစ္စည်းကို ပြန်ဖွင့်ပြီးပါပြီ");
     } catch {
-      toast.error("ရောင်းချထားသော သမိုင်းမှတ်တမ်းရှိသည့် ကုန်ပစ္စည်းကို ဖျက်၍မရပါ");
+      toast.error("မအောင်မြင်ပါ — database update (items.archived_at) ကို အရင် သုံးထားရန် လိုနိုင်သည်");
     }
   };
 
@@ -333,6 +341,18 @@ function InventoryPage() {
                   {tab.label}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => setShowArchived((v) => !v)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  showArchived
+                    ? "bg-primary font-semibold text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                သိမ်းထားသည် ({archivedItems.length})
+              </button>
             </div>
 
             {/* Category Dropdown */}
@@ -412,7 +432,16 @@ function InventoryPage() {
                       >
                         လေဘယ်
                       </button>
-                      {!isBranchDevice && (
+                      {!isBranchDevice && showArchived && (
+                        <button
+                          type="button"
+                          onClick={() => handleArchive(item.id, false)}
+                          className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                        >
+                          ပြန်ဖွင့်ရန်
+                        </button>
+                      )}
+                      {!isBranchDevice && !showArchived && (
                         <>
                           <button
                             type="button"
@@ -430,10 +459,10 @@ function InventoryPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => handleArchive(item.id, true)}
                             className="rounded-md px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
                           >
-                            ဖျက်ရန်
+                            သိမ်းထားရန်
                           </button>
                         </>
                       )}
@@ -515,7 +544,16 @@ function InventoryPage() {
                               >
                                 လေဘယ်
                               </button>
-                              {!isBranchDevice && (
+                              {!isBranchDevice && showArchived && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleArchive(item.id, false)}
+                                  className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                                >
+                                  ပြန်ဖွင့်ရန်
+                                </button>
+                              )}
+                              {!isBranchDevice && !showArchived && (
                                 <>
                                   <button
                                     type="button"
@@ -533,10 +571,12 @@ function InventoryPage() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleDelete(item.id)}
+                                    onClick={() => handleArchive(item.id, true)}
+                                    title="သိမ်းထားရန်"
+                                    aria-label="သိမ်းထားရန်"
                                     className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                   >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Archive className="h-3.5 w-3.5" />
                                   </button>
                                 </>
                               )}
@@ -595,13 +635,13 @@ function InventoryPage() {
 
       {importOpen && (
         <ImportModal
-          items={items}
+          items={[...items, ...archivedItems]}
           isPro={isPro}
           onClose={() => setImportOpen(false)}
           onImport={async (rows) => {
             let created = 0;
             let updated = 0;
-            const skuMap = new Map(items.map((i) => [i.sku, i]));
+            const skuMap = new Map([...items, ...archivedItems].map((i) => [i.sku, i]));
 
             for (const r of rows) {
               const existing = skuMap.get(r.sku);
