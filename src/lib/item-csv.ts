@@ -64,6 +64,8 @@ export interface ParsedItemRow {
   stock_quantity: number;
   unit_name: string;
   category: string;
+  /** Not read from CSV today; importers fall back to a default threshold. */
+  min_stock_threshold?: number;
 }
 
 export interface ParseResult {

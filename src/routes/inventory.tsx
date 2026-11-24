@@ -577,7 +577,7 @@ function InventoryPage() {
                 itemId: adjustingItem.id,
                 newQuantity: newQty,
                 reason,
-                note,
+                ...(note !== undefined ? { note } : {}),
               });
             } else {
               await saveItem({

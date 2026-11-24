@@ -1,10 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { HandCoins, PackageCheck, Plus, Trash2, X } from "lucide-react";
+import { Check, HandCoins, PackageCheck, Pencil, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { FREE_LIMITS } from "@/lib/subscription";
 import { PosShell } from "@/components/pos/pos-shell";
-import { useAccountingStore, PURCHASE_RECEIVED, type Supplier } from "@/lib/accounting-store";
+import {
+  useAccountingStore,
+  canReceiveLegacy,
+  PURCHASE_DRAFT,
+  PURCHASE_ORDERED,
+  type Purchase,
+  type Supplier,
+} from "@/lib/accounting-store";
 import { usePos } from "@/lib/pos-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
@@ -35,6 +42,12 @@ const PURCHASE_STATUS_LABEL: Record<string, { label: string; color: string }> = 
   CANCELLED: { label: "ပယ်ဖျက်ပြီး", color: "bg-destructive/10 text-destructive border-destructive/20" },
 };
 
+// Unknown or missing statuses must never crash the list: show the raw value in a neutral badge.
+const unknownStatusMeta = (status: string) => ({
+  label: status || "—",
+  color: "bg-muted text-muted-foreground",
+});
+
 const inputClass =
   "h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring";
 const labelClass = "mb-1.5 block text-xs font-medium text-muted-foreground";
@@ -47,6 +60,8 @@ function SuppliersPage() {
     saveSupplier,
     deleteSupplier,
     createPurchase,
+    updateDraftPurchase,
+    confirmPurchase,
     receivePurchase,
     deletePurchase,
     paySupplierDebt,
@@ -55,6 +70,7 @@ function SuppliersPage() {
   const { fmt, isPro } = useStoreSettings();
   const [supplierOpen, setSupplierOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [editingDraft, setEditingDraft] = useState<Purchase | null>(null);
   const [paying, setPaying] = useState<Supplier | null>(null);
 
   if (!enabled) {
@@ -80,7 +96,10 @@ function SuppliersPage() {
             <Plus className="h-4 w-4" /> ကုန်သွင်းသူ အသစ်
           </button>
           <button
-            onClick={() => setPurchaseOpen(true)}
+            onClick={() => {
+              setEditingDraft(null);
+              setPurchaseOpen(true);
+            }}
             className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" /> ဝယ်ယူမှု အော်ဒါ
@@ -144,7 +163,8 @@ function SuppliersPage() {
           )}
           {purchases.map((purchase) => {
             const supplier = suppliers.find((s) => s.id === purchase.supplier_id);
-            const statusMeta = PURCHASE_STATUS_LABEL[purchase.status] || PURCHASE_STATUS_LABEL.ORDERED;
+            const statusMeta = PURCHASE_STATUS_LABEL[purchase.status] ?? unknownStatusMeta(purchase.status);
+            const isDraft = purchase.status === PURCHASE_DRAFT;
             return (
               <div key={purchase.id} className="rounded-md border border-border bg-card p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -160,7 +180,28 @@ function SuppliersPage() {
                     </p>
                   </div>
                   <div className="flex gap-1">
-                    {purchase.status !== PURCHASE_RECEIVED && (
+                    {isDraft && (
+                      <>
+                        <button
+                          onClick={() => setEditingDraft(purchase)}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-accent"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> ပြင်ရန်
+                        </button>
+                        <button
+                          disabled={purchase.lines.length === 0}
+                          onClick={() => {
+                            void confirmPurchase(purchase.id)
+                              .then(() => toast.success("အော်ဒါကို အတည်ပြုပြီးပါပြီ"))
+                              .catch(() => toast.error("အတည်မပြုနိုင်ပါ — ထပ်ကြိုးစားပါ"));
+                          }}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                        >
+                          <Check className="h-3.5 w-3.5" /> အတည်ပြုမည်
+                        </button>
+                      </>
+                    )}
+                    {canReceiveLegacy(purchase.status) && (
                       <button
                         onClick={() => {
                           void receivePurchase(purchase.id).then(() => toast.success("ကုန်ပစ္စည်း လက်ခံရရှိပြီးပါပြီ"));
@@ -211,8 +252,9 @@ function SuppliersPage() {
           }}
         />
       )}
-      {purchaseOpen && (
+      {(purchaseOpen || editingDraft) && (
         <PurchaseModal
+          initial={editingDraft}
           suppliers={suppliers}
           items={items.map((i) => ({
             id: i.id,
@@ -220,11 +262,27 @@ function SuppliersPage() {
             cost: i.cost_price,
             units: i.units || [],
           }))}
-          onClose={() => setPurchaseOpen(false)}
-          onSave={async (values) => {
-            await createPurchase(values);
+          onClose={() => {
             setPurchaseOpen(false);
-            toast.success("ဝယ်ယူမှု အော်ဒါကို မှတ်တမ်းတင်ပြီးပါပြီ");
+            setEditingDraft(null);
+          }}
+          onSave={async ({ status, ...values }) => {
+            if (editingDraft) {
+              await updateDraftPurchase({
+                purchaseId: editingDraft.id,
+                ...values,
+                confirm: status === PURCHASE_ORDERED,
+              });
+            } else {
+              await createPurchase({ status, ...values });
+            }
+            setPurchaseOpen(false);
+            setEditingDraft(null);
+            toast.success(
+              status === PURCHASE_DRAFT
+                ? "မူကြမ်းကို သိမ်းဆည်းပြီးပါပြီ"
+                : "ဝယ်ယူမှု အော်ဒါကို အတည်ပြုပြီးပါပြီ",
+            );
           }}
         />
       )}
@@ -302,15 +360,19 @@ interface PurchaseItemOption {
 }
 
 function PurchaseModal({
+  initial,
   suppliers,
   items,
   onClose,
   onSave,
 }: {
+  /** A draft being reopened for editing; null/undefined starts a new order. */
+  initial?: Purchase | null;
   suppliers: Supplier[];
   items: PurchaseItemOption[];
   onClose: () => void;
   onSave: (values: {
+    status: typeof PURCHASE_DRAFT | typeof PURCHASE_ORDERED;
     supplierId: string | null;
     lines: {
       item_id: string;
@@ -323,7 +385,9 @@ function PurchaseModal({
     notes: string;
   }) => Promise<void>;
 }) {
-  const [supplierId, setSupplierId] = useState<string>(suppliers[0]?.id ?? "");
+  const [supplierId, setSupplierId] = useState<string>(
+    initial ? (initial.supplier_id ?? "") : (suppliers[0]?.id ?? ""),
+  );
   const [itemId, setItemId] = useState<string>(items[0]?.id ?? "");
   const [selectedUnitName, setSelectedUnitName] = useState<string>("");
   const [qty, setQty] = useState("1");
@@ -335,9 +399,18 @@ function PurchaseModal({
     unit_cost: number;
     unit_name?: string | null;
     conversion: number;
-  }[]>([]);
-  const [amountPaid, setAmountPaid] = useState("0");
-  const [notes, setNotes] = useState("");
+  }[]>(
+    (initial?.lines ?? []).map((l) => ({
+      item_id: l.item_id,
+      name: l.name ?? "",
+      quantity: l.quantity,
+      unit_cost: l.unit_cost,
+      unit_name: l.unit_name ?? null,
+      conversion: l.conversion ?? 1,
+    })),
+  );
+  const [amountPaid, setAmountPaid] = useState(String(initial?.amount_paid ?? 0));
+  const [notes, setNotes] = useState(initial?.notes ?? "");
   const [busy, setBusy] = useState(false);
 
   const currentItem = items.find((i) => i.id === itemId);
@@ -381,11 +454,26 @@ function PurchaseModal({
 
   const total = lines.reduce((sum, l) => sum + l.quantity * l.unit_cost, 0);
 
+  // One in-flight save at a time; failures keep the dialog open so nothing typed is lost.
+  const submit = (status: typeof PURCHASE_DRAFT | typeof PURCHASE_ORDERED) => {
+    if (busy) return;
+    setBusy(true);
+    void onSave({
+      status,
+      supplierId: supplierId || null,
+      lines,
+      amountPaid: Number(amountPaid) || 0,
+      notes: notes.trim(),
+    })
+      .catch(() => toast.error("မသိမ်းနိုင်ပါ — ထပ်ကြိုးစားပါ"))
+      .finally(() => setBusy(false));
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
       <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">ဝယ်ယူမှု အော်ဒါ အသစ်</h2>
+          <h2 className="text-sm font-semibold">{initial ? "မူကြမ်း အော်ဒါ ပြင်ရန်" : "ဝယ်ယူမှု အော်ဒါ အသစ်"}</h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
           </button>
@@ -515,21 +603,24 @@ function PurchaseModal({
           </div>
         </div>
 
-        <button
-          disabled={busy || lines.length === 0}
-          onClick={() => {
-            setBusy(true);
-            void onSave({
-              supplierId: supplierId || null,
-              lines,
-              amountPaid: Number(amountPaid) || 0,
-              notes: notes.trim(),
-            }).finally(() => setBusy(false));
-          }}
-          className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          အော်ဒါ အတည်ပြုမည်
-        </button>
+        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => submit(PURCHASE_DRAFT)}
+            className="h-12 rounded-md border border-border bg-background text-sm font-semibold hover:bg-accent disabled:opacity-50"
+          >
+            မူကြမ်းအဖြစ် သိမ်းမည်
+          </button>
+          <button
+            type="button"
+            disabled={busy || lines.length === 0}
+            onClick={() => submit(PURCHASE_ORDERED)}
+            className="h-12 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            အော်ဒါ အတည်ပြုမည်
+          </button>
+        </div>
       </div>
     </div>
   );
