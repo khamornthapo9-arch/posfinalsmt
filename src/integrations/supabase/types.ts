@@ -1047,6 +1047,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_purchase: {
+        Args: { p_purchase_id: string }
+        Returns: Json
+      }
+      update_draft_purchase: {
+        Args: {
+          p_amount_paid: number
+          p_confirm?: boolean
+          p_lines: Json
+          p_notes: string
+          p_purchase_id: string
+          p_supplier_id: string | null
+        }
+        Returns: Json
+      }
       post_sale: {
         Args: {
           p_created_at?: string

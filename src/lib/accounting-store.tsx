@@ -75,6 +75,17 @@ export const PURCHASE_CANCELLED = "CANCELLED";
 export const canReceiveLegacy = (status: string) =>
   status === PURCHASE_ORDERED || status === PURCHASE_PENDING;
 
+/**
+ * The legacy receive adds line.quantity to stock and writes unit_cost as the item cost, which is
+ * only correct for base units. Purchases with any pack/carton line stay unreceivable until G2.
+ */
+export const hasNonBaseUnit = (purchase: { lines: { conversion?: number }[] }) =>
+  purchase.lines.some((line) => (line.conversion ?? 1) > 1);
+
+/** Only drafts and cancelled orders may be deleted; anything that may have moved stock may not. */
+export const canDeletePurchase = (status: string) =>
+  status === PURCHASE_DRAFT || status === PURCHASE_CANCELLED;
+
 export interface Purchase {
   id: string;
   supplier_id: string | null;
@@ -499,53 +510,27 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
     [refreshAll, storeId],
   );
 
+  // Draft edit/confirm run as database functions (see migration 20261124040000): the header and
+  // lines are replaced in one transaction, so a failure leaves the original draft untouched.
   const updateDraftPurchase = useCallback<AccountingContextValue["updateDraftPurchase"]>(
     async ({ purchaseId, supplierId, lines, amountPaid, notes, confirm }) => {
       if (!storeId) throw new Error("No active store");
       if (confirm && lines.length === 0) throw new Error("Add at least one line before confirming");
-      const total = lines.reduce((sum, line) => sum + line.quantity * line.unit_cost, 0);
-      const { data: oldLines, error: oldError } = await supabase
-        .from("purchase_items")
-        .select("id")
-        .eq("purchase_id", purchaseId);
-      if (oldError) throw oldError;
-      // The status filter makes this a no-op (and an error) unless the order is still a draft,
-      // so an already-ordered or received purchase can never be rewritten from here.
-      const { data: updated, error } = await supabase
-        .from("purchases")
-        .update({
-          supplier_id: supplierId,
-          total_amount: total,
-          amount_paid: amountPaid,
-          notes: notes || null,
-          ...(confirm ? { status: PURCHASE_ORDERED } : {}),
-        })
-        .eq("id", purchaseId)
-        .eq("store_id", storeId)
-        .eq("status", PURCHASE_DRAFT)
-        .select("id");
+      const { error } = await supabase.rpc("update_draft_purchase", {
+        p_purchase_id: purchaseId,
+        p_supplier_id: supplierId,
+        p_amount_paid: amountPaid,
+        p_notes: notes,
+        p_confirm: Boolean(confirm),
+        p_lines: lines.map((line) => ({
+          item_id: line.item_id,
+          quantity: line.quantity,
+          unit_cost: line.unit_cost,
+          unit_name: line.unit_name || null,
+          conversion: line.conversion || 1,
+        })),
+      });
       if (error) throw error;
-      if (!updated || updated.length === 0) throw new Error("Only draft purchases can be edited");
-      // New lines first, then remove the old ones: a failure leaves duplicates, never an empty order.
-      if (lines.length > 0) {
-        const { error: insertError } = await supabase.from("purchase_items").insert(
-          lines.map((line) => ({
-            purchase_id: purchaseId,
-            item_id: line.item_id,
-            quantity: line.quantity,
-            unit_cost: line.unit_cost,
-            unit_name: line.unit_name || null,
-            conversion: line.conversion || 1,
-            received_quantity: 0,
-          })),
-        );
-        if (insertError) throw insertError;
-      }
-      const oldIds = (oldLines ?? []).map((row) => row.id);
-      if (oldIds.length > 0) {
-        const { error: deleteError } = await supabase.from("purchase_items").delete().in("id", oldIds);
-        if (deleteError) throw deleteError;
-      }
       await refreshAll();
     },
     [refreshAll, storeId],
@@ -554,27 +539,20 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   const confirmPurchase = useCallback<AccountingContextValue["confirmPurchase"]>(
     async (purchaseId) => {
       if (!storeId) throw new Error("No active store");
-      const purchase = purchases.find((p) => p.id === purchaseId);
-      if (!purchase || purchase.lines.length === 0) throw new Error("Add at least one line before confirming");
-      const { data, error } = await supabase
-        .from("purchases")
-        .update({ status: PURCHASE_ORDERED })
-        .eq("id", purchaseId)
-        .eq("store_id", storeId)
-        .eq("status", PURCHASE_DRAFT)
-        .select("id");
+      const { error } = await supabase.rpc("confirm_purchase", { p_purchase_id: purchaseId });
       if (error) throw error;
-      if (!data || data.length === 0) throw new Error("Only draft purchases can be confirmed");
       await refreshAll();
     },
-    [purchases, refreshAll, storeId],
+    [refreshAll, storeId],
   );
 
   const receivePurchase = useCallback(
     async (purchaseId: string) => {
       if (!storeId) return;
       const purchase = purchases.find((p) => p.id === purchaseId);
-      if (!purchase || !canReceiveLegacy(purchase.status)) return;
+      if (!purchase) return;
+      if (!canReceiveLegacy(purchase.status)) throw new Error("This purchase cannot be received");
+      if (hasNonBaseUnit(purchase)) throw new Error("Purchases in non-base units cannot be received yet");
       const unpaid = Math.max(purchase.total_amount - purchase.amount_paid, 0);
 
       // Increment stock for each received line.
@@ -621,8 +599,16 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
 
   const deletePurchase = useCallback(
     async (purchaseId: string) => {
-      const { error } = await supabase.from("purchases").delete().eq("id", purchaseId);
+      // The status filter is enforced by the database query, not only the button: a received or
+      // ordered purchase is never deleted from here (no stock/ledger reversal exists yet).
+      const { data, error } = await supabase
+        .from("purchases")
+        .delete()
+        .eq("id", purchaseId)
+        .in("status", [PURCHASE_DRAFT, PURCHASE_CANCELLED])
+        .select("id");
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Only draft or cancelled purchases can be deleted");
       await refreshAll();
     },
     [refreshAll],
