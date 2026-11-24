@@ -152,9 +152,18 @@ function AnalyticsPage() {
         ordersCount += 1;
         const lineItems = t.sale_items || t.transaction_items || [];
         for (const item of lineItems) {
-          const matchedItem = items.find((i) => i.id === item.item_id);
-          const buyPrice = matchedItem?.cost_price || 0;
-          costOfGoods += buyPrice * (item.quantity || 1);
+          // Cost is the snapshot taken when the sale was posted (sale_items.unit_cost, per sold
+          // unit), so later cost changes (purchases, manual edits) never rewrite past profit.
+          // Only rows without a snapshot (legacy / offline-synced) fall back to the current cost.
+          const snapshot = item.unit_cost;
+          const quantity = Number(item.quantity || 1);
+          if (snapshot !== null && snapshot !== undefined && Number.isFinite(Number(snapshot))) {
+            costOfGoods += Number(snapshot) * quantity;
+          } else {
+            const matchedItem = items.find((i) => i.id === item.item_id);
+            const conversion = Number(item.conversion || 1);
+            costOfGoods += (matchedItem?.cost_price || 0) * conversion * quantity;
+          }
         }
       }
     }
