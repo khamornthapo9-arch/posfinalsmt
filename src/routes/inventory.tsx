@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 const QRCodeCanvas = lazy(() =>
   import("@/components/lazy/label-codes").then((m) => ({ default: m.QRCodeCanvas })),
 );
@@ -571,13 +571,14 @@ function InventoryPage() {
         <StockAdjustmentModal
           item={adjustingItem}
           onClose={() => setAdjustingItem(null)}
-          onAdjust={async (newQty, reason, note) => {
+          onAdjust={async (newQty, reason, note, requestId) => {
             if (adjustStock) {
               await adjustStock({
                 itemId: adjustingItem.id,
                 newQuantity: newQty,
                 reason,
                 ...(note !== undefined ? { note } : {}),
+                ...(requestId !== undefined ? { requestId } : {}),
               });
             } else {
               await saveItem({
@@ -1053,12 +1054,18 @@ function StockAdjustmentModal({
 }: {
   item: CachedItem;
   onClose: () => void;
-  onAdjust: (newQty: number, reason: string, note?: string) => Promise<void>;
+  onAdjust: (newQty: number, reason: string, note?: string, requestId?: string) => Promise<void>;
 }) {
   const [newQuantity, setNewQuantity] = useState(String(item.stock_quantity));
   const [reason, setReason] = useState("စာရင်းစစ် ပြင်ဆင်ခြင်း");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  // One id per distinct attempt: a retry of the same entry reuses it (server ignores the repeat),
+  // changing the numbers or reason starts a new attempt.
+  const requestId = useRef(crypto.randomUUID());
+  useEffect(() => {
+    requestId.current = crypto.randomUUID();
+  }, [newQuantity, reason, note]);
 
   const delta = (Number(newQuantity) || 0) - (Number(item.stock_quantity) || 0);
 
@@ -1134,7 +1141,7 @@ function StockAdjustmentModal({
             onClick={async () => {
               setBusy(true);
               try {
-                await onAdjust(Number(newQuantity), reason, note.trim() || undefined);
+                await onAdjust(Number(newQuantity), reason, note.trim() || undefined, requestId.current);
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "ချိန်ညှိ၍မရပါ");
               } finally {
