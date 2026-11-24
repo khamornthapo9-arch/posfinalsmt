@@ -56,7 +56,17 @@ export interface PurchaseLine {
   quantity: number;
   unit_cost: number;
   name?: string;
+  unit_name?: string | null;
+  conversion?: number;
+  received_quantity?: number;
 }
+
+export const PURCHASE_DRAFT = "DRAFT";
+export const PURCHASE_ORDERED = "ORDERED";
+export const PURCHASE_PARTIALLY_RECEIVED = "PARTIALLY_RECEIVED";
+export const PURCHASE_RECEIVED = "ရရှိပြီး"; // Backwards compatible with legacy
+export const PURCHASE_PENDING = "စောင့်ဆိုင်းဆဲ"; // Backwards compatible with legacy
+export const PURCHASE_CANCELLED = "CANCELLED";
 
 export interface Purchase {
   id: string;
@@ -95,9 +105,6 @@ export interface LedgerLine {
   memo?: string;
 }
 
-export const PURCHASE_RECEIVED = "ရရှိပြီး";
-export const PURCHASE_PENDING = "စောင့်ဆိုင်းဆဲ";
-
 interface PurchaseRow {
   id: string;
   supplier_id: string | null;
@@ -111,6 +118,9 @@ interface PurchaseRow {
         item_id: string;
         quantity: number;
         unit_cost: number | string;
+        unit_name?: string | null;
+        conversion?: number;
+        received_quantity?: number;
         items: { name: string } | null;
       }[]
     | null;
@@ -226,7 +236,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
         supabase
           .from("purchases")
           .select(
-            "id,supplier_id,status,total_amount,amount_paid,notes,created_at,purchase_items(item_id,quantity,unit_cost,items(name))",
+            "id,supplier_id,status,total_amount,amount_paid,notes,created_at,purchase_items(item_id,quantity,unit_cost,unit_name,conversion,received_quantity,items(name))",
           )
           .eq("store_id", storeId)
           .order("created_at", { ascending: false }),
@@ -262,6 +272,9 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
             item_id: line.item_id,
             quantity: Number(line.quantity),
             unit_cost: Number(line.unit_cost),
+            unit_name: line.unit_name ?? null,
+            conversion: Number(line.conversion || 1),
+            received_quantity: Number(line.received_quantity || 0),
             name: line.items?.name ?? "",
           })),
         })),
@@ -441,7 +454,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
         .insert({
           store_id: storeId,
           supplier_id: supplierId,
-          status: PURCHASE_PENDING,
+          status: PURCHASE_ORDERED,
           total_amount: total,
           amount_paid: amountPaid,
           notes: notes || null,
@@ -455,6 +468,9 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
           item_id: line.item_id,
           quantity: line.quantity,
           unit_cost: line.unit_cost,
+          unit_name: line.unit_name || null,
+          conversion: line.conversion || 1,
+          received_quantity: 0,
         })),
       );
       if (lineError) throw lineError;
