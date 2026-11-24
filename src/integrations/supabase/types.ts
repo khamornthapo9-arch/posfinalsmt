@@ -430,6 +430,7 @@ export type Database = {
       }
       items: {
         Row: {
+          archived_at: string | null
           barcode: string | null
           category: string
           cost_price: number
@@ -445,6 +446,7 @@ export type Database = {
           store_id: string
         }
         Insert: {
+          archived_at?: string | null
           barcode?: string | null
           category?: string
           cost_price?: number
@@ -460,6 +462,7 @@ export type Database = {
           store_id: string
         }
         Update: {
+          archived_at?: string | null
           barcode?: string | null
           category?: string
           cost_price?: number

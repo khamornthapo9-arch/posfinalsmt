@@ -55,7 +55,10 @@ export interface OrderSummary {
 }
 
 interface PosContextValue {
+  /** Active (non-archived) items only: this is what the register, scanner and pickers use. */
   items: CachedItem[];
+  /** Archived items: kept for history, shown only in the inventory "archived" view. */
+  archivedItems: CachedItem[];
   categories: string[];
   loading: boolean;
   isOnline: boolean;
@@ -136,7 +139,8 @@ interface PosContextValue {
     /** Stable per attempt so a retry or double-click can never apply the adjustment twice. */
     requestId?: string;
   }) => Promise<void>;
-  deleteItem: (id: string) => Promise<void>;
+  /** Archive (hide, keep history) or restore an item. Items are never hard-deleted from the app. */
+  setItemArchived: (id: string, archived: boolean) => Promise<void>;
   seedDemoItems: () => Promise<number>;
 }
 
@@ -456,6 +460,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       qr_value: (row as { qr_value?: string | null }).qr_value ?? null,
       created_at: row.created_at,
       units: unitsByItem.get(row.id) ?? [],
+      archived_at: (row as { archived_at?: string | null }).archived_at ?? null,
     }));
     await posDb.transaction("rw", posDb.cached_items, async () => {
       await posDb.cached_items.clear();
@@ -761,13 +766,19 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     [items, refreshCatalog, storeId],
   );
 
-  const deleteItem = useCallback(
-    async (id: string) => {
-      const { error } = await supabase.from("items").delete().eq("id", id);
+  const setItemArchived = useCallback(
+    async (id: string, archived: boolean) => {
+      if (!storeId) throw new Error("No active store");
+      // One UPDATE (atomic). Scoped to the active store as well as RLS; history is untouched.
+      const { error } = await supabase
+        .from("items")
+        .update({ archived_at: archived ? new Date().toISOString() : null })
+        .eq("id", id)
+        .eq("store_id", storeId);
       if (error) throw error;
       await refreshCatalog();
     },
-    [refreshCatalog],
+    [refreshCatalog, storeId],
   );
 
   const seedDemoItems = useCallback(async () => {
@@ -1124,7 +1135,9 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     [refreshCatalog, refreshRecentOrders, refreshTabs],
   );
 
-  const list = items ?? [];
+  const allItems = items ?? [];
+  const list = allItems.filter((i) => !i.archived_at);
+  const archivedItems = allItems.filter((i) => Boolean(i.archived_at));
   const lowStockItems = list.filter((i) => i.stock_quantity <= i.min_stock_threshold);
   const lowStockCount = lowStockItems.length;
   const categories = [...new Set(list.map((i) => i.category || DEFAULT_CATEGORY))].sort();
@@ -1133,6 +1146,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   const value = useMemo<PosContextValue>(
     () => ({
       items: list,
+      archivedItems,
       categories,
       loading,
       isOnline,
@@ -1159,11 +1173,12 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       recordSale,
       saveItem,
       adjustStock,
-      deleteItem,
+      setItemArchived,
       seedDemoItems,
     }),
     [
       list,
+      archivedItems,
       categories,
       loading,
       isOnline,
@@ -1190,7 +1205,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       recordSale,
       saveItem,
       adjustStock,
-      deleteItem,
+      setItemArchived,
       seedDemoItems,
     ],
   );
