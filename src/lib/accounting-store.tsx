@@ -68,6 +68,13 @@ export const PURCHASE_RECEIVED = "ရရှိပြီး"; // Backwards compat
 export const PURCHASE_PENDING = "စောင့်ဆိုင်းဆဲ"; // Backwards compatible with legacy
 export const PURCHASE_CANCELLED = "CANCELLED";
 
+/**
+ * The existing one-shot receive (G2 will replace it) may only run on confirmed orders. Drafts,
+ * cancelled and already-received orders must never add stock through it.
+ */
+export const canReceiveLegacy = (status: string) =>
+  status === PURCHASE_ORDERED || status === PURCHASE_PENDING;
+
 export interface Purchase {
   id: string;
   supplier_id: string | null;
@@ -176,11 +183,24 @@ interface AccountingContextValue {
   }) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
   createPurchase: (input: {
+    /** Defaults to ORDERED. DRAFT saves the order without committing to it. */
+    status?: typeof PURCHASE_DRAFT | typeof PURCHASE_ORDERED;
     supplierId: string | null;
     lines: PurchaseLine[];
     amountPaid: number;
     notes: string;
   }) => Promise<void>;
+  /** Edit a DRAFT purchase (lines, supplier, notes). Optionally confirm it in the same save. */
+  updateDraftPurchase: (input: {
+    purchaseId: string;
+    supplierId: string | null;
+    lines: PurchaseLine[];
+    amountPaid: number;
+    notes: string;
+    confirm?: boolean;
+  }) => Promise<void>;
+  /** DRAFT → ORDERED. Changes status only: no stock, cost, supplier balance or ledger effect. */
+  confirmPurchase: (purchaseId: string) => Promise<void>;
   receivePurchase: (purchaseId: string) => Promise<void>;
   deletePurchase: (purchaseId: string) => Promise<void>;
   saveExpense: (input: {
@@ -446,7 +466,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   );
 
   const createPurchase = useCallback<AccountingContextValue["createPurchase"]>(
-    async ({ supplierId, lines, amountPaid, notes }) => {
+    async ({ status, supplierId, lines, amountPaid, notes }) => {
       if (!storeId) throw new Error("No active store");
       const total = lines.reduce((sum, line) => sum + line.quantity * line.unit_cost, 0);
       const { data, error } = await supabase
@@ -454,7 +474,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
         .insert({
           store_id: storeId,
           supplier_id: supplierId,
-          status: PURCHASE_ORDERED,
+          status: status ?? PURCHASE_ORDERED,
           total_amount: total,
           amount_paid: amountPaid,
           notes: notes || null,
@@ -479,11 +499,82 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
     [refreshAll, storeId],
   );
 
+  const updateDraftPurchase = useCallback<AccountingContextValue["updateDraftPurchase"]>(
+    async ({ purchaseId, supplierId, lines, amountPaid, notes, confirm }) => {
+      if (!storeId) throw new Error("No active store");
+      if (confirm && lines.length === 0) throw new Error("Add at least one line before confirming");
+      const total = lines.reduce((sum, line) => sum + line.quantity * line.unit_cost, 0);
+      const { data: oldLines, error: oldError } = await supabase
+        .from("purchase_items")
+        .select("id")
+        .eq("purchase_id", purchaseId);
+      if (oldError) throw oldError;
+      // The status filter makes this a no-op (and an error) unless the order is still a draft,
+      // so an already-ordered or received purchase can never be rewritten from here.
+      const { data: updated, error } = await supabase
+        .from("purchases")
+        .update({
+          supplier_id: supplierId,
+          total_amount: total,
+          amount_paid: amountPaid,
+          notes: notes || null,
+          ...(confirm ? { status: PURCHASE_ORDERED } : {}),
+        })
+        .eq("id", purchaseId)
+        .eq("store_id", storeId)
+        .eq("status", PURCHASE_DRAFT)
+        .select("id");
+      if (error) throw error;
+      if (!updated || updated.length === 0) throw new Error("Only draft purchases can be edited");
+      // New lines first, then remove the old ones: a failure leaves duplicates, never an empty order.
+      if (lines.length > 0) {
+        const { error: insertError } = await supabase.from("purchase_items").insert(
+          lines.map((line) => ({
+            purchase_id: purchaseId,
+            item_id: line.item_id,
+            quantity: line.quantity,
+            unit_cost: line.unit_cost,
+            unit_name: line.unit_name || null,
+            conversion: line.conversion || 1,
+            received_quantity: 0,
+          })),
+        );
+        if (insertError) throw insertError;
+      }
+      const oldIds = (oldLines ?? []).map((row) => row.id);
+      if (oldIds.length > 0) {
+        const { error: deleteError } = await supabase.from("purchase_items").delete().in("id", oldIds);
+        if (deleteError) throw deleteError;
+      }
+      await refreshAll();
+    },
+    [refreshAll, storeId],
+  );
+
+  const confirmPurchase = useCallback<AccountingContextValue["confirmPurchase"]>(
+    async (purchaseId) => {
+      if (!storeId) throw new Error("No active store");
+      const purchase = purchases.find((p) => p.id === purchaseId);
+      if (!purchase || purchase.lines.length === 0) throw new Error("Add at least one line before confirming");
+      const { data, error } = await supabase
+        .from("purchases")
+        .update({ status: PURCHASE_ORDERED })
+        .eq("id", purchaseId)
+        .eq("store_id", storeId)
+        .eq("status", PURCHASE_DRAFT)
+        .select("id");
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error("Only draft purchases can be confirmed");
+      await refreshAll();
+    },
+    [purchases, refreshAll, storeId],
+  );
+
   const receivePurchase = useCallback(
     async (purchaseId: string) => {
       if (!storeId) return;
       const purchase = purchases.find((p) => p.id === purchaseId);
-      if (!purchase || purchase.status === PURCHASE_RECEIVED) return;
+      if (!purchase || !canReceiveLegacy(purchase.status)) return;
       const unpaid = Math.max(purchase.total_amount - purchase.amount_paid, 0);
 
       // Increment stock for each received line.
@@ -668,6 +759,8 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       saveSupplier,
       deleteSupplier,
       createPurchase,
+      updateDraftPurchase,
+      confirmPurchase,
       receivePurchase,
       deletePurchase,
       saveExpense,
@@ -698,6 +791,8 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       saveSupplier,
       deleteSupplier,
       createPurchase,
+      updateDraftPurchase,
+      confirmPurchase,
       receivePurchase,
       deletePurchase,
       saveExpense,

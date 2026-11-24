@@ -590,28 +590,37 @@ export type Database = {
       }
       purchase_items: {
         Row: {
+          conversion: number
           created_at: string
           id: string
           item_id: string
           purchase_id: string
           quantity: number
+          received_quantity: number
           unit_cost: number
+          unit_name: string | null
         }
         Insert: {
+          conversion?: number
           created_at?: string
           id?: string
           item_id: string
           purchase_id: string
           quantity: number
+          received_quantity?: number
           unit_cost: number
+          unit_name?: string | null
         }
         Update: {
+          conversion?: number
           created_at?: string
           id?: string
           item_id?: string
           purchase_id?: string
           quantity?: number
+          received_quantity?: number
           unit_cost?: number
+          unit_name?: string | null
         }
         Relationships: [
           {
