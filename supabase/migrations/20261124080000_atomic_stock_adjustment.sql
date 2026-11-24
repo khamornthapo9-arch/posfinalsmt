@@ -8,10 +8,14 @@
 -- raising) a failure of step 2. Two devices could overwrite each other and stock could change
 -- with no movement record.
 --
--- Security: SECURITY DEFINER with a fixed search_path. Because it bypasses row-level security it
--- authorises the caller explicitly, using the store of the ITEM ROW read from the database (never
--- trusting the store id alone), and requires MANAGER (has_store_role also accepts the store
--- owner, matching the existing "Managers manage inventory" policy on items).
+-- Security: SECURITY DEFINER with an EMPTY search_path (every object is schema-qualified, so a
+-- caller can never shadow a table or function by creating one in their own schema). Because it
+-- bypasses row-level security it authorises the caller explicitly, using the store of the ITEM ROW
+-- read from the database (never trusting the store id alone), and requires MANAGER (has_store_role
+-- also accepts the store owner, matching the existing "Managers manage inventory" policy on items).
+-- Authorisation runs twice: once before locking (so unauthorised callers cannot lock rows) and
+-- again AFTER the row lock, against the locked row, so a change of store or role between the two
+-- cannot be exploited.
 --
 -- Concurrency: the item row is locked FOR UPDATE; the new stock is computed from the locked,
 -- current database value (stock = stock + delta), so concurrent adjustments serialise and both apply.
@@ -30,11 +34,12 @@ CREATE OR REPLACE FUNCTION public.adjust_stock(
 ) RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
   v_uid uuid := auth.uid();
   v_item_store uuid;
+  v_locked_store uuid;
   v_prev numeric;
   v_new numeric;
   v_stored numeric;
@@ -50,7 +55,7 @@ BEGIN
   IF p_delta IS NULL OR p_delta = 0 THEN
     RAISE EXCEPTION 'INVALID_DELTA';
   END IF;
-  IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+  IF p_reason IS NULL OR pg_catalog.btrim(p_reason) = '' THEN
     RAISE EXCEPTION 'REASON_REQUIRED';
   END IF;
 
@@ -63,8 +68,17 @@ BEGIN
     RAISE EXCEPTION 'ACCESS_DENIED';
   END IF;
 
-  -- Lock the item and read the CURRENT stock from the database.
-  SELECT stock_quantity INTO v_prev FROM public.items WHERE id = p_item_id FOR UPDATE;
+  -- Lock the item and read the CURRENT store and stock from the database.
+  SELECT store_id, stock_quantity INTO v_locked_store, v_prev
+  FROM public.items WHERE id = p_item_id FOR UPDATE;
+
+  -- Re-authorise against the LOCKED row: nothing has been changed yet, so rejecting here is clean.
+  IF NOT FOUND OR v_locked_store IS DISTINCT FROM p_store_id THEN
+    RAISE EXCEPTION 'ITEM_NOT_FOUND';
+  END IF;
+  IF NOT public.has_store_role(v_locked_store, 'MANAGER') THEN
+    RAISE EXCEPTION 'ACCESS_DENIED';
+  END IF;
 
   -- Duplicate request: already applied, return the original outcome.
   SELECT quantity INTO v_dup_qty
@@ -75,7 +89,7 @@ BEGIN
     AND reference_id::text = p_request_id::text
   LIMIT 1;
   IF FOUND THEN
-    RETURN jsonb_build_object(
+    RETURN pg_catalog.jsonb_build_object(
       'item_id', p_item_id,
       'duplicate', true,
       'delta', v_dup_qty,
@@ -95,15 +109,16 @@ BEGIN
     RAISE EXCEPTION 'QUANTITY_NOT_REPRESENTABLE';
   END IF;
 
-  v_note := btrim(p_reason) ||
-    CASE WHEN p_note IS NOT NULL AND btrim(p_note) <> '' THEN ' - ' || btrim(p_note) ELSE '' END;
+  v_note := pg_catalog.btrim(p_reason) ||
+    CASE WHEN p_note IS NOT NULL AND pg_catalog.btrim(p_note) <> ''
+         THEN ' - ' || pg_catalog.btrim(p_note) ELSE '' END;
 
   INSERT INTO public.inventory_movements
     (store_id, item_id, movement_type, quantity, note, created_by, reference_id)
   VALUES
     (p_store_id, p_item_id, 'ADJUSTMENT', p_delta, v_note, v_uid, p_request_id);
 
-  RETURN jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'item_id', p_item_id,
     'duplicate', false,
     'previous_quantity', v_prev,
