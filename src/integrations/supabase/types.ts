@@ -1047,6 +1047,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_item_with_opening_stock: {
+        Args: {
+          p_barcode: string | null
+          p_category: string | null
+          p_cost_price: number
+          p_image_url: string | null
+          p_item_id: string
+          p_min_stock_threshold: number
+          p_name: string
+          p_opening_stock: number
+          p_price: number
+          p_qr_value: string | null
+          p_sku: string
+          p_store_id: string
+          p_units: Json | null
+        }
+        Returns: Json
+      }
       post_sale: {
         Args: {
           p_created_at?: string
