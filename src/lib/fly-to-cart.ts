@@ -64,7 +64,9 @@ export function flyToCart(source: Element, options: { imageSrc?: string | null }
     zIndex: "9999",
     willChange: "transform, opacity",
     boxShadow: "0 8px 20px -6px rgb(0 0 0 / 0.35)",
-    background: hasImage ? `center / cover no-repeat url("${(options.imageSrc ?? "").replace(/"/g, "%22")}")` : "var(--primary)",
+    background: hasImage
+      ? `center / cover no-repeat url("${(options.imageSrc ?? "").replace(/"/g, "%22")}")`
+      : "var(--primary)",
     border: "2px solid var(--card, #fff)",
   } satisfies Partial<CSSStyleDeclaration>);
   document.body.appendChild(el);

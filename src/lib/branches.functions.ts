@@ -74,7 +74,11 @@ export const createBranch = createServerFn({ method: "POST" })
     const name = data.name.trim().slice(0, 80);
     if (!name) throw new Error("ဆိုင်ခွဲ အမည် ထည့်ပါ");
     assertPin(data.pin);
-    const parent = await requireOwnedProStore(context.supabase as never, context.userId, data.storeId);
+    const parent = await requireOwnedProStore(
+      context.supabase as never,
+      context.userId,
+      data.storeId,
+    );
     if (!parent.is_pro) throw new Error("ဆိုင်ခွဲ ဖွင့်ရန် Pro Plan လိုအပ်ပါသည်");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -142,7 +146,9 @@ export const createBranch = createServerFn({ method: "POST" })
 async function loadOwnedBranch(supabase: unknown, branchId: string) {
   const { data } = await (
     supabase as {
-      from: (t: string) => OwnedRowQuery<{ id: string; auth_user_id: string; branch_store_id: string }>;
+      from: (
+        t: string,
+      ) => OwnedRowQuery<{ id: string; auth_user_id: string; branch_store_id: string }>;
     }
   )
     .from("branches")
@@ -160,14 +166,12 @@ export const resetBranchPin = createServerFn({ method: "POST" })
     assertPin(data.pin);
     const branch = await loadOwnedBranch(context.supabase, data.branchId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin
-      .from("branch_secrets")
-      .upsert({
-        branch_id: branch.id,
-        pin_hash: await pinHash(branch.id, data.pin),
-        failed_attempts: 0,
-        locked_until: null,
-      });
+    await supabaseAdmin.from("branch_secrets").upsert({
+      branch_id: branch.id,
+      pin_hash: await pinHash(branch.id, data.pin),
+      failed_attempts: 0,
+      locked_until: null,
+    });
     return { ok: true };
   });
 
@@ -192,7 +196,11 @@ export const setBranchActive = createServerFn({ method: "POST" })
 /** Public: a branch device signs in with its branch code + PIN. */
 export const branchLogin = createServerFn({ method: "POST" })
   .inputValidator((input: { code: string; pin: string }) => ({
-    code: String(input.code ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12),
+    code: String(input.code ?? "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .slice(0, 12),
     pin: String(input.pin ?? "").trim(),
   }))
   .handler(async ({ data }) => {

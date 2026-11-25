@@ -25,7 +25,8 @@ export const Route = createFileRoute("/admin_/admin")({
       { title: "Admin — ဆိုင်များနှင့် Pro စီမံခန့်ခွဲမှု | SMT POS" },
       {
         name: "description",
-        content: "SMT POS စီမံခန့်ခွဲသူ စာမျက်နှာ — ဆိုင်များ၏ Pro Plan ဖွင့်/ပိတ်ခြင်းနှင့် ကြေညာချက် ပေးပို့ခြင်း။",
+        content:
+          "SMT POS စီမံခန့်ခွဲသူ စာမျက်နှာ — ဆိုင်များ၏ Pro Plan ဖွင့်/ပိတ်ခြင်းနှင့် ကြေညာချက် ပေးပို့ခြင်း။",
       },
       { property: "og:title", content: "Admin — SMT POS" },
       { property: "og:description", content: "ဆိုင်များ၏ Plan နှင့် ကြေညာချက် စီမံခန့်ခွဲမှု။" },
@@ -67,7 +68,8 @@ const DEFAULT_SETTINGS: PlatformSettings = {
   email: "khamornthapo9@gmail.com",
   kbzpay: "09-45xxxxxxx (SMT POS)",
   wavepay: "09-97xxxxxxx (SMT POS)",
-  payment_note: "ငွေလွှဲပြီးပါက ပြေစာ (screenshot) ကို Telegram သို့မဟုတ် Viber သို့ ပို့ပေးပါ။ ၂၄ နာရီအတွင်း Pro ဖွင့်ပေးပါမည်။",
+  payment_note:
+    "ငွေလွှဲပြီးပါက ပြေစာ (screenshot) ကို Telegram သို့မဟုတ် Viber သို့ ပို့ပေးပါ။ ၂၄ နာရီအတွင်း Pro ဖွင့်ပေးပါမည်။",
 };
 
 function AdminPage() {
@@ -91,9 +93,15 @@ function AdminPage() {
     try {
       const [{ data: storeRows }, { data: contacts }, { data: anns }, { data: pSettings }] =
         await Promise.all([
-          supabase.from("stores").select("id, name, is_pro, created_at").order("created_at", { ascending: false }),
+          supabase
+            .from("stores")
+            .select("id, name, is_pro, created_at")
+            .order("created_at", { ascending: false }),
           supabase.from("store_contacts").select("store_id, phone, telegram, viber, email, note"),
-          supabase.from("announcements").select("id, message, is_active, audience").order("created_at", { ascending: false }),
+          supabase
+            .from("announcements")
+            .select("id, message, is_active, audience")
+            .order("created_at", { ascending: false }),
           supabase.from("platform_settings").select("*").eq("id", "default").maybeSingle(),
         ]);
 
@@ -138,7 +146,10 @@ function AdminPage() {
 
   const togglePro = async (store: StoreRow) => {
     setBusy(store.id);
-    const { error } = await supabase.from("stores").update({ is_pro: !store.is_pro }).eq("id", store.id);
+    const { error } = await supabase
+      .from("stores")
+      .update({ is_pro: !store.is_pro })
+      .eq("id", store.id);
     setBusy(null);
     if (error) {
       toast.error("Plan ပြောင်း၍ မရပါ");
@@ -225,15 +236,19 @@ function AdminPage() {
         {/* 1. Official Admin Contact & Payment Settings */}
         <div className="rounded-md border border-border bg-card p-4">
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <CreditCard className="h-4 w-4 text-primary" /> စီမံခန့်ခွဲသူ ဆက်သွယ်ရန်နှင့် ငွေပေးချေမှု အချက်အလက်များ
+            <CreditCard className="h-4 w-4 text-primary" /> စီမံခန့်ခွဲသူ ဆက်သွယ်ရန်နှင့်
+            ငွေပေးချေမှု အချက်အလက်များ
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            ဤနေရာတွင် ဖြည့်စွက်ထားသော အချက်အလက်များကို ဆိုင်များက Pro အဆင့်မြှင့်တင်ရာတွင် မြင်တွေ့ရမည်ဖြစ်ပါသည်။
+            ဤနေရာတွင် ဖြည့်စွက်ထားသော အချက်အလက်များကို ဆိုင်များက Pro အဆင့်မြှင့်တင်ရာတွင်
+            မြင်တွေ့ရမည်ဖြစ်ပါသည်။
           </p>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Telegram Handle / Username</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Telegram Handle / Username
+              </label>
               <div className="relative mt-1">
                 <Send className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <input
@@ -246,7 +261,9 @@ function AdminPage() {
             </div>
 
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Viber / ဖုန်းနံပါတ်</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                Viber / ဖုန်းနံပါတ်
+              </label>
               <div className="relative mt-1">
                 <Phone className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <input
@@ -279,7 +296,9 @@ function AdminPage() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="text-xs font-medium text-muted-foreground">ဆက်သွယ်ရန် အီးမေးလ်</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                ဆက်သွယ်ရန် အီးမေးလ်
+              </label>
               <div className="relative mt-1">
                 <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <input
@@ -292,10 +311,14 @@ function AdminPage() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="text-xs font-medium text-muted-foreground">ငွေလွှဲ ညွှန်ကြားချက် / မှတ်ချက်</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                ငွေလွှဲ ညွှန်ကြားချက် / မှတ်ချက်
+              </label>
               <textarea
                 value={adminSettings.payment_note}
-                onChange={(e) => setAdminSettings({ ...adminSettings, payment_note: e.target.value })}
+                onChange={(e) =>
+                  setAdminSettings({ ...adminSettings, payment_note: e.target.value })
+                }
                 rows={2}
                 placeholder="ငွေလွှဲပြီးပါက ပြေစာ (screenshot) ကို ပို့ပေးပါ..."
                 className="mt-1 w-full rounded-md border border-border bg-background p-2 text-xs"
@@ -308,7 +331,11 @@ function AdminPage() {
             onClick={() => void saveAdminSettings()}
             className="mt-3 inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
-            {savingSettings ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {savingSettings ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5" />
+            )}
             သိမ်းဆည်းမည်
           </button>
         </div>
@@ -332,7 +359,9 @@ function AdminPage() {
                 onClick={() => setAudience(a)}
                 className={cn(
                   "h-9 rounded-md border px-3 text-xs font-medium transition-colors",
-                  audience === a ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border hover:bg-accent",
+                  audience === a
+                    ? "border-primary bg-primary/10 text-primary font-semibold"
+                    : "border-border hover:bg-accent",
                 )}
               >
                 {a === "ALL" ? "ဆိုင်အားလုံး" : "ရွေးချယ်ထားသော ဆိုင်များ"}
@@ -350,14 +379,21 @@ function AdminPage() {
           {announcements.length > 0 && (
             <ul className="mt-3 space-y-1.5">
               {announcements.map((a) => (
-                <li key={a.id} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs">
+                <li
+                  key={a.id}
+                  className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs"
+                >
                   <span className="min-w-0 flex-1 truncate">{a.message}</span>
-                  <span className="text-muted-foreground">{a.audience === "ALL" ? "အားလုံး" : "ရွေးချယ်"}</span>
+                  <span className="text-muted-foreground">
+                    {a.audience === "ALL" ? "အားလုံး" : "ရွေးချယ်"}
+                  </span>
                   <button
                     onClick={() => void toggleActive(a.id, !a.is_active)}
                     className={cn(
                       "rounded-full px-2.5 py-0.5 font-semibold text-[11px]",
-                      a.is_active ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground",
+                      a.is_active
+                        ? "bg-emerald-500/15 text-emerald-600"
+                        : "bg-muted text-muted-foreground",
                     )}
                   >
                     {a.is_active ? "ဖွင့်" : "ပိတ်"}

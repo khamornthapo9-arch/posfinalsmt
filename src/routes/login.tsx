@@ -19,8 +19,9 @@ export const Route = createFileRoute("/login")({
   validateSearch: (
     search: Record<string, unknown>,
   ): { mode?: Mode | undefined; code?: string | undefined } => ({
-    mode: search['mode'] === "signup" ? "signup" : search['mode'] === "branch" ? "branch" : undefined,
-    code: typeof search['code'] === "string" ? search['code'] : undefined,
+    mode:
+      search["mode"] === "signup" ? "signup" : search["mode"] === "branch" ? "branch" : undefined,
+    code: typeof search["code"] === "string" ? search["code"] : undefined,
   }),
   head: () => ({
     meta: [
@@ -45,9 +46,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
   const { session, store, loading, refreshStore } = useAuth();
-  const [mode, setMode] = useState<Mode>(
-    search.mode ?? (search.code ? "branch" : "signin"),
-  );
+  const [mode, setMode] = useState<Mode>(search.mode ?? (search.code ? "branch" : "signin"));
   const [branchCode, setBranchCode] = useState(search.code ?? "");
   const [branchPin, setBranchPin] = useState("");
   const loginBranch = useServerFn(branchLogin);
@@ -56,7 +55,6 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  
 
   useEffect(() => {
     if (!loading && session && store) void navigate({ to: "/register", replace: true });
@@ -145,7 +143,10 @@ function LoginPage() {
 
   return (
     <main className="hero-glow relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 py-10">
-      <div aria-hidden="true" className="dot-grid pointer-events-none absolute inset-0 opacity-50" />
+      <div
+        aria-hidden="true"
+        className="dot-grid pointer-events-none absolute inset-0 opacity-50"
+      />
       <div className="relative w-full max-w-md">
         <div className="mb-6 flex justify-center">
           <Link to="/">
@@ -161,66 +162,70 @@ function LoginPage() {
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-pop sm:p-8">
           <>
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-brand">
-                  <ScanLine className="h-5 w-5" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-semibold tracking-tight">SMT POS</h1>
-                  <p className="text-sm text-muted-foreground">
-                    {mode === "signin" ? "အကောင့်ဝင်ရန်" : "ဆိုင်အသစ် စတင်ရန်"}
-                  </p>
-                </div>
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-brand">
+                <ScanLine className="h-5 w-5" />
               </div>
+              <div>
+                <h1 className="text-lg font-semibold tracking-tight">SMT POS</h1>
+                <p className="text-sm text-muted-foreground">
+                  {mode === "signin" ? "အကောင့်ဝင်ရန်" : "ဆိုင်အသစ် စတင်ရန်"}
+                </p>
+              </div>
+            </div>
 
-              <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
-                <button
-                  type="button"
-                  onClick={() => setMode("signin")}
-                  className={`rounded-md py-2 transition-colors ${mode !== "branch" ? "bg-card font-semibold text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  ပိုင်ရှင်
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode("branch")}
-                  className={`rounded-md py-2 transition-colors ${mode === "branch" ? "bg-card font-semibold text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  ဆိုင်ခွဲဝင်ရန်
-                </button>
-              </div>
-              {mode === "branch" ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bcode">ဆိုင်ခွဲ ကုဒ်</Label>
-                    <Input
-                      id="bcode"
-                      value={branchCode}
-                      onChange={(e) => setBranchCode(e.target.value.toUpperCase())}
-                      placeholder="ABC123"
-                      maxLength={12}
-                      className="min-h-11 font-mono tracking-widest"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bpin">PIN</Label>
-                    <Input
-                      id="bpin"
-                      type="password"
-                      inputMode="numeric"
-                      value={branchPin}
-                      onChange={(e) => setBranchPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="••••"
-                      className="min-h-11 tracking-widest"
-                      onKeyDown={(e) => e.key === "Enter" && void submitBranch()}
-                    />
-                  </div>
-                  <Button onClick={() => void submitBranch()} disabled={busy} className="min-h-11 w-full">
-                    {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    ဆိုင်ခွဲ ဝင်ရန်
-                  </Button>
+            <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className={`rounded-md py-2 transition-colors ${mode !== "branch" ? "bg-card font-semibold text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                ပိုင်ရှင်
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("branch")}
+                className={`rounded-md py-2 transition-colors ${mode === "branch" ? "bg-card font-semibold text-foreground shadow-card" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                ဆိုင်ခွဲဝင်ရန်
+              </button>
+            </div>
+            {mode === "branch" ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bcode">ဆိုင်ခွဲ ကုဒ်</Label>
+                  <Input
+                    id="bcode"
+                    value={branchCode}
+                    onChange={(e) => setBranchCode(e.target.value.toUpperCase())}
+                    placeholder="ABC123"
+                    maxLength={12}
+                    className="min-h-11 font-mono tracking-widest"
+                  />
                 </div>
-              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="bpin">PIN</Label>
+                  <Input
+                    id="bpin"
+                    type="password"
+                    inputMode="numeric"
+                    value={branchPin}
+                    onChange={(e) => setBranchPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="••••"
+                    className="min-h-11 tracking-widest"
+                    onKeyDown={(e) => e.key === "Enter" && void submitBranch()}
+                  />
+                </div>
+                <Button
+                  onClick={() => void submitBranch()}
+                  disabled={busy}
+                  className="min-h-11 w-full"
+                >
+                  {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  ဆိုင်ခွဲ ဝင်ရန်
+                </Button>
+              </div>
+            ) : (
               <div className="space-y-4">
                 {mode === "signup" && (
                   <div className="space-y-2">
@@ -293,7 +298,7 @@ function LoginPage() {
                   </button>
                 </p>
               </div>
-              )}
+            )}
           </>
         </div>
       </div>

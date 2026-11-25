@@ -1,16 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  CreditCard,
-  LifeBuoy,
-  Loader2,
-  LogOut,
-  Mail,
-  Plus,
-  Send,
-  Store,
-  X,
-} from "lucide-react";
+import { CreditCard, LifeBuoy, Loader2, LogOut, Mail, Plus, Send, Store, X } from "lucide-react";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,13 +34,7 @@ export const Route = createFileRoute("/settings")({
 
 const CURRENCIES = ["Ks", "ကျပ်", "$", "€", "£", "¥", "₹"];
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="border-t border-border pt-5">
       <h2 className="mb-3 text-base font-semibold">{title}</h2>
@@ -357,10 +341,16 @@ function SettingsPage() {
                   disabled={uploading || !isPro}
                   className="inline-flex h-9 items-center gap-2 rounded-sm border border-border px-3 text-xs font-medium hover:bg-accent disabled:opacity-50"
                 >
-                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "လိုဂို ပြောင်းမည်"}
+                  {uploading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    "လိုဂို ပြောင်းမည်"
+                  )}
                 </button>
                 {!isPro && (
-                  <p className="text-[11px] text-muted-foreground">လိုဂိုတင်ရန် Pro Plan လိုအပ်ပါသည်</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    လိုဂိုတင်ရန် Pro Plan လိုအပ်ပါသည်
+                  </p>
                 )}
               </div>
             </div>
@@ -404,7 +394,9 @@ function SettingsPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-muted-foreground">ကောင်တာ အရောင်းစာရေး</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  ကောင်တာ အရောင်းစာရေး
+                </label>
                 <input
                   value={cashierName}
                   onChange={(e) => setCashierName(e.target.value)}

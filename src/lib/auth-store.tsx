@@ -60,10 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
     setOwnerId(activeSession.user.id);
-    const { data: list } = await supabase
-      .from("stores")
-      .select(STORE_COLUMNS)
-      .order("created_at");
+    const { data: list } = await supabase.from("stores").select(STORE_COLUMNS).order("created_at");
     const all = (list ?? []) as StoreRecord[];
     if (all.length > 0) {
       setStores(all);
@@ -179,7 +176,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateStore,
       signOut,
     }),
-    [session, store, stores, isBranchDevice, switchStore, loading, refreshStore, updateStore, signOut],
+    [
+      session,
+      store,
+      stores,
+      isBranchDevice,
+      switchStore,
+      loading,
+      refreshStore,
+      updateStore,
+      signOut,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -58,7 +58,6 @@ function ReceiptSettingsPage() {
     setFooter(isPro ? (store.receipt_footer ?? "") : "");
   }, [store, isPro]);
 
-
   const totals = useMemo(() => {
     const subtotal = SAMPLE_LINES.reduce((sum, l) => sum + l.qty * l.price, 0);
     const tax = (subtotal * taxPercent) / 100;
@@ -102,7 +101,6 @@ function ReceiptSettingsPage() {
     }
   };
 
-
   if (!canManageSettings) {
     return (
       <PosShell title="ပြေစာ ဒီဇိုင်း">
@@ -114,7 +112,6 @@ function ReceiptSettingsPage() {
   }
 
   return (
-
     <PosShell
       title="ပြေစာ ဒီဇိုင်း"
       subtitle="ပြင်ဆင်လိုက်တာနှင့်အမျှ ညာဘက်တွင် ချက်ချင်း မြင်ရပါမည်"
@@ -195,9 +192,7 @@ function ReceiptSettingsPage() {
           <section className="rounded-md border border-border bg-card p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold">ပြေစာ စာသားများ</h2>
-              {!isPro && (
-                <span className="text-xs text-muted-foreground">Pro Plan မှ စမည်</span>
-              )}
+              {!isPro && <span className="text-xs text-muted-foreground">Pro Plan မှ စမည်</span>}
             </div>
             <div className="space-y-3">
               <Field label="ခေါင်းစီး စာသား">
@@ -219,7 +214,11 @@ function ReceiptSettingsPage() {
                   maxLength={200}
                   disabled={!isPro}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
-                  placeholder={isPro ? "ကျေးဇူးတင်ပါသည်။ နောက်တစ်ခေါက် ကြွရောက်ပါဦး!" : "Pro Plan သို့ အဆင့်မြှင့်ပါ"}
+                  placeholder={
+                    isPro
+                      ? "ကျေးဇူးတင်ပါသည်။ နောက်တစ်ခေါက် ကြွရောက်ပါဦး!"
+                      : "Pro Plan သို့ အဆင့်မြှင့်ပါ"
+                  }
                 />
               </Field>
               <div className="flex items-center gap-2">
@@ -241,7 +240,6 @@ function ReceiptSettingsPage() {
               </div>
             </div>
           </section>
-
 
           <div className="flex gap-2">
             <button

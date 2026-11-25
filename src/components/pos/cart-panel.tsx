@@ -95,7 +95,9 @@ function quickAmounts(due: number): number[] {
     const next = Math.ceil(due / step) * step;
     if (next > due) set.add(next);
   }
-  return Array.from(set).sort((a, b) => a - b).slice(0, 4);
+  return Array.from(set)
+    .sort((a, b) => a - b)
+    .slice(0, 4);
 }
 
 export function CartPanel({
@@ -172,9 +174,7 @@ export function CartPanel({
     cashShort ||
     digitalUnconfirmed;
 
-  const digitalMethods = payments.filter(
-    (p) => p.id !== "ငွေသား" && p.id !== CREDIT_METHOD,
-  );
+  const digitalMethods = payments.filter((p) => p.id !== "ငွေသား" && p.id !== CREDIT_METHOD);
 
   const activeDigital = splitMode
     ? digitalMethods.filter((p) => (splits[p.id] ?? 0) > 0).map((p) => p.label)
@@ -238,7 +238,9 @@ export function CartPanel({
               <UserCheck className="h-3.5 w-3.5 shrink-0 text-primary" />
               <span className="font-semibold truncate">{customer.name}</span>
               {customer.phone && (
-                <span className="text-[11px] text-muted-foreground truncate">({customer.phone})</span>
+                <span className="text-[11px] text-muted-foreground truncate">
+                  ({customer.phone})
+                </span>
               )}
             </div>
             <button

@@ -9,7 +9,12 @@ interface MobileCheckoutBarProps {
   onCheckout: () => void;
 }
 
-export function MobileCheckoutBar({ cart, total, currencySymbol, onCheckout }: MobileCheckoutBarProps) {
+export function MobileCheckoutBar({
+  cart,
+  total,
+  currencySymbol,
+  onCheckout,
+}: MobileCheckoutBarProps) {
   const fmt = (n: number) => money(n, currencySymbol);
   const count = cart.reduce((sum, line) => sum + line.quantity, 0);
 
