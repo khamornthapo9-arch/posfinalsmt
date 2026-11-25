@@ -6,7 +6,9 @@ import { FREE_LIMITS } from "@/lib/subscription";
 import { PosShell } from "@/components/pos/pos-shell";
 import {
   useAccountingStore,
+  canDeletePurchase,
   canReceiveLegacy,
+  hasNonBaseUnit,
   PURCHASE_DRAFT,
   PURCHASE_ORDERED,
   type Purchase,
@@ -165,6 +167,8 @@ function SuppliersPage() {
             const supplier = suppliers.find((s) => s.id === purchase.supplier_id);
             const statusMeta = PURCHASE_STATUS_LABEL[purchase.status] ?? unknownStatusMeta(purchase.status);
             const isDraft = purchase.status === PURCHASE_DRAFT;
+            const nonBase = hasNonBaseUnit(purchase);
+            const receivable = canReceiveLegacy(purchase.status) && !nonBase;
             return (
               <div key={purchase.id} className="rounded-md border border-border bg-card p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -201,23 +205,37 @@ function SuppliersPage() {
                         </button>
                       </>
                     )}
-                    {canReceiveLegacy(purchase.status) && (
+                    {canReceiveLegacy(purchase.status) && nonBase && (
+                      <span className="max-w-48 text-[11px] leading-tight text-muted-foreground">
+                        ယူနစ်ကြီး (ဘူး/ဗူး) ဖြင့် မှာထားသောကြောင့် လက်ခံခြင်းကို နောက်အဆင့်တွင် ထည့်သွင်းမည်
+                      </span>
+                    )}
+                    {receivable && (
                       <button
                         onClick={() => {
-                          void receivePurchase(purchase.id).then(() => toast.success("ကုန်ပစ္စည်း လက်ခံရရှိပြီးပါပြီ"));
+                          void receivePurchase(purchase.id)
+                            .then(() => toast.success("ကုန်ပစ္စည်း လက်ခံရရှိပြီးပါပြီ"))
+                            .catch(() => toast.error("လက်ခံ၍ မရပါ"));
                         }}
                         className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"
                       >
                         <PackageCheck className="h-3.5 w-3.5" /> ရရှိပြီး
                       </button>
                     )}
-                    <button
-                      onClick={() => void deletePurchase(purchase.id)}
-                      aria-label="ဖျက်ရန်"
-                      className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {canDeletePurchase(purchase.status) && (
+                      <button
+                        onClick={() => {
+                          if (!window.confirm("ဤဝယ်ယူမှု အော်ဒါကို ဖျက်မလား?")) return;
+                          void deletePurchase(purchase.id)
+                            .then(() => toast.success("ဖျက်ပြီးပါပြီ"))
+                            .catch(() => toast.error("ဖျက်၍ မရပါ"));
+                        }}
+                        aria-label="ဖျက်ရန်"
+                        className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">

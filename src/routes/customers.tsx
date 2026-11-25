@@ -70,8 +70,9 @@ function CustomersPage() {
     });
   }, [customers, query, status, type, debtOnly]);
 
-  const totalDebt = activeCustomers.reduce((sum, c) => sum + c.balance, 0);
-  const debtorCount = activeCustomers.filter((c) => c.balance > 0).length;
+  // Debt totals include archived customers: archiving hides a customer, it does not cancel what they owe.
+  const totalDebt = customers.reduce((sum, c) => sum + c.balance, 0);
+  const debtorCount = customers.filter((c) => c.balance > 0).length;
 
   // အကြွေးစာရင်း CSV အစီရင်ခံစာ ထုတ်ယူရန်
   const exportDebtCsv = () => {
