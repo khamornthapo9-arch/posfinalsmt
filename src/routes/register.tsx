@@ -516,7 +516,7 @@ function RegisterPage() {
     const clientTransactionId = txnRef.current.id;
     setBusy(true);
     try {
-      const { offline, saleId, reference, creditPosted } = await recordSale({
+      const { offline, saleId, reference, creditPosted, ledgerPosted } = await recordSale({
         clientTransactionId,
         customerName: customer?.name ?? null,
         cashReceived: cashDue > 0 && cashTendered != null && !cashShort ? cashTendered : null,
@@ -533,7 +533,8 @@ function RegisterPage() {
             ? "UNPAID"
             : "PARTIAL",
       });
-      if (!offline) {
+      // When the database already wrote the ledger inside post_sale there is nothing left to post.
+      if (!offline && !ledgerPosted) {
         // The sale itself is already saved. If the accounting/credit posting fails, say so rather
         // than reporting the sale as failed (which would invite the cashier to ring it up twice).
         try {

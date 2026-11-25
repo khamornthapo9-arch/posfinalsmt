@@ -115,6 +115,8 @@ interface PosContextValue {
     reference: string;
     /** True when post_sale already applied the credit balance (skip the client credit posting). */
     creditPosted: boolean;
+    /** True when the database wrote the sale's ledger entries inside post_sale. */
+    ledgerPosted: boolean;
   }>;
   saveItem: (input: {
     id?: string;
@@ -285,11 +287,13 @@ interface ServerSaleInput {
  * Each step is checked before it runs, so a half-saved sale is resumed, never duplicated.
  * A non-network failure after the header exists rolls the header back (best effort).
  */
-async function postSaleToServer(input: ServerSaleInput): Promise<{ creditPosted: boolean }> {
+async function postSaleToServer(
+  input: ServerSaleInput,
+): Promise<{ creditPosted: boolean; ledgerPosted: boolean }> {
   // Preferred path: one atomic, idempotent database transaction (sale, lines, stock movements,
   // cost snapshot and credit balance). Falls back to the step-by-step path below only when the
   // function has not been installed in this database yet.
-  const { error: rpcError } = await supabase.rpc("post_sale", {
+  const { data: rpcData, error: rpcError } = await supabase.rpc("post_sale", {
     p_sale_id: input.id,
     p_store_id: input.storeId,
     p_lines: input.lines.map((line) => ({
@@ -311,7 +315,12 @@ async function postSaleToServer(input: ServerSaleInput): Promise<{ creditPosted:
     p_created_at: input.createdAt,
     p_is_offline_sync: input.isOfflineSync,
   });
-  if (!rpcError) return { creditPosted: true };
+  if (!rpcError) {
+    // Newer database versions write the ledger inside post_sale and say so; older ones do not,
+    // and the client keeps posting the ledger itself (so deploy order is safe either way).
+    const ledgerPosted = (rpcData as { ledger_posted?: boolean } | null)?.ledger_posted === true;
+    return { creditPosted: true, ledgerPosted };
+  }
   const missing =
     rpcError.code === "PGRST202" ||
     rpcError.code === "42883" ||
@@ -387,7 +396,7 @@ async function postSaleToServer(input: ServerSaleInput): Promise<{ creditPosted:
     }
     throw err;
   }
-  return { creditPosted: false };
+  return { creditPosted: false, ledgerPosted: false };
 }
 
 function PosProviderInner({ children }: { children: ReactNode }) {
@@ -650,14 +659,15 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           await posDb.pending_sales.add(offlineSale);
           await applyLocalStock();
         }
-        return { offline: true, saleId: null, reference: reference(true), creditPosted: false };
+        return { offline: true, saleId: null, reference: reference(true), creditPosted: false, ledgerPosted: false };
       };
 
       if (!(navigator.onLine && isOnline)) return queueOffline();
 
       let creditPosted = false;
+      let ledgerPosted = false;
       try {
-        ({ creditPosted } = await postSaleToServer({
+        ({ creditPosted, ledgerPosted } = await postSaleToServer({
           id: txnId,
           storeId,
           userId,
@@ -683,7 +693,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         throw saleErrorFromServer(err);
       }
       await refreshCatalog();
-      return { offline: false, saleId: txnId, reference: reference(false), creditPosted };
+      return { offline: false, saleId: txnId, reference: reference(false), creditPosted, ledgerPosted };
     },
     [isOnline, refreshCatalog, storeId, userId],
   );
