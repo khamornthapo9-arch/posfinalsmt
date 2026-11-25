@@ -36,5 +36,13 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // Intentional: shadcn/ui primitives export their `*Variants` helpers next to the component, and
+    // the context-provider modules export their `use*` hooks next to the provider. Moving those
+    // exports would touch every importer and only affects dev-time fast refresh (it resets local
+    // state on edit), never production behaviour.
+    files: ["src/components/ui/**/*.{ts,tsx}", "src/lib/*-store.tsx", "src/lib/roles.tsx"],
+    rules: { "react-refresh/only-export-components": "off" },
+  },
   eslintPluginPrettier,
 );
