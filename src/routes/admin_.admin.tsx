@@ -94,7 +94,7 @@ function AdminPage() {
           supabase.from("stores").select("id, name, is_pro, created_at").order("created_at", { ascending: false }),
           supabase.from("store_contacts").select("store_id, phone, telegram, viber, email, note"),
           supabase.from("announcements").select("id, message, is_active, audience").order("created_at", { ascending: false }),
-          (supabase as any).from("platform_settings").select("*").eq("id", "default").maybeSingle(),
+          supabase.from("platform_settings").select("*").eq("id", "default").maybeSingle(),
         ]);
 
       const byStore = new Map((contacts ?? []).map((c) => [c.store_id, c]));
@@ -180,7 +180,7 @@ function AdminPage() {
   const saveAdminSettings = async () => {
     setSavingSettings(true);
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("platform_settings")
         .upsert(
           { id: "default", ...adminSettings, updated_at: new Date().toISOString() },

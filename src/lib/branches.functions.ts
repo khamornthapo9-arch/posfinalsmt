@@ -28,8 +28,25 @@ function assertPin(pin: string) {
   if (!/^\d{4,6}$/.test(pin)) throw new Error("PIN သည် ဂဏန်း ၄ လုံးမှ ၆ လုံး ဖြစ်ရပါမည်");
 }
 
+/** Minimal shape of the Supabase query builder used by the helpers below. */
+interface OwnedRowQuery<T> {
+  select: (columns: string) => {
+    eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: T | null }> };
+  };
+}
+
+interface OwnedStoreRow {
+  id: string;
+  owner_id: string;
+  is_pro: boolean;
+  parent_store_id: string | null;
+  currency_symbol: string;
+  tax_rate: number;
+  business_type: string;
+}
+
 async function requireOwnedProStore(
-  supabase: { from: (t: "stores") => any },
+  supabase: { from: (t: "stores") => OwnedRowQuery<OwnedStoreRow> },
   userId: string,
   storeId: string,
 ) {
@@ -123,7 +140,11 @@ export const createBranch = createServerFn({ method: "POST" })
   });
 
 async function loadOwnedBranch(supabase: unknown, branchId: string) {
-  const { data } = await (supabase as { from: (t: string) => any })
+  const { data } = await (
+    supabase as {
+      from: (t: string) => OwnedRowQuery<{ id: string; auth_user_id: string; branch_store_id: string }>;
+    }
+  )
     .from("branches")
     .select("id, auth_user_id, branch_store_id")
     .eq("id", branchId)

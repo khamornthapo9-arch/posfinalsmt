@@ -116,7 +116,7 @@ function PlanSettingsPage() {
     // 2. Fetch official admin contact & payment info from platform_settings
     void (async () => {
       try {
-        const { data } = await (supabase as any)
+        const { data } = await supabase
           .from("platform_settings")
           .select("*")
           .eq("id", "default")
