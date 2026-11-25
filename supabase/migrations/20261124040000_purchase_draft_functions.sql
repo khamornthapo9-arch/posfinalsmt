@@ -57,6 +57,9 @@ BEGIN
     v_cost := (v_line->>'unit_cost')::numeric;
     v_conv := COALESCE((v_line->>'conversion')::integer, 1);
     IF v_qty IS NULL OR v_qty <= 0 THEN RAISE EXCEPTION 'invalid_quantity'; END IF;
+    -- purchase_items.quantity is an INTEGER column (verified live): reject fractions instead of
+    -- letting PostgreSQL round them silently (0.4 would otherwise be stored as 0).
+    IF v_qty <> trunc(v_qty) THEN RAISE EXCEPTION 'invalid_quantity'; END IF;
     IF v_cost IS NULL OR v_cost < 0 THEN RAISE EXCEPTION 'invalid_cost'; END IF;
     IF v_conv < 1 THEN RAISE EXCEPTION 'invalid_conversion'; END IF;
     IF NOT EXISTS (
