@@ -1,0 +1,32 @@
+# ONE-OFF: formats the code with the project's own ESLint+Prettier rules and commits the result
+# to this same branch (chore/prettier-format). Delete this file before merging the branch.
+name: Format once
+
+on:
+  push:
+    branches: [chore/prettier-format]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Auto-fix (prettier rule via ESLint)
+        run: bunx eslint . --fix || true
+      - name: Commit and push if anything changed
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "chore: apply prettier formatting (eslint --fix)"
+            git push origin HEAD:chore/prettier-format
+          else
+            echo "Nothing to format."
+          fi
