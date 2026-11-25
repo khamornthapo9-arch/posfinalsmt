@@ -11,9 +11,18 @@ export function LottiePlayer({ src, className }: { src: string; className?: stri
         fetch(src).then((r) => r.json()),
       ]);
       if (cancelled || !ref.current) return;
-      anim = lottie.loadAnimation({ container: ref.current, renderer: "svg", loop: true, autoplay: true, animationData: data });
+      anim = lottie.loadAnimation({
+        container: ref.current,
+        renderer: "svg",
+        loop: true,
+        autoplay: true,
+        animationData: data,
+      });
     })();
-    return () => { cancelled = true; anim?.destroy(); };
+    return () => {
+      cancelled = true;
+      anim?.destroy();
+    };
   }, [src]);
   return <div ref={ref} className={className} aria-hidden />;
 }

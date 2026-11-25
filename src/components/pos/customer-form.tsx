@@ -79,7 +79,9 @@ export function CustomerForm({
     setErrors(found);
     if (Object.keys(found).length > 0) return;
     setSaving(true);
-    void onSave({ ...(customer ? { id: customer.id } : {}), ...values }).finally(() => setSaving(false));
+    void onSave({ ...(customer ? { id: customer.id } : {}), ...values }).finally(() =>
+      setSaving(false),
+    );
   };
 
   const field = (
@@ -87,7 +89,12 @@ export function CustomerForm({
     label: string,
     value: string,
     set: (v: string) => void,
-    opts: { error?: string | undefined; type?: string; inputMode?: "tel" | "email"; required?: boolean } = {},
+    opts: {
+      error?: string | undefined;
+      type?: string;
+      inputMode?: "tel" | "email";
+      required?: boolean;
+    } = {},
   ) => (
     <div>
       <label className={labelClass} htmlFor={id}>
@@ -128,15 +135,29 @@ export function CustomerForm({
         className="flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-xl border border-border bg-card shadow-lg sm:rounded-md"
       >
         <div className="flex items-center justify-between px-5 pb-3 pt-5">
-          <h2 className="text-sm font-semibold">{customer ? "ဖောက်သည် ပြင်ဆင်ရန်" : "ဖောက်သည် အသစ်"}</h2>
-          <Button type="button" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+          <h2 className="text-sm font-semibold">
+            {customer ? "ဖောက်သည် ပြင်ဆင်ရန်" : "ဖောက်သည် အသစ်"}
+          </h2>
+          <Button
+            type="button"
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 pb-2">
           {field("c-name", "အမည်", name, setName, { error: errors.name, required: true })}
-          {field("c-phone", "ဖုန်းနံပါတ်", phone, setPhone, { error: errors.phone, inputMode: "tel" })}
-          {field("c-email", "အီးမေးလ်", email, setEmail, { error: errors.email, type: "email", inputMode: "email" })}
+          {field("c-phone", "ဖုန်းနံပါတ်", phone, setPhone, {
+            error: errors.phone,
+            inputMode: "tel",
+          })}
+          {field("c-email", "အီးမေးလ်", email, setEmail, {
+            error: errors.email,
+            type: "email",
+            inputMode: "email",
+          })}
           {field("c-address", "လိပ်စာ", address, setAddress)}
           {field("c-note", "မှတ်ချက်", note, setNote)}
         </div>

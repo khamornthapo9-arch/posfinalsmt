@@ -26,7 +26,10 @@ export const Route = createFileRoute("/suppliers")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { title: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ — SMT POS" },
-      { name: "description", content: "ကုန်သွင်းသူများ၊ ဝယ်ယူမှု အော်ဒါများနှင့် ပေးရန်ကြွေးများကို စီမံပါ။" },
+      {
+        name: "description",
+        content: "ကုန်သွင်းသူများ၊ ဝယ်ယူမှု အော်ဒါများနှင့် ပေးရန်ကြွေးများကို စီမံပါ။",
+      },
       { property: "og:title", content: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ — SMT POS" },
       { property: "og:description", content: "SMT POS ဝယ်ယူမှု စီမံခန့်ခွဲမှု။" },
     ],
@@ -37,11 +40,20 @@ export const Route = createFileRoute("/suppliers")({
 const PURCHASE_STATUS_LABEL: Record<string, { label: string; color: string }> = {
   DRAFT: { label: "မူကြမ်း", color: "bg-muted text-muted-foreground" },
   ORDERED: { label: "အော်ဒါတင်ပြီး", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
-  စောင့်ဆိုင်းဆဲ: { label: "စောင့်ဆိုင်းဆဲ", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
-  PARTIALLY_RECEIVED: { label: "တစ်စိတ်တစ်ပိုင်း ရရှိပြီး", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
+  စောင့်ဆိုင်းဆဲ: {
+    label: "စောင့်ဆိုင်းဆဲ",
+    color: "bg-amber-500/10 text-amber-600 border-amber-200",
+  },
+  PARTIALLY_RECEIVED: {
+    label: "တစ်စိတ်တစ်ပိုင်း ရရှိပြီး",
+    color: "bg-purple-500/10 text-purple-600 border-purple-200",
+  },
   ရရှိပြီး: { label: "ရရှိပြီး", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
   RECEIVED: { label: "ရရှိပြီး", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
-  CANCELLED: { label: "ပယ်ဖျက်ပြီး", color: "bg-destructive/10 text-destructive border-destructive/20" },
+  CANCELLED: {
+    label: "ပယ်ဖျက်ပြီး",
+    color: "bg-destructive/10 text-destructive border-destructive/20",
+  },
 };
 
 // Unknown or missing statuses must never crash the list: show the raw value in a neutral badge.
@@ -88,7 +100,10 @@ function SuppliersPage() {
   }
 
   return (
-    <PosShell title="ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ" subtitle="ကုန်သွင်းသူ ကြွေးများနှင့် ဝယ်ယူမှု အော်ဒါများ">
+    <PosShell
+      title="ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ"
+      subtitle="ကုန်သွင်းသူ ကြွေးများနှင့် ဝယ်ယူမှု အော်ဒါများ"
+    >
       <div className="space-y-4 p-3 sm:p-4">
         <div className="flex flex-wrap gap-2">
           <button
@@ -123,7 +138,12 @@ function SuppliersPage() {
                 <tr key={supplier.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-3 font-medium">{supplier.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{supplier.phone ?? "—"}</td>
-                  <td className={cn("px-4 py-3 text-right tabular-nums", supplier.balance > 0 && "font-semibold text-destructive")}>
+                  <td
+                    className={cn(
+                      "px-4 py-3 text-right tabular-nums",
+                      supplier.balance > 0 && "font-semibold text-destructive",
+                    )}
+                  >
                     {fmt(supplier.balance)}
                   </td>
                   <td className="px-4 py-3">
@@ -165,7 +185,8 @@ function SuppliersPage() {
           )}
           {purchases.map((purchase) => {
             const supplier = suppliers.find((s) => s.id === purchase.supplier_id);
-            const statusMeta = PURCHASE_STATUS_LABEL[purchase.status] ?? unknownStatusMeta(purchase.status);
+            const statusMeta =
+              PURCHASE_STATUS_LABEL[purchase.status] ?? unknownStatusMeta(purchase.status);
             const isDraft = purchase.status === PURCHASE_DRAFT;
             const nonBase = hasNonBaseUnit(purchase);
             const receivable = canReceiveLegacy(purchase.status) && !nonBase;
@@ -174,13 +195,21 @@ function SuppliersPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-medium">{supplier?.name ?? "ကုန်သွင်းသူ မသတ်မှတ်"}</p>
-                      <span className={cn("inline-block rounded-full px-2 py-0.5 text-[11px] font-medium border", statusMeta.color)}>
+                      <p className="text-sm font-medium">
+                        {supplier?.name ?? "ကုန်သွင်းသူ မသတ်မှတ်"}
+                      </p>
+                      <span
+                        className={cn(
+                          "inline-block rounded-full px-2 py-0.5 text-[11px] font-medium border",
+                          statusMeta.color,
+                        )}
+                      >
                         {statusMeta.label}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {purchase.created_at.slice(0, 10)} · {statusMeta.label} · {fmt(purchase.total_amount)}
+                      {purchase.created_at.slice(0, 10)} · {statusMeta.label} ·{" "}
+                      {fmt(purchase.total_amount)}
                     </p>
                   </div>
                   <div className="flex gap-1">
@@ -207,7 +236,8 @@ function SuppliersPage() {
                     )}
                     {canReceiveLegacy(purchase.status) && nonBase && (
                       <span className="max-w-48 text-[11px] leading-tight text-muted-foreground">
-                        ယူနစ်ကြီး (ဘူး/ဗူး) ဖြင့် မှာထားသောကြောင့် လက်ခံခြင်းကို နောက်အဆင့်တွင် ထည့်သွင်းမည်
+                        ယူနစ်ကြီး (ဘူး/ဗူး) ဖြင့် မှာထားသောကြောင့် လက်ခံခြင်းကို နောက်အဆင့်တွင်
+                        ထည့်သွင်းမည်
                       </span>
                     )}
                     {receivable && (
@@ -241,7 +271,8 @@ function SuppliersPage() {
                 <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                   {purchase.lines.map((line, i) => (
                     <li key={i}>
-                      {line.name || "—"} × {line.quantity} {line.unit_name ? `(${line.unit_name})` : "ခု"} @ {fmt(line.unit_cost)}
+                      {line.name || "—"} × {line.quantity}{" "}
+                      {line.unit_name ? `(${line.unit_name})` : "ခု"} @ {fmt(line.unit_cost)}
                       {line.conversion && line.conversion > 1 && (
                         <span className="ml-1 text-[11px] text-muted-foreground/80">
                           (စုစုပေါင်း {line.quantity * line.conversion} ခု)
@@ -261,7 +292,9 @@ function SuppliersPage() {
           onClose={() => setSupplierOpen(false)}
           onSave={async (values) => {
             if (!isPro && suppliers.length >= FREE_LIMITS.suppliers) {
-              toast.error(`Standard အစီအစဉ်တွင် ကုန်သွင်းသူ ${FREE_LIMITS.suppliers} ဦးသာ သိမ်းနိုင်သည်`);
+              toast.error(
+                `Standard အစီအစဉ်တွင် ကုန်သွင်းသူ ${FREE_LIMITS.suppliers} ဦးသာ သိမ်းနိုင်သည်`,
+              );
               return;
             }
             await saveSupplier(values);
@@ -343,23 +376,46 @@ function SupplierModal({
         </div>
         <div className="space-y-3">
           <div>
-            <label className={labelClass} htmlFor="s-name">အမည်</label>
-            <input id="s-name" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+            <label className={labelClass} htmlFor="s-name">
+              အမည်
+            </label>
+            <input
+              id="s-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+            />
           </div>
           <div>
-            <label className={labelClass} htmlFor="s-phone">ဖုန်းနံပါတ်</label>
-            <input id="s-phone" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
+            <label className={labelClass} htmlFor="s-phone">
+              ဖုန်းနံပါတ်
+            </label>
+            <input
+              id="s-phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className={inputClass}
+            />
           </div>
           <div>
-            <label className={labelClass} htmlFor="s-note">မှတ်ချက်</label>
-            <input id="s-note" value={note} onChange={(e) => setNote(e.target.value)} className={inputClass} />
+            <label className={labelClass} htmlFor="s-note">
+              မှတ်ချက်
+            </label>
+            <input
+              id="s-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className={inputClass}
+            />
           </div>
         </div>
         <button
           disabled={busy || !name.trim()}
           onClick={() => {
             setBusy(true);
-            void onSave({ name: name.trim(), phone: phone.trim(), note: note.trim() }).finally(() => setBusy(false));
+            void onSave({ name: name.trim(), phone: phone.trim(), note: note.trim() }).finally(() =>
+              setBusy(false),
+            );
           }}
           className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
@@ -410,14 +466,16 @@ function PurchaseModal({
   const [selectedUnitName, setSelectedUnitName] = useState<string>("");
   const [qty, setQty] = useState("1");
   const [cost, setCost] = useState(String(items[0]?.cost ?? 0));
-  const [lines, setLines] = useState<{
-    item_id: string;
-    name: string;
-    quantity: number;
-    unit_cost: number;
-    unit_name?: string | null;
-    conversion: number;
-  }[]>(
+  const [lines, setLines] = useState<
+    {
+      item_id: string;
+      name: string;
+      quantity: number;
+      unit_cost: number;
+      unit_name?: string | null;
+      conversion: number;
+    }[]
+  >(
     (initial?.lines ?? []).map((l) => ({
       item_id: l.item_id,
       name: l.name ?? "",
@@ -491,18 +549,29 @@ function PurchaseModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
       <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">{initial ? "မူကြမ်း အော်ဒါ ပြင်ရန်" : "ဝယ်ယူမှု အော်ဒါ အသစ်"}</h2>
+          <h2 className="text-sm font-semibold">
+            {initial ? "မူကြမ်း အော်ဒါ ပြင်ရန်" : "ဝယ်ယူမှု အော်ဒါ အသစ်"}
+          </h2>
           <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="space-y-3">
           <div>
-            <label className={labelClass} htmlFor="p-supplier">ကုန်သွင်းသူ</label>
-            <select id="p-supplier" value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={inputClass}>
+            <label className={labelClass} htmlFor="p-supplier">
+              ကုန်သွင်းသူ
+            </label>
+            <select
+              id="p-supplier"
+              value={supplierId}
+              onChange={(e) => setSupplierId(e.target.value)}
+              className={inputClass}
+            >
               <option value="">— မသတ်မှတ် —</option>
               {suppliers.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
               ))}
             </select>
           </div>
@@ -510,16 +579,32 @@ function PurchaseModal({
           <div className="rounded-md border border-border p-3 space-y-3 bg-muted/20">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div>
-                <label className={labelClass} htmlFor="p-item">ကုန်ပစ္စည်း</label>
-                <select id="p-item" value={itemId} onChange={(e) => handleItemChange(e.target.value)} className={inputClass}>
+                <label className={labelClass} htmlFor="p-item">
+                  ကုန်ပစ္စည်း
+                </label>
+                <select
+                  id="p-item"
+                  value={itemId}
+                  onChange={(e) => handleItemChange(e.target.value)}
+                  className={inputClass}
+                >
                   {items.map((i) => (
-                    <option key={i.id} value={i.id}>{i.name}</option>
+                    <option key={i.id} value={i.id}>
+                      {i.name}
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className={labelClass} htmlFor="p-unit">ဝယ်ယူသည့် ယူနစ်</label>
-                <select id="p-unit" value={selectedUnitName} onChange={(e) => handleUnitChange(e.target.value)} className={inputClass}>
+                <label className={labelClass} htmlFor="p-unit">
+                  ဝယ်ယူသည့် ယူနစ်
+                </label>
+                <select
+                  id="p-unit"
+                  value={selectedUnitName}
+                  onChange={(e) => handleUnitChange(e.target.value)}
+                  className={inputClass}
+                >
                   <option value="">အခြေခံယူနစ် (၁ ခု)</option>
                   {currentUnits.map((u) => (
                     <option key={u.unit_name} value={u.unit_name}>
@@ -532,12 +617,31 @@ function PurchaseModal({
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <div>
-                <label className={labelClass} htmlFor="p-qty">အရေအတွက်</label>
-                <input id="p-qty" type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} className={inputClass} />
+                <label className={labelClass} htmlFor="p-qty">
+                  အရေအတွက်
+                </label>
+                <input
+                  id="p-qty"
+                  type="number"
+                  min="1"
+                  value={qty}
+                  onChange={(e) => setQty(e.target.value)}
+                  className={inputClass}
+                />
               </div>
               <div>
-                <label className={labelClass} htmlFor="p-cost">ဝယ်ယူသည့် ယူနစ်စျေး</label>
-                <input id="p-cost" type="number" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} className={inputClass} />
+                <label className={labelClass} htmlFor="p-cost">
+                  ဝယ်ယူသည့် ယူနစ်စျေး
+                </label>
+                <input
+                  id="p-cost"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value)}
+                  className={inputClass}
+                />
               </div>
               <div className="flex items-end">
                 <button
@@ -553,7 +657,11 @@ function PurchaseModal({
 
             {conversion > 1 && (
               <p className="text-[11px] text-muted-foreground">
-                စုစုပေါင်း အခြေခံအရေအတွက်: <span className="font-semibold text-foreground">{(Number(qty) || 0) * conversion} ခု</span> (အခြေခံ ၁ ခုလျှင် အရင်း {(Number(cost) / conversion).toFixed(2)} Ks)
+                စုစုပေါင်း အခြေခံအရေအတွက်:{" "}
+                <span className="font-semibold text-foreground">
+                  {(Number(qty) || 0) * conversion} ခု
+                </span>{" "}
+                (အခြေခံ ၁ ခုလျှင် အရင်း {(Number(cost) / conversion).toFixed(2)} Ks)
               </p>
             )}
           </div>
@@ -575,11 +683,19 @@ function PurchaseModal({
                     <tr key={i} className="border-b border-border last:border-0">
                       <td className="px-3 py-2 font-medium">
                         {l.name}
-                        {l.unit_name && <span className="ml-1 text-[10px] text-muted-foreground">({l.unit_name})</span>}
+                        {l.unit_name && (
+                          <span className="ml-1 text-[10px] text-muted-foreground">
+                            ({l.unit_name})
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-center tabular-nums">{l.quantity}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{l.unit_cost.toLocaleString()}</td>
-                      <td className="px-3 py-2 text-right font-medium tabular-nums">{(l.quantity * l.unit_cost).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {l.unit_cost.toLocaleString()}
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium tabular-nums">
+                        {(l.quantity * l.unit_cost).toLocaleString()}
+                      </td>
                       <td className="px-2 py-2 text-right">
                         <button
                           type="button"
@@ -598,7 +714,9 @@ function PurchaseModal({
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
-              <label className={labelClass} htmlFor="p-paid">ကြိုတင်ပေးငွေ</label>
+              <label className={labelClass} htmlFor="p-paid">
+                ကြိုတင်ပေးငွေ
+              </label>
               <input
                 id="p-paid"
                 type="number"
@@ -610,8 +728,15 @@ function PurchaseModal({
               />
             </div>
             <div>
-              <label className={labelClass} htmlFor="p-notes">မှတ်ချက်</label>
-              <input id="p-notes" value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} />
+              <label className={labelClass} htmlFor="p-notes">
+                မှတ်ချက်
+              </label>
+              <input
+                id="p-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className={inputClass}
+              />
             </div>
           </div>
 

@@ -228,11 +228,7 @@ interface AccountingContextValue {
     amount: number;
     method: string;
   }) => Promise<void>;
-  paySupplierDebt: (input: {
-    supplierId: string;
-    amount: number;
-    method: string;
-  }) => Promise<void>;
+  paySupplierDebt: (input: { supplierId: string; amount: number; method: string }) => Promise<void>;
 }
 
 const AccountingContext = createContext<AccountingContextValue | null>(null);
@@ -263,7 +259,11 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       const [c, s, p, e, l] = await Promise.all([
         // "*" so the loader keeps working before and after the CRM columns exist.
         supabase.from("customers").select("*").eq("store_id", storeId).order("name"),
-        supabase.from("suppliers").select("id,name,phone,note,balance").eq("store_id", storeId).order("name"),
+        supabase
+          .from("suppliers")
+          .select("id,name,phone,note,balance")
+          .eq("store_id", storeId)
+          .order("name"),
         supabase
           .from("purchases")
           .select(
@@ -552,7 +552,8 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       const purchase = purchases.find((p) => p.id === purchaseId);
       if (!purchase) return;
       if (!canReceiveLegacy(purchase.status)) throw new Error("This purchase cannot be received");
-      if (hasNonBaseUnit(purchase)) throw new Error("Purchases in non-base units cannot be received yet");
+      if (hasNonBaseUnit(purchase))
+        throw new Error("Purchases in non-base units cannot be received yet");
       const unpaid = Math.max(purchase.total_amount - purchase.amount_paid, 0);
 
       // Increment stock for each received line.
@@ -608,7 +609,8 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
         .in("status", [PURCHASE_DRAFT, PURCHASE_CANCELLED])
         .select("id");
       if (error) throw error;
-      if (!data || data.length === 0) throw new Error("Only draft or cancelled purchases can be deleted");
+      if (!data || data.length === 0)
+        throw new Error("Only draft or cancelled purchases can be deleted");
       await refreshAll();
     },
     [refreshAll],
@@ -629,7 +631,11 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.from("expenses").update(payload).eq("id", id);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from("expenses").insert(payload).select("id").single();
+        const { data, error } = await supabase
+          .from("expenses")
+          .insert(payload)
+          .select("id")
+          .single();
         if (error || !data) throw error ?? new Error("Expense failed");
         await postEntries(
           [

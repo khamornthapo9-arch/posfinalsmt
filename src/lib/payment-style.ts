@@ -20,7 +20,8 @@ export interface PaymentStyle {
 const STYLES: Record<PaymentTone, PaymentStyle> = {
   cash: {
     idle: "border-pay-cash-border bg-pay-cash-soft text-pay-cash-ink hover:border-pay-cash",
-    active: "border-pay-cash bg-pay-cash text-pay-cash-foreground shadow-btn ring-2 ring-pay-cash/30",
+    active:
+      "border-pay-cash bg-pay-cash text-pay-cash-foreground shadow-btn ring-2 ring-pay-cash/30",
   },
   kbz: {
     idle: "border-pay-kbz-border bg-pay-kbz-soft text-pay-kbz-ink hover:border-pay-kbz",
@@ -28,7 +29,8 @@ const STYLES: Record<PaymentTone, PaymentStyle> = {
   },
   wave: {
     idle: "border-pay-wave-border bg-pay-wave-soft text-pay-wave-ink hover:border-pay-wave",
-    active: "border-pay-wave bg-pay-wave text-pay-wave-foreground shadow-btn ring-2 ring-pay-wave/40",
+    active:
+      "border-pay-wave bg-pay-wave text-pay-wave-foreground shadow-btn ring-2 ring-pay-wave/40",
   },
   credit: {
     idle: "border-pay-credit-border bg-pay-credit-soft text-pay-credit-ink hover:border-pay-credit",

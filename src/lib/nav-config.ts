@@ -43,26 +43,80 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "workspace",
     label: "လုပ်ငန်းခွင်",
     items: [
-      { to: "/register", label: "အရောင်းစာရင်း", short: "အရောင်း", tone: "sales", roles: ALL, exact: true, branch: true, primary: 0 },
-      { to: "/inventory", label: "ကုန်ပစ္စည်းများ", short: "ကုန်ပစ္စည်း", tone: "inventory", roles: MGMT, branch: true, primary: 1 },
-      { to: "/customers", label: "ဖောက်သည်များ", short: "ဖောက်သည်", tone: "customers", roles: ALL, advanced: true, branch: true, primary: 2 },
+      {
+        to: "/register",
+        label: "အရောင်းစာရင်း",
+        short: "အရောင်း",
+        tone: "sales",
+        roles: ALL,
+        exact: true,
+        branch: true,
+        primary: 0,
+      },
+      {
+        to: "/inventory",
+        label: "ကုန်ပစ္စည်းများ",
+        short: "ကုန်ပစ္စည်း",
+        tone: "inventory",
+        roles: MGMT,
+        branch: true,
+        primary: 1,
+      },
+      {
+        to: "/customers",
+        label: "ဖောက်သည်များ",
+        short: "ဖောက်သည်",
+        tone: "customers",
+        roles: ALL,
+        advanced: true,
+        branch: true,
+        primary: 2,
+      },
       // Purchasing currently lives inside the suppliers page (one module, one entry).
-      { to: "/suppliers", label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ", short: "ကုန်သွင်း", tone: "suppliers", roles: MGMT, advanced: true },
+      {
+        to: "/suppliers",
+        label: "ဝယ်ယူမှုနှင့် ကုန်သွင်းသူများ",
+        short: "ကုန်သွင်း",
+        tone: "suppliers",
+        roles: MGMT,
+        advanced: true,
+      },
     ],
   },
   {
     id: "finance",
     label: "ငွေကြေး",
     items: [
-      { to: "/expenses", label: "အသုံးစရိတ်", short: "အသုံးစရိတ်", tone: "expenses", roles: MGMT, advanced: true, branch: true },
-      { to: "/analytics", label: "ဆန်းစစ်ခြင်း", short: "ဆန်းစစ်", tone: "reports", roles: MGMT, primary: 3 },
+      {
+        to: "/expenses",
+        label: "အသုံးစရိတ်",
+        short: "အသုံးစရိတ်",
+        tone: "expenses",
+        roles: MGMT,
+        advanced: true,
+        branch: true,
+      },
+      {
+        to: "/analytics",
+        label: "ဆန်းစစ်ခြင်း",
+        short: "ဆန်းစစ်",
+        tone: "reports",
+        roles: MGMT,
+        primary: 3,
+      },
     ],
   },
   {
     id: "admin",
     label: "စီမံခန့်ခွဲမှု",
     items: [
-      { to: "/settings/staff", label: "ဆိုင်ခွဲများ", short: "ဆိုင်ခွဲ", tone: "admin", roles: OWNER },
+      {
+        to: "/settings/staff",
+        label: "ဆိုင်ခွဲများ",
+        short: "ဆိုင်ခွဲ",
+        tone: "admin",
+        roles: OWNER,
+      },
       {
         to: "/settings",
         label: "ပြုပြင်ခြင်း",
@@ -96,7 +150,12 @@ export interface NavContext {
  * everyone else is filtered by role (and must be active). This only hides links; the route guard
  * in PosShell and Supabase RLS remain the enforcement.
  */
-export function visibleGroups({ advanced, isBranchDevice, role, isActive }: NavContext): NavGroup[] {
+export function visibleGroups({
+  advanced,
+  isBranchDevice,
+  role,
+  isActive,
+}: NavContext): NavGroup[] {
   const show = (item: NavItem) => {
     if (item.advanced && !advanced) return false;
     return isBranchDevice ? Boolean(item.branch) : item.roles.includes(role) && isActive;

@@ -82,7 +82,15 @@ const EMPTY_ITEM = {
 };
 
 function InventoryPage() {
-  const { items, archivedItems, categories, saveItem, setItemArchived, seedDemoItems, adjustStock } = usePos();
+  const {
+    items,
+    archivedItems,
+    categories,
+    saveItem,
+    setItemArchived,
+    seedDemoItems,
+    adjustStock,
+  } = usePos();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -144,8 +152,7 @@ function InventoryPage() {
         (item.qr_value && item.qr_value.toLowerCase().includes(q));
 
       const matchesCategory =
-        selectedCategory === "all" ||
-        (item.category || "အထွေထွေ") === selectedCategory;
+        selectedCategory === "all" || (item.category || "အထွေထွေ") === selectedCategory;
 
       const qty = Number(item.stock_quantity) || 0;
       const min = Number(item.min_stock_threshold) || 0;
@@ -170,9 +177,13 @@ function InventoryPage() {
       return;
     try {
       await setItemArchived(id, archive);
-      toast.success(archive ? "ကုန်ပစ္စည်းကို သိမ်းထားပြီးပါပြီ" : "ကုန်ပစ္စည်းကို ပြန်ဖွင့်ပြီးပါပြီ");
+      toast.success(
+        archive ? "ကုန်ပစ္စည်းကို သိမ်းထားပြီးပါပြီ" : "ကုန်ပစ္စည်းကို ပြန်ဖွင့်ပြီးပါပြီ",
+      );
     } catch {
-      toast.error("မအောင်မြင်ပါ — database update (items.archived_at) ကို အရင် သုံးထားရန် လိုနိုင်သည်");
+      toast.error(
+        "မအောင်မြင်ပါ — database update (items.archived_at) ကို အရင် သုံးထားရန် လိုနိုင်သည်",
+      );
     }
   };
 
@@ -290,26 +301,38 @@ function InventoryPage() {
               <p className="mt-1 text-lg font-bold text-foreground">{metrics.totalItems}</p>
             </div>
             <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
-              <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">လက်ကျန်ရှိ</p>
+              <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                လက်ကျန်ရှိ
+              </p>
               <p className="mt-1 text-lg font-bold text-foreground">{metrics.inStock}</p>
             </div>
             <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
-              <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">လက်ကျန်နည်း</p>
+              <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                လက်ကျန်နည်း
+              </p>
               <p className="mt-1 text-lg font-bold text-foreground">{metrics.lowStock}</p>
             </div>
             <div className="rounded-lg border border-border bg-card p-3 shadow-xs">
-              <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">ပစ္စည်းပြတ်</p>
+              <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                ပစ္စည်းပြတ်
+              </p>
               <p className="mt-1 text-lg font-bold text-foreground">{metrics.outStock}</p>
             </div>
             {!isBranchDevice && (
               <>
                 <div className="col-span-2 rounded-lg border border-border bg-card p-3 shadow-xs sm:col-span-2 lg:col-span-1">
-                  <p className="text-[11px] font-medium text-muted-foreground">ခန့်မှန်းရောင်းတန်ဖိုး</p>
-                  <p className="mt-1 truncate text-base font-bold text-foreground">{fmt(metrics.totalRetailValuation)}</p>
+                  <p className="text-[11px] font-medium text-muted-foreground">
+                    ခန့်မှန်းရောင်းတန်ဖိုး
+                  </p>
+                  <p className="mt-1 truncate text-base font-bold text-foreground">
+                    {fmt(metrics.totalRetailValuation)}
+                  </p>
                 </div>
                 <div className="col-span-2 rounded-lg border border-border bg-card p-3 shadow-xs sm:col-span-2 lg:col-span-1">
                   <p className="text-[11px] font-medium text-muted-foreground">ဝယ်ရင်းတန်ဖိုး</p>
-                  <p className="mt-1 truncate text-base font-bold text-foreground">{fmt(metrics.totalCostValuation)}</p>
+                  <p className="mt-1 truncate text-base font-bold text-foreground">
+                    {fmt(metrics.totalCostValuation)}
+                  </p>
                 </div>
               </>
             )}
@@ -389,7 +412,9 @@ function InventoryPage() {
                   <div key={item.id} className="p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {item.name}
+                        </p>
                         <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                           <span className="font-mono">{item.sku || "—"}</span>
                           <span>·</span>
@@ -406,7 +431,8 @@ function InventoryPage() {
                               : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
                         )}
                       >
-                        {status === "out" ? "ပြတ်" : status === "low" ? "နည်း" : "ရှိ"} ({item.stock_quantity})
+                        {status === "out" ? "ပြတ်" : status === "low" ? "နည်း" : "ရှိ"} (
+                        {item.stock_quantity})
                       </span>
                     </div>
 
@@ -491,7 +517,10 @@ function InventoryPage() {
                 <tbody className="divide-y divide-border/60">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={isBranchDevice ? 6 : 7} className="px-4 py-8 text-center text-muted-foreground">
+                      <td
+                        colSpan={isBranchDevice ? 6 : 7}
+                        className="px-4 py-8 text-center text-muted-foreground"
+                      >
                         ကိုက်ညီသော ကုန်ပစ္စည်း မတွေ့ရှိပါ
                       </td>
                     </tr>
@@ -505,7 +534,9 @@ function InventoryPage() {
                         <tr key={item.id} className="hover:bg-muted/20 transition-colors">
                           <td className="px-4 py-3">
                             <p className="font-semibold text-foreground">{item.name}</p>
-                            <p className="font-mono text-[11px] text-muted-foreground">{item.sku || "—"}</p>
+                            <p className="font-mono text-[11px] text-muted-foreground">
+                              {item.sku || "—"}
+                            </p>
                           </td>
                           <td className="px-3 py-3 text-muted-foreground">
                             {item.category || "အထွေထွေ"}
@@ -802,7 +833,11 @@ function ProductModal({
           <h2 className="text-sm font-semibold">
             {item ? "ကုန်ပစ္စည်း အချက်အလက် ပြင်ဆင်ရန်" : "ကုန်ပစ္စည်း အသစ် ထည့်ရန်"}
           </h2>
-          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground hover:text-foreground">
+          <button
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="text-muted-foreground hover:text-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -859,7 +894,9 @@ function ProductModal({
           <div className="space-y-3 rounded-md border border-border/70 p-3 bg-muted/10">
             <p className="text-xs font-semibold text-foreground">အခြေခံ အချက်အလက်များ</p>
             <div>
-              <label className="mb-1 block text-xs font-medium text-foreground">ကုန်ပစ္စည်း အမည် *</label>
+              <label className="mb-1 block text-xs font-medium text-foreground">
+                ကုန်ပစ္စည်း အမည် *
+              </label>
               <input
                 type="text"
                 value={form.name}
@@ -879,7 +916,9 @@ function ProductModal({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">အမျိုးအစား (Category)</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">
+                  အမျိုးအစား (Category)
+                </label>
                 <input
                   type="text"
                   list="category-suggestions"
@@ -897,7 +936,9 @@ function ProductModal({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">Barcode (ဘားကုဒ်)</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">
+                  Barcode (ဘားကုဒ်)
+                </label>
                 <input
                   type="text"
                   value={form.barcode}
@@ -921,10 +962,14 @@ function ProductModal({
 
           {/* Group B: Pricing & Margins */}
           <div className="space-y-3 rounded-md border border-border/70 p-3 bg-muted/10">
-            <p className="text-xs font-semibold text-foreground">ဈေးနှုန်းနှင့် အမြတ်သတ်မှတ်ခြင်း</p>
+            <p className="text-xs font-semibold text-foreground">
+              ဈေးနှုန်းနှင့် အမြတ်သတ်မှတ်ခြင်း
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">ရောင်းဈေး (Selling Price) *</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">
+                  ရောင်းဈေး (Selling Price) *
+                </label>
                 <input
                   type="number"
                   value={form.price}
@@ -933,7 +978,9 @@ function ProductModal({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">ဝယ်ရင်းဈေး (Cost Price)</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">
+                  ဝယ်ရင်းဈေး (Cost Price)
+                </label>
                 <input
                   type="number"
                   value={form.cost_price}
@@ -946,13 +993,23 @@ function ProductModal({
               <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-xs">
                 <div>
                   <span className="text-muted-foreground">အမြတ်ငွေ: </span>
-                  <span className={cn("font-bold", grossProfit >= 0 ? "text-emerald-600" : "text-destructive")}>
+                  <span
+                    className={cn(
+                      "font-bold",
+                      grossProfit >= 0 ? "text-emerald-600" : "text-destructive",
+                    )}
+                  >
                     {grossProfit.toLocaleString()} ကျပ်
                   </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">အမြတ်ရာခိုင်နှုန်း: </span>
-                  <span className={cn("font-bold", grossMarginPct >= 0 ? "text-emerald-600" : "text-destructive")}>
+                  <span
+                    className={cn(
+                      "font-bold",
+                      grossMarginPct >= 0 ? "text-emerald-600" : "text-destructive",
+                    )}
+                  >
                     {grossMarginPct.toFixed(1)}%
                   </span>
                 </div>
@@ -963,7 +1020,9 @@ function ProductModal({
           {/* Group C: Units & Packaging */}
           <div className="space-y-3 rounded-md border border-border/70 p-3 bg-muted/10">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-foreground">ထုပ်ပိုးမှုယူနစ်များ (Packaging Units)</p>
+              <p className="text-xs font-semibold text-foreground">
+                ထုပ်ပိုးမှုယူနစ်များ (Packaging Units)
+              </p>
               <button
                 type="button"
                 onClick={addUnitRow}
@@ -1014,11 +1073,15 @@ function ProductModal({
 
           {/* Group D & E: Stock Control */}
           <div className="space-y-3 rounded-md border border-border/70 p-3 bg-muted/10">
-            <p className="text-xs font-semibold text-foreground">လက်ကျန်နှင့် အနိမ့်ဆုံးသတိပေးချက်</p>
+            <p className="text-xs font-semibold text-foreground">
+              လက်ကျန်နှင့် အနိမ့်ဆုံးသတိပေးချက်
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-xs font-medium text-foreground">
-                  {item ? "လက်ရှိလက်ကျန် (အပြောင်းအလဲမပြုလုပ်နိုင်ပါ)" : "အစပျိုးလက်ကျန် (Opening Stock)"}
+                  {item
+                    ? "လက်ရှိလက်ကျန် (အပြောင်းအလဲမပြုလုပ်နိုင်ပါ)"
+                    : "အစပျိုးလက်ကျန် (Opening Stock)"}
                 </label>
                 <input
                   type="number"
@@ -1034,7 +1097,9 @@ function ProductModal({
                 )}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">အနိမ့်ဆုံး သတိပေးလက်ကျန်</label>
+                <label className="mb-1 block text-xs font-medium text-foreground">
+                  အနိမ့်ဆုံး သတိပေးလက်ကျန်
+                </label>
                 <input
                   type="number"
                   value={form.min_stock_threshold}
@@ -1122,7 +1187,9 @@ function StockAdjustmentModal({
         <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
           <div>
             <h2 className="text-sm font-semibold">လက်ကျန်စာရင်း ချိန်ညှိခြင်း</h2>
-            <p className="text-xs text-muted-foreground">{item.name} ({item.sku})</p>
+            <p className="text-xs text-muted-foreground">
+              {item.name} ({item.sku})
+            </p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
@@ -1136,7 +1203,9 @@ function StockAdjustmentModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-foreground">အမှန်တကယ်ရှိသော လက်ကျန်အရေအတွက် *</label>
+            <label className="mb-1 block text-xs font-medium text-foreground">
+              အမှန်တကယ်ရှိသော လက်ကျန်အရေအတွက် *
+            </label>
             <input
               type="number"
               value={newQuantity}
@@ -1145,20 +1214,33 @@ function StockAdjustmentModal({
             />
             <p className="mt-1 text-xs">
               ကွာခြားချက် (Delta):{" "}
-              <span className={cn("font-bold font-mono", delta > 0 ? "text-emerald-600" : delta < 0 ? "text-destructive" : "text-muted-foreground")}>
+              <span
+                className={cn(
+                  "font-bold font-mono",
+                  delta > 0
+                    ? "text-emerald-600"
+                    : delta < 0
+                      ? "text-destructive"
+                      : "text-muted-foreground",
+                )}
+              >
                 {delta > 0 ? `+${delta}` : delta}
               </span>
             </p>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-foreground">ချိန်ညှိရသည့် အကြောင်းပြချက် *</label>
+            <label className="mb-1 block text-xs font-medium text-foreground">
+              ချိန်ညှိရသည့် အကြောင်းပြချက် *
+            </label>
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
             >
-              <option value="စာရင်းစစ် ပြင်ဆင်ခြင်း">စာရင်းစစ် ပြင်ဆင်ခြင်း (Stock Count Correction)</option>
+              <option value="စာရင်းစစ် ပြင်ဆင်ခြင်း">
+                စာရင်းစစ် ပြင်ဆင်ခြင်း (Stock Count Correction)
+              </option>
               <option value="ပျက်စီးဆုံးရှုံးခြင်း">ပျက်စီးဆုံးရှုံးခြင်း (Damaged Stock)</option>
               <option value="ပျောက်ဆုံးခြင်း">ပျောက်ဆုံးခြင်း (Lost / Missing)</option>
               <option value="လက်ကျန်ဖွင့်လှစ်ခြင်း">လက်ကျန်ဖွင့်လှစ်ခြင်း (Opening Balance)</option>
@@ -1167,7 +1249,9 @@ function StockAdjustmentModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-foreground">မှတ်ချက် (ရွေးချယ်ရန်)</label>
+            <label className="mb-1 block text-xs font-medium text-foreground">
+              မှတ်ချက် (ရွေးချယ်ရန်)
+            </label>
             <input
               type="text"
               value={note}
@@ -1188,7 +1272,12 @@ function StockAdjustmentModal({
             onClick={async () => {
               setBusy(true);
               try {
-                await onAdjust(Number(newQuantity), reason, note.trim() || undefined, requestId.current);
+                await onAdjust(
+                  Number(newQuantity),
+                  reason,
+                  note.trim() || undefined,
+                  requestId.current,
+                );
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "ချိန်ညှိ၍မရပါ");
               } finally {
@@ -1225,7 +1314,10 @@ function ImportModal({
     setFileName(file.name);
     try {
       const text = await file.text();
-      const parsed = parseItemsCsv(text, items.map((item) => item.sku));
+      const parsed = parseItemsCsv(
+        text,
+        items.map((item) => item.sku),
+      );
       setRows(parsed.rows);
       setErrors(parsed.errors || []);
     } catch {
@@ -1238,7 +1330,11 @@ function ImportModal({
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
           <h2 className="text-sm font-semibold">CSV ဖြင့် ကုန်ပစ္စည်းများ ထည့်သွင်းရန်</h2>
-          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground hover:text-foreground">
+          <button
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="text-muted-foreground hover:text-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1270,7 +1366,9 @@ function ImportModal({
           {rows.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <p className="font-medium text-emerald-600">✓ ကုန်ပစ္စည်း {rows.length} မျိုး စစ်ဆေးတွေ့ရှိပါသည်</p>
+                <p className="font-medium text-emerald-600">
+                  ✓ ကုန်ပစ္စည်း {rows.length} မျိုး စစ်ဆေးတွေ့ရှိပါသည်
+                </p>
                 <button
                   type="button"
                   onClick={() => downloadCsv("sample-items.csv", SAMPLE_CSV_ROWS)}
@@ -1306,7 +1404,9 @@ function ImportModal({
                 </table>
               </div>
               {rows.length > 10 && (
-                <p className="text-[11px] text-muted-foreground text-center">... အခြား {rows.length - 10} မျိုး ပါဝင်ပါသည်</p>
+                <p className="text-[11px] text-muted-foreground text-center">
+                  ... အခြား {rows.length - 10} မျိုး ပါဝင်ပါသည်
+                </p>
               )}
             </div>
           )}
@@ -1321,13 +1421,17 @@ function ImportModal({
             disabled={busy || rows.length === 0}
             onClick={async () => {
               if (!isPro && items.length + rows.length > FREE_LIMITS.items) {
-                toast.error(`Standard အစီအစဉ်တွင် ပစ္စည်း ${FREE_LIMITS.items} သာ ထည့်သွင်းနိုင်ပါသည်`);
+                toast.error(
+                  `Standard အစီအစဉ်တွင် ပစ္စည်း ${FREE_LIMITS.items} သာ ထည့်သွင်းနိုင်ပါသည်`,
+                );
                 return;
               }
               setBusy(true);
               try {
                 const res = await onImport(rows);
-                toast.success(`အသစ် ${res.created} မျိုး၊ ပြင်ဆင်မှု ${res.updated} မျိုး ထည့်သွင်းပြီးပါပြီ`);
+                toast.success(
+                  `အသစ် ${res.created} မျိုး၊ ပြင်ဆင်မှု ${res.updated} မျိုး ထည့်သွင်းပြီးပါပြီ`,
+                );
                 onClose();
               } catch (e) {
                 toast.error(e instanceof Error ? e.message : "ထည့်သွင်း၍မရပါ");
@@ -1349,7 +1453,9 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
   const [mode, setMode] = useState<"barcode" | "qr">("barcode");
   const [count, setCount] = useState(1);
   const printRef = useRef<HTMLDivElement>(null);
-  const codeValue = (mode === "barcode" ? item.barcode || item.sku : item.qr_value || item.sku).trim();
+  const codeValue = (
+    mode === "barcode" ? item.barcode || item.sku : item.qr_value || item.sku
+  ).trim();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
@@ -1368,7 +1474,9 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
               onClick={() => setMode("barcode")}
               className={cn(
                 "flex-1 rounded py-1.5 font-medium border text-center transition-colors",
-                mode === "barcode" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted",
+                mode === "barcode"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border hover:bg-muted",
               )}
             >
               Barcode
@@ -1378,7 +1486,9 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
               onClick={() => setMode("qr")}
               className={cn(
                 "flex-1 rounded py-1.5 font-medium border text-center transition-colors",
-                mode === "qr" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted",
+                mode === "qr"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border hover:bg-muted",
               )}
             >
               QR Code
@@ -1398,7 +1508,10 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
           </div>
 
           {/* Label Preview */}
-          <div ref={printRef} className="rounded border border-border bg-white p-4 text-black text-center space-y-2">
+          <div
+            ref={printRef}
+            className="rounded border border-border bg-white p-4 text-black text-center space-y-2"
+          >
             <p className="font-bold text-sm truncate">{item.name}</p>
             <div className="flex justify-center my-2">
               <Suspense fallback={<div className="h-12 w-32 animate-pulse bg-gray-200" />}>

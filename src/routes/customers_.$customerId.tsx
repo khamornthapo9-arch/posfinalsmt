@@ -1,6 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, ArchiveRestore, ChevronDown, Loader2, Mail, MapPin, Pencil, Phone } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ChevronDown,
+  Loader2,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+} from "lucide-react";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
 import { CustomerForm } from "@/components/pos/customer-form";
@@ -32,7 +41,9 @@ interface SummarySale {
 
 interface HistorySale extends SummarySale {
   payment_status: string;
-  sale_items: { quantity: number; unit_price: number; items: { name: string; sku: string | null } | null }[] | null;
+  sale_items:
+    | { quantity: number; unit_price: number; items: { name: string; sku: string | null } | null }[]
+    | null;
 }
 
 /** Credit part of a sale, from its payment breakdown (or the whole sale for a pure-credit sale). */
@@ -60,7 +71,12 @@ const shortId = (id: string) => id.slice(0, 8).toUpperCase();
 
 function CustomerDetailPage() {
   const { customerId } = Route.useParams();
-  const { customers, setCustomerArchived, saveCustomer, loading: accountingLoading } = useAccountingStore();
+  const {
+    customers,
+    setCustomerArchived,
+    saveCustomer,
+    loading: accountingLoading,
+  } = useAccountingStore();
   const { store, isBranchDevice } = useAuth();
   const { fmt } = useStoreSettings();
   const customer = customers.find((c) => c.id === customerId) ?? null;
@@ -128,7 +144,10 @@ function CustomerDetailPage() {
     }
     setTotal(count ?? 0);
     setHistory(
-      (data ?? []).map((r) => ({ ...r, total_amount: Number(r.total_amount) })) as unknown as HistorySale[],
+      (data ?? []).map((r) => ({
+        ...r,
+        total_amount: Number(r.total_amount),
+      })) as unknown as HistorySale[],
     );
   }, [storeId, customerId, page]);
 
@@ -185,7 +204,11 @@ function CustomerDetailPage() {
       return;
     }
     void setCustomerArchived(customer.id, !archived)
-      .then(() => toast.success(archived ? "ဖောက်သည်ကို ပြန်ဖွင့်ပြီးပါပြီ" : "ဖောက်သည်ကို သိမ်းထားပြီးပါပြီ"))
+      .then(() =>
+        toast.success(
+          archived ? "ဖောက်သည်ကို ပြန်ဖွင့်ပြီးပါပြီ" : "ဖောက်သည်ကို သိမ်းထားပြီးပါပြီ",
+        ),
+      )
       .catch(() => toast.error("မအောင်မြင်ပါ — database update ကို အရင် သုံးထားရန် လိုနိုင်သည်"));
   };
 
@@ -200,7 +223,7 @@ function CustomerDetailPage() {
   return (
     <PosShell
       title={customer.name}
-      subtitle={archived ? "သိမ်းထားသော ဖောက်သည်" : customer.phone ?? ""}
+      subtitle={archived ? "သိမ်းထားသော ဖောက်သည်" : (customer.phone ?? "")}
       actions={
         !isBranchDevice ? (
           <>
@@ -214,7 +237,11 @@ function CustomerDetailPage() {
               onClick={toggleArchive}
               className="inline-flex h-10 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-xs font-medium hover:bg-accent"
             >
-              {archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+              {archived ? (
+                <ArchiveRestore className="h-3.5 w-3.5" />
+              ) : (
+                <Archive className="h-3.5 w-3.5" />
+              )}
               <span className="max-sm:sr-only">{archived ? "ပြန်ဖွင့်ရန်" : "သိမ်းထားရန်"}</span>
             </button>
           </>
@@ -223,7 +250,10 @@ function CustomerDetailPage() {
     >
       <div className="mx-auto max-w-5xl space-y-4 p-3 sm:p-4">
         {/* Overview */}
-        <section aria-label="ဖောက်သည် အချက်အလက်" className="rounded-md border border-border bg-card p-4">
+        <section
+          aria-label="ဖောက်သည် အချက်အလက်"
+          className="rounded-md border border-border bg-card p-4"
+        >
           <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
             <div className="flex items-start gap-2">
               <Phone className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -240,7 +270,10 @@ function CustomerDetailPage() {
               </div>
             </div>
             <div className="flex items-start gap-2 sm:col-span-2">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <MapPin
+                className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
               <div className="min-w-0">
                 <dt className="text-[11px] text-muted-foreground">လိပ်စာ</dt>
                 <dd className="break-words">{customer.address || "—"}</dd>
@@ -280,7 +313,9 @@ function CustomerDetailPage() {
               <p className="mt-1.5 text-[11px] text-muted-foreground">
                 နောက်ဆုံး ဝယ်ယူသည့်ရက် — {stats.last ? new Date(stats.last).toLocaleString() : "—"}
                 {stats.capped && ` · နောက်ဆုံး ${SUMMARY_CAP} ခုအထိသာ တွက်ထားသည်`}
-                {" · ပြန်အမ်း/ပယ်ဖျက်ထားသော အရောင်းများ မပါ၊ အော့ဖ်လိုင်း မတင်ရသေးသော အရောင်းများ မပါ"}
+                {
+                  " · ပြန်အမ်း/ပယ်ဖျက်ထားသော အရောင်းများ မပါ၊ အော့ဖ်လိုင်း မတင်ရသေးသော အရောင်းများ မပါ"
+                }
               </p>
             </>
           )}
@@ -288,7 +323,9 @@ function CustomerDetailPage() {
 
         {/* Purchase history */}
         <section aria-label="ဝယ်ယူမှု မှတ်တမ်း" className="rounded-md border border-border bg-card">
-          <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">ဝယ်ယူမှု မှတ်တမ်း</h2>
+          <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">
+            ဝယ်ယူမှု မှတ်တမ်း
+          </h2>
           {historyError ? (
             <div className="space-y-2 px-4 py-8 text-center">
               <p className="text-sm text-destructive">မှတ်တမ်း ဖတ်၍ မရပါ။</p>
@@ -328,7 +365,9 @@ function CustomerDetailPage() {
                           <span
                             className={cn(
                               "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                              voided ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success",
+                              voided
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-success/10 text-success",
                             )}
                           >
                             {STATUS_LABEL[sale.status] ?? sale.status}
@@ -341,24 +380,40 @@ function CustomerDetailPage() {
                           {new Date(sale.created_at).toLocaleString()} · {itemCount} ခု
                         </p>
                       </div>
-                      <span className={cn("shrink-0 text-sm font-semibold tabular-nums", voided && "line-through opacity-60")}>
+                      <span
+                        className={cn(
+                          "shrink-0 text-sm font-semibold tabular-nums",
+                          voided && "line-through opacity-60",
+                        )}
+                      >
                         {fmt(sale.total_amount)}
                       </span>
                       <ChevronDown
-                        className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
+                        className={cn(
+                          "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                          open && "rotate-180",
+                        )}
                       />
                     </button>
                     {open && (
                       <div className="bg-muted/30 px-4 pb-3 pt-1">
                         {lines.length === 0 ? (
-                          <p className="py-2 text-xs text-muted-foreground">ပစ္စည်း အသေးစိတ် မရှိပါ။</p>
+                          <p className="py-2 text-xs text-muted-foreground">
+                            ပစ္စည်း အသေးစိတ် မရှိပါ။
+                          </p>
                         ) : (
                           <ul className="divide-y divide-border text-sm">
                             {lines.map((line, i) => (
-                              <li key={i} className="flex items-center justify-between gap-3 py-1.5">
+                              <li
+                                key={i}
+                                className="flex items-center justify-between gap-3 py-1.5"
+                              >
                                 <span className="min-w-0 truncate">
                                   {line.items?.name ?? "—"}
-                                  <span className="text-xs text-muted-foreground"> × {Number(line.quantity)}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {" "}
+                                    × {Number(line.quantity)}
+                                  </span>
                                 </span>
                                 <span className="shrink-0 tabular-nums">
                                   {fmt(Number(line.unit_price) * Number(line.quantity))}

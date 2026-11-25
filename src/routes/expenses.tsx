@@ -18,7 +18,8 @@ export const Route = createFileRoute("/expenses")({
       { title: "အသုံးစရိတ် မှတ်တမ်း — SMT POS" },
       {
         name: "description",
-        content: "ဆိုင်၏ လည်ပတ်မှု အသုံးစရိတ်များကို မှတ်တမ်းတင်ပြီး အမြတ်တွက်ချက်မှုတွင် ထည့်သွင်းပါ။",
+        content:
+          "ဆိုင်၏ လည်ပတ်မှု အသုံးစရိတ်များကို မှတ်တမ်းတင်ပြီး အမြတ်တွက်ချက်မှုတွင် ထည့်သွင်းပါ။",
       },
       { property: "og:title", content: "အသုံးစရိတ် မှတ်တမ်း — SMT POS" },
       { property: "og:description", content: "SMT POS အသုံးစရိတ် စီမံခန့်ခွဲမှု။" },
@@ -94,10 +95,7 @@ function ExpensesPage() {
   }
 
   return (
-    <PosShell
-      title="အသုံးစရိတ် မှတ်တမ်း"
-      subtitle={`စုစုပေါင်း ကုန်ကျငွေ ${fmt(totalExpenses)}`}
-    >
+    <PosShell title="အသုံးစရိတ် မှတ်တမ်း" subtitle={`စုစုပေါင်း ကုန်ကျငွေ ${fmt(totalExpenses)}`}>
       <div className="space-y-4 p-3 sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button
@@ -131,7 +129,9 @@ function ExpensesPage() {
             <tbody>
               {expenses.map((expense) => (
                 <tr key={expense.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 text-muted-foreground">{expense.spent_at.slice(0, 10)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {expense.spent_at.slice(0, 10)}
+                  </td>
                   <td className="px-4 py-3 font-medium">{expense.category}</td>
                   <td className="px-4 py-3 text-muted-foreground">{expense.note ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{expense.paid_with}</td>

@@ -126,33 +126,33 @@ export function DenseProductList({
   const renderUnitButtons = (item: CachedItem, units: ItemUnit[]) => {
     const soldOut = item.stock_quantity <= 0;
     return (
-    <>
-      <button
-        type="button"
-        disabled={soldOut}
-        onClick={(event) => {
-          onAdd(item);
-          fly(event.currentTarget, false);
-        }}
-        className="press min-h-8 touch:min-h-10 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        အရပ် · {fmt(item.price)}
-      </button>
-      {units.map((unit) => (
+      <>
         <button
-          key={unit.id}
           type="button"
           disabled={soldOut}
           onClick={(event) => {
-            onAdd(item, unit);
+            onAdd(item);
             fly(event.currentTarget, false);
           }}
-          className="press min-h-8 touch:min-h-10 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+          className="press min-h-8 touch:min-h-10 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {unit.unit_name} x{unit.conversion} · {fmt(unit.price)}
+          အရပ် · {fmt(item.price)}
         </button>
-      ))}
-    </>
+        {units.map((unit) => (
+          <button
+            key={unit.id}
+            type="button"
+            disabled={soldOut}
+            onClick={(event) => {
+              onAdd(item, unit);
+              fly(event.currentTarget, false);
+            }}
+            className="press min-h-8 touch:min-h-10 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {unit.unit_name} x{unit.conversion} · {fmt(unit.price)}
+          </button>
+        ))}
+      </>
     );
   };
 
@@ -272,13 +272,15 @@ export function DenseProductList({
                     aria-disabled={outOfStock}
                     aria-label={`${item.name} ထည့်ရန်`}
                     onClick={(event) => add(event.currentTarget, true)}
-                    onKeyDown={(event) =>
-                      !outOfStock && addOnKey(event, (el) => add(el, true))
-                    }
+                    onKeyDown={(event) => !outOfStock && addOnKey(event, (el) => add(el, true))}
                     className="flex min-w-0 flex-1 cursor-pointer select-none flex-col focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                   >
                     <div className="relative">
-                      <ItemImage url={item.image_url} name={item.name} className="aspect-square w-full" />
+                      <ItemImage
+                        url={item.image_url}
+                        name={item.name}
+                        className="aspect-square w-full"
+                      />
                       {status !== "ok" && (
                         <span
                           className={cn(
@@ -368,9 +370,7 @@ export function DenseProductList({
                       aria-disabled={outOfStock}
                       className="min-w-0 flex-1 cursor-pointer select-none rounded-md focus-visible:outline-2 focus-visible:outline-ring"
                       onClick={(event) => add(event.currentTarget, true)}
-                      onKeyDown={(event) =>
-                        !outOfStock && addOnKey(event, (el) => add(el, true))
-                      }
+                      onKeyDown={(event) => !outOfStock && addOnKey(event, (el) => add(el, true))}
                     >
                       <p className="truncate text-sm font-semibold leading-6">{item.name}</p>
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -387,7 +387,9 @@ export function DenseProductList({
                     </div>
 
                     <div className="shrink-0 text-right">
-                      <p className="text-sm font-bold tabular-nums text-foreground">{fmt(item.price)}</p>
+                      <p className="text-sm font-bold tabular-nums text-foreground">
+                        {fmt(item.price)}
+                      </p>
                     </div>
 
                     <button
@@ -403,7 +405,9 @@ export function DenseProductList({
                   </div>
 
                   {units.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">{renderUnitButtons(item, units)}</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {renderUnitButtons(item, units)}
+                    </div>
                   )}
                 </div>
               );
@@ -428,7 +432,9 @@ export function DenseProductList({
                   : "ကုန်ပစ္စည်း စာရင်းမရှိသေးပါ။"}
               </p>
             ) : (
-              <p className="text-sm text-muted-foreground">ရှာဖွေမှုနှင့် ကိုက်ညီသော ပစ္စည်းမရှိပါ။</p>
+              <p className="text-sm text-muted-foreground">
+                ရှာဖွေမှုနှင့် ကိုက်ညီသော ပစ္စည်းမရှိပါ။
+              </p>
             )}
           </div>
         )}

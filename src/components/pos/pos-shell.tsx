@@ -41,7 +41,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { StaffSwitchModal } from "@/components/pos/staff-switch-modal";
 import { useStoreLogo } from "@/lib/use-store-logo";
 import { cn } from "@/lib/utils";
-import { ShoppingCart, Boxes, BarChart3, Settings as SettingsIcon, Users, Truck, Wallet, ShieldCheck } from "lucide-react";
+import {
+  ShoppingCart,
+  Boxes,
+  BarChart3,
+  Settings as SettingsIcon,
+  Users,
+  Truck,
+  Wallet,
+  ShieldCheck,
+} from "lucide-react";
 
 const NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   sales: ShoppingCart,
@@ -76,8 +85,12 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
       )}
       {!collapsed && (
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold tracking-tight text-sidebar-foreground">SMT POS</p>
-          <p className="truncate text-xs leading-5 text-sidebar-foreground/60">{store?.name ?? "Store"}</p>
+          <p className="truncate text-sm font-bold tracking-tight text-sidebar-foreground">
+            SMT POS
+          </p>
+          <p className="truncate text-xs leading-5 text-sidebar-foreground/60">
+            {store?.name ?? "Store"}
+          </p>
         </div>
       )}
     </div>
@@ -101,7 +114,11 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
   // Parents with children auto-expand on their own routes; the chevron overrides that.
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
 
-  const renderLink = (item: { to: string; label: string; tone?: string; exact?: boolean }, Icon?: ComponentType<{ className?: string }>, child = false) => {
+  const renderLink = (
+    item: { to: string; label: string; tone?: string; exact?: boolean },
+    Icon?: ComponentType<{ className?: string }>,
+    child = false,
+  ) => {
     const link = (
       <Link
         key={item.to}
@@ -149,7 +166,7 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
               if (collapsed || children.length === 0) {
                 return renderLink(item, Icon);
               }
-              const underParent = isPathActive(pathname, item.to) ;
+              const underParent = isPathActive(pathname, item.to);
               const open = toggled[item.to] ?? underParent;
               return (
                 <div key={item.to} className="flex flex-col gap-0.5">
@@ -162,10 +179,13 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
                       onClick={() => setToggled((prev) => ({ ...prev, [item.to]: !open }))}
                       className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent/60"
                     >
-                      <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+                      <ChevronDown
+                        className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
+                      />
                     </button>
                   </div>
-                  {open && children.map((child) => renderLink({ ...child, exact: true }, undefined, true))}
+                  {open &&
+                    children.map((child) => renderLink({ ...child, exact: true }, undefined, true))}
                 </div>
               );
             })}
@@ -246,7 +266,7 @@ function UserCard({ collapsed = false }: { collapsed?: boolean }) {
   const [switching, setSwitching] = useState(false);
   const navigate = useNavigate();
   const email = session?.user.email ?? "";
-  const label = isBranchDevice ? (store?.name ?? "Branch") : (activeStaff?.name || email);
+  const label = isBranchDevice ? (store?.name ?? "Branch") : activeStaff?.name || email;
   const initial = label.charAt(0).toUpperCase() || "U";
 
   const handleSignOut = () => {
@@ -371,7 +391,8 @@ export function PosShell({
       (pathname.startsWith("/analytics") && canViewAnalytics) ||
       (pathname.startsWith("/suppliers") && canManageAccounting) ||
       (pathname.startsWith("/expenses") && canManageAccounting) ||
-      ((pathname === "/settings" || pathname.startsWith("/settings/")) && (canManageSettings || isBranchDevice));
+      ((pathname === "/settings" || pathname.startsWith("/settings/")) &&
+        (canManageSettings || isBranchDevice));
     if (!allowed) void navigate({ to: "/register", replace: true });
   }, [
     loading,
@@ -410,7 +431,10 @@ export function PosShell({
     const root = rootRef.current;
     if (!chrome || !root) return;
     const apply = () =>
-      root.style.setProperty("--pos-chrome", `${Math.ceil(chrome.getBoundingClientRect().height)}px`);
+      root.style.setProperty(
+        "--pos-chrome",
+        `${Math.ceil(chrome.getBoundingClientRect().height)}px`,
+      );
     apply();
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(apply);
@@ -571,9 +595,7 @@ export function PosShell({
                 <h1 className="truncate text-base font-semibold leading-7 tracking-tight sm:text-lg">
                   {title}
                 </h1>
-                {subtitle && (
-                  <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
-                )}
+                {subtitle && <p className="truncate text-xs text-muted-foreground">{subtitle}</p>}
               </div>
               {actions && (
                 <div
@@ -590,7 +612,9 @@ export function PosShell({
           <AnnouncementMarquee />
         </div>
 
-        <main className="animate-page-in min-w-0 flex-1 pb-[var(--pos-bottom-nav,0px)]">{children}</main>
+        <main className="animate-page-in min-w-0 flex-1 pb-[var(--pos-bottom-nav,0px)]">
+          {children}
+        </main>
       </div>
       {showBottomNav && <BottomNav onMore={() => setDrawerOpen(true)} moreOpen={drawerOpen} />}
     </div>

@@ -62,7 +62,7 @@ export function ScannerModal({
         </div>
         <div id={containerId} className="overflow-hidden rounded-md bg-muted" />
         <p className="mt-3 text-xs text-muted-foreground">
-          သင့် ကင်မရာကို ကုဒ်ဖတ်ပေါ်တွင် ပေါ်ပါစေ။ 
+          သင့် ကင်မရာကို ကုဒ်ဖတ်ပေါ်တွင် ပေါ်ပါစေ။
         </p>
       </div>
     </div>

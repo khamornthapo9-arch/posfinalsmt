@@ -17,7 +17,10 @@ export const Route = createFileRoute("/settings_/staff")({
   head: () => ({
     meta: [
       { title: "ဆိုင်ခွဲများ — SMT POS" },
-      { name: "description", content: "Pro ပိုင်ရှင်များအတွက် ဆိုင်ခွဲ ဖွင့်ခြင်း၊ ကုဒ်နှင့် PIN စီမံခြင်း။" },
+      {
+        name: "description",
+        content: "Pro ပိုင်ရှင်များအတွက် ဆိုင်ခွဲ ဖွင့်ခြင်း၊ ကုဒ်နှင့် PIN စီမံခြင်း။",
+      },
       { property: "og:title", content: "ဆိုင်ခွဲများ — SMT POS" },
       { property: "og:description", content: "ဆိုင်ခွဲ ကုဒ် + PIN ဖြင့် ဝင်ရောက်နိုင်သော စနစ်။" },
       { property: "og:type", content: "website" },
@@ -109,11 +112,16 @@ function BranchesPage() {
   return (
     <PosShell title="ဆိုင်ခွဲများ" subtitle={store?.name ?? ""}>
       <div className="mx-auto max-w-3xl space-y-4 p-3 sm:p-4">
-        <Link to="/settings" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+        <Link
+          to="/settings"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground"
+        >
           <ArrowLeft className="h-4 w-4" /> ဆက်တင်
         </Link>
         {!isMain ? (
-          <p className="text-sm text-muted-foreground">ပင်မဆိုင် ပိုင်ရှင်သာ ဆိုင်ခွဲ စီမံနိုင်ပါသည်။</p>
+          <p className="text-sm text-muted-foreground">
+            ပင်မဆိုင် ပိုင်ရှင်သာ ဆိုင်ခွဲ စီမံနိုင်ပါသည်။
+          </p>
         ) : !isPro ? (
           <div className="rounded-md border border-border bg-card p-5 text-sm">
             ဆိုင်ခွဲ ဖွင့်ရန် Pro Plan လိုအပ်ပါသည်။{" "}
@@ -125,7 +133,12 @@ function BranchesPage() {
           <div className="space-y-3 rounded-md border border-border bg-card p-4">
             <h2 className="font-semibold">ဆိုင်ခွဲ အသစ်</h2>
             <div className="grid gap-2 sm:grid-cols-[1fr_140px_auto]">
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ဆိုင်ခွဲ အမည်" maxLength={80} />
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ဆိုင်ခွဲ အမည်"
+                maxLength={80}
+              />
               <Input
                 value={pin}
                 inputMode="numeric"
@@ -133,7 +146,11 @@ function BranchesPage() {
                 placeholder="PIN (၄-၆)"
               />
               <Button onClick={() => void add()} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
                 ဖွင့်ရန်
               </Button>
             </div>

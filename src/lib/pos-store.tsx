@@ -3,7 +3,13 @@ import type { ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
-import { posDb, type CachedItem, type ItemUnit, type PendingSale, type PendingSaleLine } from "@/lib/pos-db";
+import {
+  posDb,
+  type CachedItem,
+  type ItemUnit,
+  type PendingSale,
+  type PendingSaleLine,
+} from "@/lib/pos-db";
 import { DEMO_CATALOG } from "@/lib/demo-catalog";
 import { CREDIT_METHOD } from "@/lib/accounting-store";
 
@@ -89,11 +95,7 @@ interface PosContextValue {
     total: number;
     notes: string;
   }) => Promise<string>;
-  closeTab: (input: {
-    saleId: string;
-    total: number;
-    paymentMethod: string;
-  }) => Promise<void>;
+  closeTab: (input: { saleId: string; total: number; paymentMethod: string }) => Promise<void>;
   refreshCatalog: () => Promise<void>;
   syncNow: () => Promise<void>;
   recordSale: (input: {
@@ -132,7 +134,8 @@ interface PosContextValue {
     barcode?: string | null;
     qr_value?: string | null;
     image_url?: string | null;
-    units?: { unit_name: string; conversion: number; price: number; is_default?: boolean }[] | undefined;
+    units?:
+      { unit_name: string; conversion: number; price: number; is_default?: boolean }[] | undefined;
   }) => Promise<void>;
   adjustStock: (input: {
     itemId: string;
@@ -214,7 +217,12 @@ export function classifySaleError(err: unknown): SaleFailureKind {
   ) {
     return "network";
   }
-  if (code === "42501" || e?.status === 401 || e?.status === 403 || /row-level security|permission denied/i.test(message)) {
+  if (
+    code === "42501" ||
+    e?.status === 401 ||
+    e?.status === 403 ||
+    /row-level security|permission denied/i.test(message)
+  ) {
     return "permission";
   }
   if (/^(22|23|P0001|PGRST)/.test(code)) return "validation";
@@ -672,7 +680,13 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           await posDb.pending_sales.add(offlineSale);
           await applyLocalStock();
         }
-        return { offline: true, saleId: null, reference: reference(true), creditPosted: false, ledgerPosted: false };
+        return {
+          offline: true,
+          saleId: null,
+          reference: reference(true),
+          creditPosted: false,
+          ledgerPosted: false,
+        };
       };
 
       if (!(navigator.onLine && isOnline)) return queueOffline();
@@ -706,7 +720,13 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         throw saleErrorFromServer(err);
       }
       await refreshCatalog();
-      return { offline: false, saleId: txnId, reference: reference(false), creditPosted, ledgerPosted };
+      return {
+        offline: false,
+        saleId: txnId,
+        reference: reference(false),
+        creditPosted,
+        ledgerPosted,
+      };
     },
     [isOnline, refreshCatalog, storeId, userId],
   );
@@ -717,7 +737,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       const category = input.category?.trim() || DEFAULT_CATEGORY;
       const barcode = input.barcode?.trim() || null;
       const qrValue = input.qr_value?.trim() || null;
-      let itemId = input.id;
+      const itemId = input.id;
       if (itemId) {
         // Editing never writes stock_quantity: the form's number is a stale cached copy and would
         // overwrite sales/purchases/adjustments made since. Stock changes only through
@@ -771,7 +791,10 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       }
 
       if (itemId && input.units) {
-        const { error: delError } = await supabase.from("item_units").delete().eq("item_id", itemId);
+        const { error: delError } = await supabase
+          .from("item_units")
+          .delete()
+          .eq("item_id", itemId);
         if (delError) throw delError;
         const rows = input.units
           .filter((u) => u.unit_name.trim() && u.conversion > 0)
@@ -996,7 +1019,9 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         orderDate.getDate() === now.getDate();
 
       if (!isToday) {
-        throw new Error("ယနေ့ဘောင်ချာသာ ပြန်အမ်းခွင့်ရှိပါသည် (Only today's sales can be refunded)");
+        throw new Error(
+          "ယနေ့ဘောင်ချာသာ ပြန်အမ်းခွင့်ရှိပါသည် (Only today's sales can be refunded)",
+        );
       }
 
       const { error } = await supabase
@@ -1021,7 +1046,9 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         if (current) {
           await supabase
             .from("items")
-            .update({ stock_quantity: current.stock_quantity + line.quantity * (line.conversion ?? 1) })
+            .update({
+              stock_quantity: current.stock_quantity + line.quantity * (line.conversion ?? 1),
+            })
             .eq("id", line.item_id);
         }
       }

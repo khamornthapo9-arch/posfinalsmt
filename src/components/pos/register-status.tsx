@@ -7,10 +7,15 @@ import { usePos } from "@/lib/pos-store";
  * Reads the POS provider's state directly (no second source of truth).
  */
 export function RegisterStatus({ className }: { className?: string }) {
-  const { syncState, pendingCount, failedSyncCount, reviewCount, otherStorePendingCount } = usePos();
+  const { syncState, pendingCount, failedSyncCount, reviewCount, otherStorePendingCount } =
+    usePos();
 
   const config = {
-    online: { label: "အွန်လိုင်း", Icon: Wifi, tone: "text-success border-success/30 bg-success/10" },
+    online: {
+      label: "အွန်လိုင်း",
+      Icon: Wifi,
+      tone: "text-success border-success/30 bg-success/10",
+    },
     syncing: {
       label: "ချိတ်ဆက်နေသည်",
       Icon: RefreshCw,

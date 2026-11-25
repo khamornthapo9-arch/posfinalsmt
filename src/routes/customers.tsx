@@ -1,6 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Archive, ArchiveRestore, Download, HandCoins, Pencil, Plus, Search, X } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Download,
+  HandCoins,
+  Pencil,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { FREE_LIMITS } from "@/lib/subscription";
 import { PosShell } from "@/components/pos/pos-shell";
@@ -20,7 +29,8 @@ export const Route = createFileRoute("/customers")({
       { title: "ဖောက်သည်များနှင့် အကြွေးစာရင်း — SMT POS" },
       {
         name: "description",
-        content: "ဖောက်သည် စာရင်းနှင့် အကြွေးလက်ကျန်များကို စီမံခန့်ခွဲပြီး ပြန်ဆပ်ငွေများကို မှတ်တမ်းတင်ပါ။",
+        content:
+          "ဖောက်သည် စာရင်းနှင့် အကြွေးလက်ကျန်များကို စီမံခန့်ခွဲပြီး ပြန်ဆပ်ငွေများကို မှတ်တမ်းတင်ပါ။",
       },
       { property: "og:title", content: "ဖောက်သည်များနှင့် အကြွေးစာရင်း — SMT POS" },
       {
@@ -85,7 +95,8 @@ function CustomersPage() {
       ["ဖောက်သည်အမည်", "ဖုန်းနံပါတ်", "အကြွေးကျန်ငွေ", "မှတ်ချက်"],
       ...debtors.map((c) => [c.name, c.phone || "-", c.balance.toString(), c.note || "-"]),
     ];
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map((r) => r.join(",")).join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8,\uFEFF" + rows.map((r) => r.join(",")).join("\n");
     const link = document.createElement("a");
     link.href = encodeURI(csvContent);
     link.download = `debt_report_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -108,9 +119,15 @@ function CustomersPage() {
       return;
     }
     void setCustomerArchived(customer.id, archiving)
-      .then(() => toast.success(archiving ? "ဖောက်သည်ကို သိမ်းထားပြီးပါပြီ" : "ဖောက်သည်ကို ပြန်ဖွင့်ပြီးပါပြီ"))
+      .then(() =>
+        toast.success(
+          archiving ? "ဖောက်သည်ကို သိမ်းထားပြီးပါပြီ" : "ဖောက်သည်ကို ပြန်ဖွင့်ပြီးပါပြီ",
+        ),
+      )
       .catch(() =>
-        toast.error("မအောင်မြင်ပါ — database update (customers.archived_at) ကို အရင် သုံးထားရန် လိုနိုင်သည်"),
+        toast.error(
+          "မအောင်မြင်ပါ — database update (customers.archived_at) ကို အရင် သုံးထားရန် လိုနိုင်သည်",
+        ),
       );
   };
 
@@ -129,7 +146,9 @@ function CustomersPage() {
   const chip = (active: boolean) =>
     cn(
       "inline-flex h-9 touch:h-10 items-center rounded-full border px-3 text-xs font-medium transition-colors",
-      active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:bg-accent",
+      active
+        ? "border-primary bg-primary text-primary-foreground"
+        : "border-border bg-card hover:bg-accent",
     );
 
   const rowActions = (customer: Customer) => (
@@ -159,7 +178,11 @@ function CustomersPage() {
             title={customer.archived_at ? "ပြန်ဖွင့်ရန်" : "သိမ်းထားရန်"}
             className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-accent"
           >
-            {customer.archived_at ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+            {customer.archived_at ? (
+              <ArchiveRestore className="h-3.5 w-3.5" />
+            ) : (
+              <Archive className="h-3.5 w-3.5" />
+            )}
           </button>
         </>
       )}
@@ -204,8 +227,11 @@ function CustomersPage() {
             onClick={exportDebtCsv}
             className="inline-flex h-11 items-center gap-1.5 rounded-md border border-border bg-card px-3.5 text-xs font-semibold hover:bg-accent"
           >
-            <Download className="h-4 w-4" /> <span className="max-sm:sr-only">အကြွေးစာရင်း Report (CSV)</span>
-            <span className="sm:hidden" aria-hidden="true">CSV</span>
+            <Download className="h-4 w-4" />{" "}
+            <span className="max-sm:sr-only">အကြွေးစာရင်း Report (CSV)</span>
+            <span className="sm:hidden" aria-hidden="true">
+              CSV
+            </span>
           </button>
 
           {/* ဆိုင်ခွဲစက် မဟုတ်သော Owner သာ ဖောက်သည်အသစ် ထည့်သွင်းခွင့်ရှိမည် */}
@@ -227,7 +253,12 @@ function CustomersPage() {
               ["all", "အားလုံး"],
             ] as [StatusFilter, string][]
           ).map(([value, label]) => (
-            <button key={value} onClick={() => setStatus(value)} aria-pressed={status === value} className={chip(status === value)}>
+            <button
+              key={value}
+              onClick={() => setStatus(value)}
+              aria-pressed={status === value}
+              className={chip(status === value)}
+            >
               {label}
             </button>
           ))}
@@ -239,12 +270,21 @@ function CustomersPage() {
               ["quick", "အမြန်ထည့်"],
             ] as [TypeFilter, string][]
           ).map(([value, label]) => (
-            <button key={value} onClick={() => setType(value)} aria-pressed={type === value} className={chip(type === value)}>
+            <button
+              key={value}
+              onClick={() => setType(value)}
+              aria-pressed={type === value}
+              className={chip(type === value)}
+            >
               {label}
             </button>
           ))}
           <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
-          <button onClick={() => setDebtOnly((v) => !v)} aria-pressed={debtOnly} className={chip(debtOnly)}>
+          <button
+            onClick={() => setDebtOnly((v) => !v)}
+            aria-pressed={debtOnly}
+            className={chip(debtOnly)}
+          >
             အကြွေးကျန်သူ
           </button>
         </div>
@@ -252,13 +292,16 @@ function CustomersPage() {
         {/* ဆိုင်ခွဲစက်များအတွက် သတိပေးချက် Bar */}
         {isBranchDevice && (
           <div className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-            * ဆိုင်ခွဲစက်တွင် ဖောက်သည် အသစ်စာရင်းသွင်းခွင့် မရှိပါ။ စာရင်းရှိပြီး ဖောက်သည်များထံသို့ အကြွေးရောင်းချခြင်းနှင့် ငွေလက်ခံခြင်းသာ ပြုလုပ်နိုင်ပါသည်။
+            * ဆိုင်ခွဲစက်တွင် ဖောက်သည် အသစ်စာရင်းသွင်းခွင့် မရှိပါ။ စာရင်းရှိပြီး ဖောက်သည်များထံသို့
+            အကြွေးရောင်းချခြင်းနှင့် ငွေလက်ခံခြင်းသာ ပြုလုပ်နိုင်ပါသည်။
           </div>
         )}
 
         {filtered.length === 0 ? (
           <p className="rounded-md border border-dashed border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
-            {customers.length === 0 ? "ဖောက်သည် မရှိသေးပါ။" : "စစ်ထုတ်ချက်နှင့် ကိုက်ညီသော ဖောက်သည် မတွေ့ပါ။"}
+            {customers.length === 0
+              ? "ဖောက်သည် မရှိသေးပါ။"
+              : "စစ်ထုတ်ချက်နှင့် ကိုက်ညီသော ဖောက်သည် မတွေ့ပါ။"}
           </p>
         ) : (
           <>
@@ -273,12 +316,16 @@ function CustomersPage() {
                       className="min-w-0 flex-1"
                     >
                       <span className="block truncate text-sm font-semibold">{customer.name}</span>
-                      <span className="block text-xs text-muted-foreground">{customer.phone ?? "—"}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {customer.phone ?? "—"}
+                      </span>
                     </Link>
                     <span
                       className={cn(
                         "shrink-0 text-sm tabular-nums",
-                        customer.balance > 0 ? "font-semibold text-destructive" : "text-muted-foreground",
+                        customer.balance > 0
+                          ? "font-semibold text-destructive"
+                          : "text-muted-foreground",
                       )}
                     >
                       {fmt(customer.balance)}
@@ -305,7 +352,13 @@ function CustomersPage() {
                 </thead>
                 <tbody>
                   {filtered.map((customer) => (
-                    <tr key={customer.id} className={cn("border-b border-border last:border-0", customer.archived_at && "opacity-70")}>
+                    <tr
+                      key={customer.id}
+                      className={cn(
+                        "border-b border-border last:border-0",
+                        customer.archived_at && "opacity-70",
+                      )}
+                    >
                       <td className="px-4 py-3 font-medium">
                         <Link
                           to="/customers/$customerId"
@@ -343,7 +396,9 @@ function CustomersPage() {
           onClose={() => setEditing(null)}
           onSave={async (values) => {
             if (!isPro && editing === "new" && activeCustomers.length >= FREE_LIMITS.customers) {
-              toast.error(`Standard အစီအစဉ်တွင် ဖောက်သည် ${FREE_LIMITS.customers} ဦးသာ သိမ်းနိုင်သည်`);
+              toast.error(
+                `Standard အစီအစဉ်တွင် ဖောက်သည် ${FREE_LIMITS.customers} ဦးသာ သိမ်းနိုင်သည်`,
+              );
               return;
             }
             try {
@@ -424,7 +479,9 @@ export function SettleModal({
                   onClick={() => setMethod(m)}
                   className={cn(
                     "min-h-11 rounded-md border px-2 text-xs font-medium",
-                    method === m ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-accent",
+                    method === m
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border hover:bg-accent",
                   )}
                 >
                   {m}
@@ -447,4 +504,3 @@ export function SettleModal({
     </div>
   );
 }
-

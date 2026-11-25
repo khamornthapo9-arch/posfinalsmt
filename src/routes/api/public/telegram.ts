@@ -45,8 +45,7 @@ async function handleTelegramWebhook({ request }: { request: Request }) {
         .select("store_id, expires_at")
         .eq("token", token)
         .maybeSingle();
-      const storeId =
-        link && new Date(link.expires_at).getTime() > Date.now() ? link.store_id : "";
+      const storeId = link && new Date(link.expires_at).getTime() > Date.now() ? link.store_id : "";
       if (link) await supabaseAdmin.from("telegram_link_tokens").delete().eq("token", token);
 
       const { data: store, error } = await supabaseAdmin
@@ -63,19 +62,19 @@ async function handleTelegramWebhook({ request }: { request: Request }) {
       if (error || !store) {
         await sendTelegramMessage(
           chatId,
-          "❌ ဆိုင်ရှာမတွေ့ပါ သို့မဟုတ် ချိတ်ဆက်မှု မအောင်မြင်ပါ။ ကျေးဇူးပြု၍ SMT POS Settings မှ တစ်ဆင့် ပြန်လည် ကြိုးစားပါ။"
+          "❌ ဆိုင်ရှာမတွေ့ပါ သို့မဟုတ် ချိတ်ဆက်မှု မအောင်မြင်ပါ။ ကျေးဇူးပြု၍ SMT POS Settings မှ တစ်ဆင့် ပြန်လည် ကြိုးစားပါ။",
         );
       } else {
         await sendTelegramMessage(
           chatId,
           `🎉 <b>${String(store.name).replace(/[<>&]/g, "")}</b> နှင့် အောင်မြင်စွာ ချိတ်ဆက်ပြီးပါပြီ!\n\n` +
-          `ယခုမှစ၍ နေ့စဉ် အရောင်းအစီရင်ခံစာ (EOD) များကို ဤနေရာသို့ အလိုအလျောက် ပို့ပေးသွားပါမည်။ ✅`
+            `ယခုမှစ၍ နေ့စဉ် အရောင်းအစီရင်ခံစာ (EOD) များကို ဤနေရာသို့ အလိုအလျောက် ပို့ပေးသွားပါမည်။ ✅`,
         );
       }
     } else if (text === "/start") {
       await sendTelegramMessage(
         chatId,
-        "မင်္ဂလာပါ 👋 SMT POS Report Bot မှ ကြိုဆိုပါသည်။ သင့်ဆိုင်နှင့် ချိတ်ဆက်ရန် SMT POS Settings > Telegram မှတစ်ဆင့် ချိတ်ဆက်ပေးပါ။"
+        "မင်္ဂလာပါ 👋 SMT POS Report Bot မှ ကြိုဆိုပါသည်။ သင့်ဆိုင်နှင့် ချိတ်ဆက်ရန် SMT POS Settings > Telegram မှတစ်ဆင့် ချိတ်ဆက်ပေးပါ။",
       );
     }
 

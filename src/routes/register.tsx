@@ -32,7 +32,8 @@ export const Route = createFileRoute("/register")({
       { title: "POS Register — SMT POS" },
       {
         name: "description",
-        content: "Retail checkout with barcode and QR scanning, tax totals, receipts and offline sales.",
+        content:
+          "Retail checkout with barcode and QR scanning, tax totals, receipts and offline sales.",
       },
       { property: "og:title", content: "POS Register — SMT POS" },
       {
@@ -146,7 +147,8 @@ function RegisterPage() {
   itemsRef.current = items;
 
   const activeTab = useMemo(
-    () => (activeTable == null ? null : openTabs.find((t) => t.table_number === activeTable) ?? null),
+    () =>
+      activeTable == null ? null : (openTabs.find((t) => t.table_number === activeTable) ?? null),
     [openTabs, activeTable],
   );
 
@@ -156,8 +158,7 @@ function RegisterPage() {
     const unitPrice = unit?.price ?? item.price;
     setCart((prev) => {
       const existing = prev.find(
-        (line) =>
-          line.item_id === item.id && (line.unit_name ?? "base") === (unitName ?? "base"),
+        (line) => line.item_id === item.id && (line.unit_name ?? "base") === (unitName ?? "base"),
       );
       const nextQty = (existing?.quantity ?? 0) + 1;
       // Every line of this item counts (e.g. 1 carton + 3 pieces), in base units.
@@ -323,7 +324,7 @@ function RegisterPage() {
         .map((line) => {
           if (line.item_id !== itemId) return line;
           if (unitName && (line.unit_name ?? "base") !== unitName) return line;
-          const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? (line.stock ?? 0);
+          const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? line.stock ?? 0;
           const conversion = line.conversion ?? 1;
           const nextQty = line.quantity + delta;
           const others = prev.filter((l) => l !== line);
@@ -347,7 +348,7 @@ function RegisterPage() {
         (line) => line.item_id === itemId && (line.unit_name ?? "base") === (unitName ?? "base"),
       );
       if (!target) return prev;
-      const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? (target.stock ?? 0);
+      const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? target.stock ?? 0;
       const others = prev.filter((l) => l !== target);
       if (baseQuantityFor(others, itemId) + qty * (target.conversion ?? 1) > stock) {
         toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
@@ -378,8 +379,7 @@ function RegisterPage() {
   const removeFromCart = (itemId: string, unitName?: string) =>
     setCart((prev) =>
       prev.filter(
-        (line) =>
-          line.item_id !== itemId || (unitName && (line.unit_name ?? "base") !== unitName),
+        (line) => line.item_id !== itemId || (unitName && (line.unit_name ?? "base") !== unitName),
       ),
     );
 
@@ -448,7 +448,8 @@ function RegisterPage() {
   const availablePayments = PAYMENTS;
   const cogsFor = (lines: CartLine[]) =>
     lines.reduce(
-      (sum, line) => sum + line.quantity * (items.find((i) => i.id === line.item_id)?.cost_price ?? 0),
+      (sum, line) =>
+        sum + line.quantity * (items.find((i) => i.id === line.item_id)?.cost_price ?? 0),
       0,
     );
 
@@ -566,9 +567,7 @@ function RegisterPage() {
         timestamp: new Date().toLocaleString(),
         offline,
         reference,
-        ...(customer
-          ? { customerName: customer.name, customerPhone: customer.phone ?? "" }
-          : {}),
+        ...(customer ? { customerName: customer.name, customerPhone: customer.phone ?? "" } : {}),
         ...(isCredit ? { previousDebt, newDebt: previousDebt + creditAmount } : {}),
         ...(cashDue > 0 && cashTendered != null && !cashShort
           ? { cashReceived: cashTendered, change: changeDue }
@@ -679,9 +678,7 @@ function RegisterPage() {
                   <span
                     className={cn(
                       "inline-flex w-fit items-center rounded-sm px-2 py-0.5 text-xs font-medium",
-                      occupied
-                        ? "bg-danger-soft text-destructive"
-                        : "bg-success-soft text-success",
+                      occupied ? "bg-danger-soft text-destructive" : "bg-success-soft text-success",
                     )}
                   >
                     {occupied ? "လူရှိသည်" : "အားသည်"}
@@ -1032,7 +1029,12 @@ function CustomerPickerModal({
       <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold">အကြွေး ဖောက်သည် ရွေးရန်</h2>
-          <button type="button" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1040,7 +1042,10 @@ function CustomerPickerModal({
         {adding ? (
           <div className="space-y-3">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="qa-name">
+              <label
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
+                htmlFor="qa-name"
+              >
                 အမည်
               </label>
               <input
@@ -1051,7 +1056,10 @@ function CustomerPickerModal({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="qa-phone">
+              <label
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
+                htmlFor="qa-phone"
+              >
                 ဖုန်းနံပါတ်
               </label>
               <input
@@ -1182,7 +1190,12 @@ function ReceiptModal({
       >
         <div className="mb-3 flex items-center justify-between print:hidden">
           <h2 className="text-sm font-semibold">ပြေစာ</h2>
-          <button type="button" onClick={onClose} aria-label="ပြေစာ ပိတ်ရန်" className="text-muted-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ပြေစာ ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1350,7 +1363,12 @@ function KitchenTicketModal({ ticket, onClose }: { ticket: KitchenTicket; onClos
       <div className="print-area kitchen-ticket w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-3 flex items-center justify-between print:hidden">
           <h2 className="text-sm font-semibold">မီးဖိုချောင် အော်ဒါလတ်မှတ်</h2>
-          <button type="button" onClick={onClose} aria-label="လက်မှတ် ပိတ်ရန်" className="text-muted-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="လက်မှတ် ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1361,7 +1379,10 @@ function KitchenTicketModal({ ticket, onClose }: { ticket: KitchenTicket; onClos
         <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
         <div className="text-sm">
           {ticket.lines.map((line) => (
-            <div key={`${line.item_id}-${line.unit_name ?? "base"}`} className="flex justify-between py-0.5">
+            <div
+              key={`${line.item_id}-${line.unit_name ?? "base"}`}
+              className="flex justify-between py-0.5"
+            >
               <span className="truncate pr-2 font-medium">{line.name}</span>
               <span className="tabular-nums">× {line.quantity}</span>
             </div>
@@ -1407,11 +1428,19 @@ function HoldNoteModal({
       <div className="w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold">ခဏဆိုင်းထားမည်</h2>
-          <button type="button" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="hold-note">
+        <label
+          className="mb-1.5 block text-xs font-medium text-muted-foreground"
+          htmlFor="hold-note"
+        >
           မှတ်ချက် (ဖောက်သည်အမည် / စားပွဲနံပါတ်)
         </label>
         <input
@@ -1446,17 +1475,19 @@ function HeldOrdersDrawer({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex justify-end bg-slate-900/60"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60" onClick={onClose}>
       <aside
         className="flex h-full w-full max-w-md flex-col bg-card shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold">ခဏဆိုင်းထားသော ဘောက်ချာများ ({orders.length})</h2>
-          <button type="button" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1477,7 +1508,10 @@ function HeldOrdersDrawer({
               </p>
               <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                 {order.lines.map((line) => (
-                  <li key={`${line.item_id}-${line.unit_name ?? "base"}`} className="flex justify-between">
+                  <li
+                    key={`${line.item_id}-${line.unit_name ?? "base"}`}
+                    className="flex justify-between"
+                  >
                     <span className="truncate pr-2">
                       {line.name} × {line.quantity}
                     </span>
@@ -1565,10 +1599,7 @@ function OrderHistoryDrawer({
   }, [orders, filterMode, selectedDate]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex justify-end bg-slate-900/60"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60" onClick={onClose}>
       <aside
         className="flex h-full w-full max-w-md flex-col bg-card shadow-xl"
         onClick={(e) => e.stopPropagation()}
@@ -1582,7 +1613,12 @@ function OrderHistoryDrawer({
               </span>
             )}
           </div>
-          <button type="button" onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>

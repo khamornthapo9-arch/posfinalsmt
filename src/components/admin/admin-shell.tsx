@@ -15,7 +15,10 @@ function AdminLogin() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const { data, error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { data, error: err } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
     if (err || !data.user) {
       setError("အီးမေးလ် သို့မဟုတ် စကားဝှက် မှားယွင်းနေပါသည်");
       setBusy(false);
@@ -37,7 +40,10 @@ function AdminLogin() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-muted p-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm"
+      >
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
           <h1 className="text-lg font-bold">SMT POS Admin</h1>
@@ -99,7 +105,9 @@ export function AdminShell({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="hidden truncate text-xs text-muted-foreground sm:inline">{session?.user.email}</span>
+          <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+            {session?.user.email}
+          </span>
           <button
             onClick={async () => {
               await signOut();
