@@ -1,0 +1,27 @@
+# Real build/lint/type checks on GitHub's runners (network + dependencies available there).
+# Each step runs even if an earlier one fails, so one run reports ALL problems at once.
+# There is no test runner or test script in this project yet, so there is no test step.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install (frozen lockfile)
+        run: bun install --frozen-lockfile
+      - name: Lint
+        if: always()
+        run: bun run lint
+      - name: Type check
+        if: always()
+        run: bun run typecheck
+      - name: Build
+        if: always()
+        run: bun run build
