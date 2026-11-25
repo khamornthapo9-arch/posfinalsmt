@@ -47,7 +47,6 @@ const inputClass =
   "h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring";
 const labelClass = "mb-1.5 block text-xs font-medium text-muted-foreground";
 
-
 type StatusFilter = "active" | "archived" | "all";
 type TypeFilter = "all" | "regular" | "quick";
 
