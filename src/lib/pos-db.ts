@@ -23,6 +23,8 @@ export interface CachedItem {
   qr_value: string | null;
   created_at: string;
   units: ItemUnit[];
+  /** Set when archived: kept for history and restorable, hidden from selling and alerts. */
+  archived_at?: string | null;
 }
 
 export interface PendingSaleLine {

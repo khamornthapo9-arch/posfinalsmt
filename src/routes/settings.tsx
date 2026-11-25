@@ -195,8 +195,8 @@ function SettingsPage() {
       } else {
         toast.error(res.error || "ပို့၍မရပါ");
       }
-    } catch (e: any) {
-      toast.error(e?.message || "မအောင်မြင်ပါ");
+    } catch (e) {
+      toast.error((e as { message?: string } | null)?.message || "မအောင်မြင်ပါ");
     } finally {
       setTestingTelegram(false);
     }
@@ -210,7 +210,7 @@ function SettingsPage() {
         .update({
           telegram_chat_id: null,
           telegram_username: null,
-        } as any)
+        })
         .eq("id", store.id);
       toast.success("Telegram ချိတ်ဆက်မှု ဖြုတ်လိုက်ပါပြီ");
       window.location.reload();
@@ -222,8 +222,8 @@ function SettingsPage() {
   const inputClass =
     "h-10 w-full rounded-sm border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 
-  const telegramChatId = (store as any)?.telegram_chat_id;
-  const telegramUsername = (store as any)?.telegram_username;
+  const telegramChatId = store?.telegram_chat_id;
+  const telegramUsername = store?.telegram_username;
   const botUsername = import.meta.env["VITE_TELEGRAM_BOT_USERNAME"] || "Smtpos_bot";
 
   // ဆိုင်ခွဲစက်ဖြစ်ပါက ဘောက်ချာပုံစံနှင့် Support သာ ပြသမည်

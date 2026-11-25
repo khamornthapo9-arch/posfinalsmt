@@ -32,6 +32,27 @@ import { usePos } from "@/lib/pos-store";
 import { cn } from "@/lib/utils";
 import { sendStoreTelegramReport } from "@/lib/telegram-report.functions";
 
+/** A sale line as read by this page (sale_items row; legacy rows may use transaction_items). */
+interface SaleLineRow {
+  item_id?: string | null;
+  quantity?: number | null;
+  conversion?: number | null;
+  unit_cost?: number | null;
+}
+
+/** A sale as read by this page. Legacy/optional fields (is_refund, total, transaction_items) are kept optional. */
+interface SaleRow {
+  id?: string;
+  created_at: string;
+  status?: string | null;
+  is_refund?: boolean | null;
+  total_amount?: number | null;
+  total?: number | null;
+  payment_method?: string | null;
+  sale_items?: SaleLineRow[] | null;
+  transaction_items?: SaleLineRow[] | null;
+}
+
 export const Route = createFileRoute("/analytics")({
   ssr: false,
   head: () => ({
@@ -73,7 +94,7 @@ function AnalyticsPage() {
   const [range, setRange] = useState<RangeKey>("today");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [eodOpen, setEodOpen] = useState(false);
   const [sendingTelegram, setSendingTelegram] = useState(false);
@@ -268,8 +289,8 @@ function AnalyticsPage() {
       } else {
         toast.error("ပို့၍မရပါ: " + res.error);
       }
-    } catch (e: any) {
-      toast.error("ချိတ်ဆက်မှု မအောင်မြင်ပါ: " + e?.message);
+    } catch (e) {
+      toast.error("ချိတ်ဆက်မှု မအောင်မြင်ပါ: " + (e as { message?: string } | null)?.message);
     } finally {
       setSendingTelegram(false);
     }
@@ -291,7 +312,7 @@ function AnalyticsPage() {
   };
 
   const ranges = isPro ? PRO_RANGES : FREE_RANGES;
-  const telegramChatId = (store as any)?.telegram_chat_id;
+  const telegramChatId = store?.telegram_chat_id;
 
   const cards = [
     { label: "စုစုပေါင်း အရောင်း", value: fmt(totals.grossSales), icon: DollarSign },

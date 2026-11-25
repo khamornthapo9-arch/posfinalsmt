@@ -55,7 +55,10 @@ export interface OrderSummary {
 }
 
 interface PosContextValue {
+  /** Active (non-archived) items only: this is what the register, scanner and pickers use. */
   items: CachedItem[];
+  /** Archived items: kept for history, shown only in the inventory "archived" view. */
+  archivedItems: CachedItem[];
   categories: string[];
   loading: boolean;
   isOnline: boolean;
@@ -112,6 +115,8 @@ interface PosContextValue {
     reference: string;
     /** True when post_sale already applied the credit balance (skip the client credit posting). */
     creditPosted: boolean;
+    /** True when the database wrote the sale's ledger entries inside post_sale. */
+    ledgerPosted: boolean;
   }>;
   saveItem: (input: {
     id?: string;
@@ -129,11 +134,15 @@ interface PosContextValue {
   }) => Promise<void>;
   adjustStock: (input: {
     itemId: string;
+    /** The count the user entered; sent to the database as a delta against what they saw. */
     newQuantity: number;
     reason: string;
     note?: string;
+    /** Stable per attempt so a retry or double-click can never apply the adjustment twice. */
+    requestId?: string;
   }) => Promise<void>;
-  deleteItem: (id: string) => Promise<void>;
+  /** Archive (hide, keep history) or restore an item. Items are never hard-deleted from the app. */
+  setItemArchived: (id: string, archived: boolean) => Promise<void>;
   seedDemoItems: () => Promise<number>;
 }
 
@@ -236,6 +245,17 @@ const POST_SALE_ERRORS: [string, string][] = [
   ["SALE_ID_CONFLICT", "အရောင်း အမှတ်စဉ် ထပ်နေသည်၊ ထပ်မံကြိုးစားပါ"],
 ];
 
+/** Maps adjust_stock's error codes to Burmese messages. */
+const ADJUST_STOCK_ERRORS: [string, string][] = [
+  ["NEGATIVE_STOCK", "လက်ကျန်သည် အနုတ် မဖြစ်ရပါ — ပမာဏ ပြန်စစ်ပါ"],
+  ["REASON_REQUIRED", "ချိန်ညှိရသည့် အကြောင်းရင်း ထည့်ပါ"],
+  ["ITEM_NOT_FOUND", "ပစ္စည်း မတွေ့ပါ (သို့) ဤဆိုင်နှင့် မသက်ဆိုင်ပါ"],
+  ["ACCESS_DENIED", "လက်ကျန် ချိန်ညှိရန် ခွင့်ပြုချက် မရှိပါ"],
+  ["NOT_AUTHENTICATED", "ဝင်ရောက်မှု သက်တမ်းကုန်သွားပါပြီ၊ ပြန်လည် ဝင်ပါ"],
+  ["QUANTITY_NOT_REPRESENTABLE", "ဤပစ္စည်းအတွက် ဒသမ ပမာဏ မသုံးနိုင်ပါ"],
+  ["INVALID_DELTA", "ပြောင်းလဲမှု ပမာဏ မမှန်ကန်ပါ"],
+];
+
 /** Turns a server rejection into a SaleError with the most specific safe message available. */
 export function saleErrorFromServer(err: unknown): SaleError {
   const kind = classifySaleError(err);
@@ -267,11 +287,13 @@ interface ServerSaleInput {
  * Each step is checked before it runs, so a half-saved sale is resumed, never duplicated.
  * A non-network failure after the header exists rolls the header back (best effort).
  */
-async function postSaleToServer(input: ServerSaleInput): Promise<{ creditPosted: boolean }> {
+async function postSaleToServer(
+  input: ServerSaleInput,
+): Promise<{ creditPosted: boolean; ledgerPosted: boolean }> {
   // Preferred path: one atomic, idempotent database transaction (sale, lines, stock movements,
   // cost snapshot and credit balance). Falls back to the step-by-step path below only when the
   // function has not been installed in this database yet.
-  const { error: rpcError } = await supabase.rpc("post_sale", {
+  const { data: rpcData, error: rpcError } = await supabase.rpc("post_sale", {
     p_sale_id: input.id,
     p_store_id: input.storeId,
     p_lines: input.lines.map((line) => ({
@@ -293,7 +315,12 @@ async function postSaleToServer(input: ServerSaleInput): Promise<{ creditPosted:
     p_created_at: input.createdAt,
     p_is_offline_sync: input.isOfflineSync,
   });
-  if (!rpcError) return { creditPosted: true };
+  if (!rpcError) {
+    // Newer database versions write the ledger inside post_sale and say so; older ones do not,
+    // and the client keeps posting the ledger itself (so deploy order is safe either way).
+    const ledgerPosted = (rpcData as { ledger_posted?: boolean } | null)?.ledger_posted === true;
+    return { creditPosted: true, ledgerPosted };
+  }
   const missing =
     rpcError.code === "PGRST202" ||
     rpcError.code === "42883" ||
@@ -369,7 +396,7 @@ async function postSaleToServer(input: ServerSaleInput): Promise<{ creditPosted:
     }
     throw err;
   }
-  return { creditPosted: false };
+  return { creditPosted: false, ledgerPosted: false };
 }
 
 function PosProviderInner({ children }: { children: ReactNode }) {
@@ -442,6 +469,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       qr_value: (row as { qr_value?: string | null }).qr_value ?? null,
       created_at: row.created_at,
       units: unitsByItem.get(row.id) ?? [],
+      archived_at: (row as { archived_at?: string | null }).archived_at ?? null,
     }));
     await posDb.transaction("rw", posDb.cached_items, async () => {
       await posDb.cached_items.clear();
@@ -631,14 +659,15 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           await posDb.pending_sales.add(offlineSale);
           await applyLocalStock();
         }
-        return { offline: true, saleId: null, reference: reference(true), creditPosted: false };
+        return { offline: true, saleId: null, reference: reference(true), creditPosted: false, ledgerPosted: false };
       };
 
       if (!(navigator.onLine && isOnline)) return queueOffline();
 
       let creditPosted = false;
+      let ledgerPosted = false;
       try {
-        ({ creditPosted } = await postSaleToServer({
+        ({ creditPosted, ledgerPosted } = await postSaleToServer({
           id: txnId,
           storeId,
           userId,
@@ -664,7 +693,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         throw saleErrorFromServer(err);
       }
       await refreshCatalog();
-      return { offline: false, saleId: txnId, reference: reference(false), creditPosted };
+      return { offline: false, saleId: txnId, reference: reference(false), creditPosted, ledgerPosted };
     },
     [isOnline, refreshCatalog, storeId, userId],
   );
@@ -719,45 +748,47 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   );
 
   const adjustStock = useCallback<PosContextValue["adjustStock"]>(
-    async ({ itemId, newQuantity, reason, note }) => {
+    async ({ itemId, newQuantity, reason, note, requestId }) => {
       if (!storeId) throw new Error("No active store");
       const target = (items ?? []).find((i) => i.id === itemId);
       if (!target) throw new Error("Item not found");
 
-      const currentQty = target.stock_quantity;
-      const delta = newQuantity - currentQty;
+      // The database applies a DELTA to its own current stock and writes the movement in the
+      // same transaction (adjust_stock); the browser never writes an absolute quantity.
+      const delta = newQuantity - target.stock_quantity;
+      if (delta === 0) return;
 
-      // 1. Update items stock_quantity
-      const { error: itemError } = await supabase
-        .from("items")
-        .update({ stock_quantity: newQuantity })
-        .eq("id", itemId)
-        .eq("store_id", storeId);
-      if (itemError) throw itemError;
-
-      // 2. Insert into inventory_movements audit trail
-      const { error: moveError } = await supabase.from("inventory_movements").insert({
-        store_id: storeId,
-        item_id: itemId,
-        movement_type: "ADJUSTMENT",
-        quantity: delta,
-        note: `${reason}${note ? ` - ${note}` : ""}`,
-        created_by: userId,
+      const { error } = await supabase.rpc("adjust_stock", {
+        p_store_id: storeId,
+        p_item_id: itemId,
+        p_delta: delta,
+        p_reason: reason,
+        p_note: note ?? null,
+        p_request_id: requestId ?? crypto.randomUUID(),
       });
-      if (moveError) console.error("Failed to log inventory movement:", moveError);
-
+      if (error) {
+        const raw = error.message ?? "";
+        const hit = ADJUST_STOCK_ERRORS.find(([code]) => raw.includes(code));
+        throw new Error(hit ? hit[1] : "လက်ကျန်စာရင်း ချိန်ညှိ၍ မရပါ — ထပ်ကြိုးစားပါ");
+      }
       await refreshCatalog();
     },
-    [items, refreshCatalog, storeId, userId],
+    [items, refreshCatalog, storeId],
   );
 
-  const deleteItem = useCallback(
-    async (id: string) => {
-      const { error } = await supabase.from("items").delete().eq("id", id);
+  const setItemArchived = useCallback(
+    async (id: string, archived: boolean) => {
+      if (!storeId) throw new Error("No active store");
+      // One UPDATE (atomic). Scoped to the active store as well as RLS; history is untouched.
+      const { error } = await supabase
+        .from("items")
+        .update({ archived_at: archived ? new Date().toISOString() : null })
+        .eq("id", id)
+        .eq("store_id", storeId);
       if (error) throw error;
       await refreshCatalog();
     },
-    [refreshCatalog],
+    [refreshCatalog, storeId],
   );
 
   const seedDemoItems = useCallback(async () => {
@@ -1114,7 +1145,9 @@ function PosProviderInner({ children }: { children: ReactNode }) {
     [refreshCatalog, refreshRecentOrders, refreshTabs],
   );
 
-  const list = items ?? [];
+  const allItems = items ?? [];
+  const list = allItems.filter((i) => !i.archived_at);
+  const archivedItems = allItems.filter((i) => Boolean(i.archived_at));
   const lowStockItems = list.filter((i) => i.stock_quantity <= i.min_stock_threshold);
   const lowStockCount = lowStockItems.length;
   const categories = [...new Set(list.map((i) => i.category || DEFAULT_CATEGORY))].sort();
@@ -1123,6 +1156,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   const value = useMemo<PosContextValue>(
     () => ({
       items: list,
+      archivedItems,
       categories,
       loading,
       isOnline,
@@ -1149,11 +1183,12 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       recordSale,
       saveItem,
       adjustStock,
-      deleteItem,
+      setItemArchived,
       seedDemoItems,
     }),
     [
       list,
+      archivedItems,
       categories,
       loading,
       isOnline,
@@ -1180,7 +1215,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
       recordSale,
       saveItem,
       adjustStock,
-      deleteItem,
+      setItemArchived,
       seedDemoItems,
     ],
   );
