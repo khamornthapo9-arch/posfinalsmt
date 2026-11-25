@@ -5,7 +5,6 @@ import {
   Loader2,
   LogOut,
   Menu,
-  MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
   X,
@@ -23,7 +22,6 @@ import { AnnouncementMarquee } from "@/components/pos/announcement-marquee";
 import { useRole, ROLE_LABEL } from "@/lib/roles";
 import {
   isPathActive,
-  primaryItems,
   trailFor,
   visibleGroups,
   type NavGroup,
@@ -60,24 +58,30 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 
   return (
     <div className={cn("flex items-center gap-2.5", collapsed && "justify-center")}>
-      {logo ? (
-        <img
-          src={logo}
-          alt={store ? `${store.name} logo` : "SMT POS logo"}
-          className="h-10 w-10 shrink-0 rounded-xl bg-white object-contain p-1"
-        />
-      ) : (
-        <div
-          aria-label="SMT POS"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1"
-        >
-          <LottiePlayer src="/animations/s-logo.json" className="h-9 w-9" />
-        </div>
-      )}
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card shadow-xs">
+        {logo ? (
+          <img
+            src={logo}
+            alt={store?.name ?? "Store"}
+            className="h-7 w-7 rounded-md object-cover"
+          />
+        ) : (
+          <div className="h-7 w-7">
+            <LottiePlayer
+              src="/animations/s-logo.json"
+              loop={false}
+              autoplay={false}
+              className="h-full w-full"
+            />
+          </div>
+        )}
+      </div>
       {!collapsed && (
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold tracking-tight text-sidebar-foreground">SMT POS</p>
-          <p className="truncate text-xs leading-5 text-sidebar-foreground/60">{store?.name ?? "Store"}</p>
+          <p className="truncate text-sm font-bold text-foreground">
+            {store?.name ?? "SMT POS"}
+          </p>
+          <p className="truncate text-[11px] text-muted-foreground">လက်လီ အရောင်းဆိုင်</p>
         </div>
       )}
     </div>
@@ -85,90 +89,65 @@ function Brand({ collapsed = false }: { collapsed?: boolean }) {
 }
 
 function useVisibleGroups(): NavGroup[] {
-  const { store, isBranchDevice } = useAuth();
-  const { role, isActive } = useRole();
-  return visibleGroups({
-    advanced: Boolean(store?.advanced_accounting_mode),
-    isBranchDevice,
-    role,
-    isActive,
-  });
+  const { role, isPro, isBranchDevice } = useRole();
+  return visibleGroups({ role, isPro, isBranchDevice });
 }
 
-function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
+function NavList({
+  collapsed = false,
+  onNavigate,
+}: {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+}) {
   const groups = useVisibleGroups();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // Parents with children auto-expand on their own routes; the chevron overrides that.
-  const [toggled, setToggled] = useState<Record<string, boolean>>({});
-
-  const renderLink = (item: { to: string; label: string; tone?: string; exact?: boolean }, Icon?: ComponentType<{ className?: string }>, child = false) => {
-    const link = (
-      <Link
-        key={item.to}
-        to={item.to as string}
-        title={collapsed ? undefined : item.label}
-        aria-label={collapsed ? item.label : undefined}
-        data-tone={item.tone ?? "settings"}
-        onClick={onNavigate}
-        activeOptions={{ exact: item.exact ?? false }}
-        activeProps={{ className: "", "data-active": "true" }}
-        className={cn(
-          "pos-nav-tab flex min-h-10 touch:min-h-12 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
-          child && "min-h-9 py-2 pl-10 text-[13px]",
-          collapsed && "justify-center px-0",
-        )}
-      >
-        {Icon && <Icon className="h-4 w-4 shrink-0" />}
-        {!collapsed && <span className="truncate leading-6">{item.label}</span>}
-      </Link>
-    );
-    if (!collapsed) return link;
-    return (
-      <Tooltip key={item.to}>
-        <TooltipTrigger asChild>{link}</TooltipTrigger>
-        <TooltipContent side="right">{item.label}</TooltipContent>
-      </Tooltip>
-    );
-  };
 
   return (
     <TooltipProvider delayDuration={150}>
-      <nav aria-label="Main" className="flex flex-col gap-3">
-        {groups.map((group, index) => (
-          <div key={group.id} className="flex flex-col gap-0.5">
-            {collapsed ? (
-              index > 0 && <div className="mx-2 mb-1 h-px bg-sidebar-border" />
-            ) : (
-              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/50">
-                {group.label}
+      <nav aria-label="Main Navigation" className="space-y-4">
+        {groups.map((group) => (
+          <div key={group.title}>
+            {!collapsed && (
+              <p className="px-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
+                {group.title}
               </p>
             )}
-            {group.items.map((item: NavItem) => {
-              const Icon = NAV_ICONS[item.tone] ?? ShoppingCart;
-              const children = item.children ?? [];
-              if (collapsed || children.length === 0) {
-                return renderLink(item, Icon);
-              }
-              const underParent = isPathActive(pathname, item.to) ;
-              const open = toggled[item.to] ?? underParent;
-              return (
-                <div key={item.to} className="flex flex-col gap-0.5">
-                  <div className="relative">
-                    {renderLink(item, Icon)}
-                    <button
-                      type="button"
-                      aria-label={open ? `${item.label} ချုံ့မည်` : `${item.label} ဖြန့်မည်`}
-                      aria-expanded={open}
-                      onClick={() => setToggled((prev) => ({ ...prev, [item.to]: !open }))}
-                      className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent/60"
-                    >
-                      <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
-                    </button>
-                  </div>
-                  {open && children.map((child) => renderLink({ ...child, exact: true }, undefined, true))}
-                </div>
-              );
-            })}
+            <ul className="space-y-1">
+              {group.items.map((item) => {
+                const active = isPathActive(pathname, item.path);
+                const Icon = NAV_ICONS[item.icon];
+                const content = (
+                  <Link
+                    to={item.path}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex min-h-9 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+                      active
+                        ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      collapsed && "justify-center px-0",
+                    )}
+                  >
+                    {Icon && <Icon className="h-4 w-4 shrink-0" />}
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </Link>
+                );
+
+                if (!collapsed) {
+                  return <li key={item.path}>{content}</li>;
+                }
+
+                return (
+                  <li key={item.path}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>{content}</TooltipTrigger>
+                      <TooltipContent side="right">{item.label}</TooltipContent>
+                    </Tooltip>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ))}
       </nav>
@@ -176,269 +155,148 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
   );
 }
 
-/** Phone-only bottom bar. More opens the existing menu drawer, which lists every destination. */
-function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean }) {
-  const groups = useVisibleGroups();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items = primaryItems(groups);
-  const tab =
-    "press touch:min-h-14 flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium text-muted-foreground transition-colors";
+function UserCard({ collapsed = false }: { collapsed?: boolean }) {
+  const { role, isPro, isBranchDevice } = useRole();
+  const { user, signOut } = useAuth();
+  const [modalOpen, setModalOpen] = useState(false);
+  const navigate = useNavigate();
+
   return (
-    <nav
-      aria-label="Primary"
-      className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-header-border bg-header/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
-    >
-      {items.map((item) => {
-        const Icon = NAV_ICONS[item.tone] ?? ShoppingCart;
-        const active = isPathActive(pathname, item.to, item.exact);
-        return (
-          <Link
-            key={item.to}
-            to={item.to as string}
-            aria-current={active ? "page" : undefined}
-            className={cn(tab, active && "text-primary")}
-          >
-            <Icon className="h-5 w-5" />
-            <span className="max-w-full truncate">{item.short}</span>
-          </Link>
-        );
-      })}
-      <button
-        type="button"
-        onClick={onMore}
-        aria-haspopup="dialog"
-        aria-expanded={moreOpen}
-        className={cn(tab, moreOpen && "text-primary")}
-      >
-        <MoreHorizontal className="h-5 w-5" />
-        <span>နောက်ထပ်</span>
-      </button>
-    </nav>
+    <>
+      <div className={cn("rounded-lg border border-border bg-card p-2 shadow-xs", collapsed && "p-1")}>
+        <div className={cn("flex items-center gap-2", collapsed && "justify-center")}>
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
+            {role.slice(0, 1)}
+          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-foreground">
+                {user?.email ?? "User"}
+              </p>
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <span>{ROLE_LABEL[role]}</span>
+                {isPro && (
+                  <span className="rounded bg-primary/15 px-1 py-0.2 text-[9px] font-bold text-primary">
+                    PRO
+                  </span>
+                )}
+                {isBranchDevice && (
+                  <span className="rounded bg-accent px-1 py-0.2 text-[9px] text-muted-foreground">
+                    ဆိုင်ခွဲ
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!collapsed && !isBranchDevice && (
+          <div className="mt-2 flex gap-1 border-t border-border/60 pt-2">
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="press flex-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-accent"
+            >
+              အကောင့်ပြောင်း
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                await signOut();
+                navigate({ to: "/" });
+              }}
+              title="ထွက်မည်"
+              aria-label="ထွက်မည်"
+              className="press flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <StaffSwitchModal open={modalOpen} onClose={() => setModalOpen(false)} />
+    </>
   );
 }
 
 function PageBreadcrumb({ pathname }: { pathname: string }) {
-  const trail = trailFor(pathname);
-  if (trail.length === 0) return null;
+  const groups = useVisibleGroups();
+  const trail = trailFor(pathname, groups);
+  if (!trail) return null;
+
   return (
-    <Breadcrumb className="mb-0.5">
-      <BreadcrumbList className="gap-1 text-xs sm:gap-1.5">
-        {trail.map((crumb, i) => (
-          <BreadcrumbItem key={crumb.label}>
-            {crumb.to ? (
-              <BreadcrumbLink asChild>
-                <Link to={crumb.to as string}>{crumb.label}</Link>
-              </BreadcrumbLink>
-            ) : (
-              <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-            )}
-            {i < trail.length - 1 && <BreadcrumbSeparator />}
-          </BreadcrumbItem>
-        ))}
+    <Breadcrumb className="hidden sm:block">
+      <BreadcrumbList className="text-[11px]">
+        <BreadcrumbItem>
+          <BreadcrumbLink asChild>
+            <Link to="/register">ပင်မ</Link>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <span className="text-muted-foreground">{trail.groupTitle}</span>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage className="font-semibold">{trail.itemLabel}</BreadcrumbPage>
+        </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
   );
 }
 
-function UserCard({ collapsed = false }: { collapsed?: boolean }) {
-  const { session, signOut, stores, store, switchStore, isBranchDevice } = useAuth();
-  const { role, isActive, activeStaff, loading: roleLoading } = useRole();
-  const [switching, setSwitching] = useState(false);
-  const navigate = useNavigate();
-  const email = session?.user.email ?? "";
-  const label = isBranchDevice ? (store?.name ?? "Branch") : (activeStaff?.name || email);
-  const initial = label.charAt(0).toUpperCase() || "U";
-
-  const handleSignOut = () => {
-    void (async () => {
-      await signOut();
-      void navigate({ to: "/", replace: true });
-    })();
-  };
-
-  if (collapsed) {
-    return (
-      <button
-        onClick={handleSignOut}
-        aria-label="Sign out"
-        className={cn(
-          "mx-auto flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold",
-          isActive ? "bg-primary-soft text-primary" : "bg-destructive/15 text-destructive",
-        )}
-      >
-        {initial}
-      </button>
-    );
-  }
-
-  return (
-    <div className="rounded-xl border border-sidebar-border bg-sidebar-accent/60 px-3 py-2.5">
-      <div className="flex items-center gap-2.5">
-        <div
-          className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold",
-            isActive ? "bg-primary-soft text-primary" : "bg-destructive/15 text-destructive",
-          )}
-        >
-          {initial}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-sidebar-accent-foreground">{label}</p>
-          <p className="text-[11px] text-sidebar-foreground/60">
-            {isBranchDevice ? "ဆိုင်ခွဲစက် (Branch POS)" : roleLoading ? "…" : ROLE_LABEL[role]}
-            {!isActive && !roleLoading && " · ရပ်ဆိုင်းထား"}
-          </p>
-        </div>
-        <button
-          onClick={handleSignOut}
-          aria-label="Sign out"
-          className="text-sidebar-foreground/60 transition-colors hover:text-destructive"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* ဆိုင်ခွဲစက် မဟုတ်သော ပင်မ Owner သာ ဆိုင်ခွဲများသို့ ကူးပြောင်းကြည့်ရှုနိုင်မည် */}
-      {stores.length > 1 && !isBranchDevice && (
-        <select
-          aria-label="ဆိုင် ပြောင်းရန်"
-          value={store?.id ?? ""}
-          onChange={(e) => switchStore(e.target.value)}
-          className="mt-2 w-full rounded-md border border-sidebar-border bg-sidebar px-2 py-1.5 text-xs text-sidebar-accent-foreground"
-        >
-          {stores.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.parent_store_id ? "ဆိုင်ခွဲ · " : "ပင်မ · "}
-              {s.name}
-            </option>
-          ))}
-        </select>
-      )}
-      {switching && <StaffSwitchModal onClose={() => setSwitching(false)} />}
-    </div>
-  );
-}
-
 export function PosShell({
+  children,
   title,
   subtitle,
   actions,
   stackActionsOnMobile = false,
-  children,
 }: {
+  children: ReactNode;
   title: string;
   subtitle?: string | undefined;
   actions?: ReactNode | undefined;
-  /** Phones: put the actions on their own full-width row under the title (for crowded toolbars). */
   stackActionsOnMobile?: boolean;
-  children: ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const { session, store, loading } = useAuth();
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("pos-sidebar-collapsed") === "1";
+  });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const drawerCloseRef = useRef<HTMLButtonElement>(null);
-  const chromeRef = useRef<HTMLDivElement>(null);
-  const { session, store, loading, isBranchDevice } = useAuth();
-  const {
-    role,
-    isActive,
-    canManageSettings,
-    canManageInventory,
-    canManageAccounting,
-    canManageCustomers,
-    canViewAnalytics,
-    loading: roleLoading,
-  } = useRole();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const navigate = useNavigate();
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const chromeRef = useRef<HTMLDivElement>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!loading && !session) void navigate({ to: "/", replace: true });
-    else if (!loading && session && !store) void navigate({ to: "/login", replace: true });
-  }, [loading, session, store, navigate]);
-
-  useEffect(() => {
-    if (loading || roleLoading || !session || !store) return;
-    if (!isActive) {
-      void navigate({ to: "/register", replace: true });
-      return;
-    }
-    const allowed =
-      pathname === "/register" ||
-      (pathname.startsWith("/customers") && canManageCustomers) ||
-      (pathname.startsWith("/inventory") && canManageInventory) ||
-      (pathname.startsWith("/analytics") && canViewAnalytics) ||
-      (pathname.startsWith("/suppliers") && canManageAccounting) ||
-      (pathname.startsWith("/expenses") && canManageAccounting) ||
-      ((pathname === "/settings" || pathname.startsWith("/settings/")) && (canManageSettings || isBranchDevice));
-    if (!allowed) void navigate({ to: "/register", replace: true });
-  }, [
-    loading,
-    roleLoading,
-    isActive,
-    role,
-    pathname,
-    isBranchDevice,
-    canManageCustomers,
-    canManageInventory,
-    canViewAnalytics,
-    canManageAccounting,
-    canManageSettings,
-    navigate,
-  ]);
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem("pos-sidebar-collapsed");
-    if (stored === "1") setCollapsed(true);
+    const handleResize = () => {
+      const w = window.innerWidth;
+      setIsTablet(w >= 768 && w < 1024);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Tablets (768–1023px) always get the icon rail, so the register keeps room for its cart.
-  // The saved collapse preference still applies on larger screens.
   useEffect(() => {
-    const mql = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
-    const sync = () => setIsTablet(mql.matches);
-    sync();
-    mql.addEventListener("change", sync);
-    return () => mql.removeEventListener("change", sync);
-  }, []);
+    setDrawerOpen(false);
+  }, [pathname]);
 
-  // Publish the real height of the header (+ announcement bar) as --pos-chrome so full-height
-  // screens can fill exactly the remaining space instead of guessing 64px.
-  useEffect(() => {
-    const chrome = chromeRef.current;
-    const root = rootRef.current;
-    if (!chrome || !root) return;
-    const apply = () =>
-      root.style.setProperty("--pos-chrome", `${Math.ceil(chrome.getBoundingClientRect().height)}px`);
-    apply();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(apply);
-    observer.observe(chrome);
-    return () => observer.disconnect();
-  }, [loading, session, store]);
-
-  // Mobile drawer: Escape closes it and the page behind it stops scrolling while it is open.
   useEffect(() => {
     if (!drawerOpen) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setDrawerOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    drawerCloseRef.current?.focus();
-    const previousOverflow = document.body.style.overflow;
+    const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    drawerCloseRef.current?.focus();
     return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previousOverflow;
-      opener?.focus();
+      document.body.style.overflow = prev;
     };
   }, [drawerOpen]);
 
   const rail = collapsed || isTablet;
-  // The register keeps its own pinned checkout bar, so the bottom nav is not stacked on top of it.
-  const showBottomNav = pathname !== "/register";
 
   const toggle = () =>
     setCollapsed((prev) => {
@@ -457,13 +315,10 @@ export function PosShell({
   return (
     <div
       ref={rootRef}
-      className={cn(
-        "pos-app flex min-h-dvh w-full overflow-x-clip bg-background text-foreground",
-        showBottomNav && "max-md:[--pos-bottom-nav:calc(3.5rem_+_env(safe-area-inset-bottom))]",
-      )}
+      className="pos-app flex min-h-dvh w-full overflow-x-clip bg-background text-foreground"
       style={{ "--pos-chrome": "64px" } as CSSProperties}
     >
-      {/* Sidebar: full on desktop, icon rail on tablet, hidden on phones (see drawer) */}
+      {/* Sidebar: Desktop & Tablet */}
       <aside
         className={cn(
           "no-print hidden shrink-0 flex-col self-start overflow-y-auto border-r border-sidebar-border bg-sidebar p-3 transition-[width] duration-200 ease-[var(--ease-out-soft)] md:sticky md:top-0 md:flex md:h-dvh",
@@ -495,8 +350,7 @@ export function PosShell({
         </div>
       </aside>
 
-      {/* Mobile drawer: always mounted so it can slide; `invisible` when closed keeps it out of
-          the tab order and away from screen readers. */}
+      {/* Mobile Drawer Slide-out Menu */}
       <div
         role="dialog"
         aria-modal="true"
@@ -552,20 +406,17 @@ export function PosShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <div ref={chromeRef} className="no-print sticky top-0 z-30">
           <header className="pt-safe border-b border-header-border bg-header/95 backdrop-blur-md">
-            {/* Flex + wrap (not a fixed 3-column grid): a crowded toolbar drops to its own row
-                instead of pushing the page wider than the screen. */}
             <div className="flex flex-wrap items-center gap-x-2 gap-y-2 px-3 py-2.5 sm:gap-x-3 sm:px-4 sm:py-3">
+              {/* Menu button is always visible on mobile */}
               <button
                 type="button"
                 onClick={() => setDrawerOpen(true)}
                 aria-label="Open menu"
-                className={cn(
-                  "press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden",
-                  showBottomNav && "hidden",
-                )}
+                className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden"
               >
                 <Menu className="h-5 w-5" />
               </button>
+
               <div className="min-w-20 flex-1 basis-0">
                 <PageBreadcrumb pathname={pathname} />
                 <h1 className="truncate text-base font-semibold leading-7 tracking-tight sm:text-lg">
@@ -590,9 +441,8 @@ export function PosShell({
           <AnnouncementMarquee />
         </div>
 
-        <main className="animate-page-in min-w-0 flex-1 pb-[var(--pos-bottom-nav,0px)]">{children}</main>
+        <main className="animate-page-in min-w-0 flex-1">{children}</main>
       </div>
-      {showBottomNav && <BottomNav onMore={() => setDrawerOpen(true)} moreOpen={drawerOpen} />}
     </div>
   );
 }
