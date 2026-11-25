@@ -688,6 +688,7 @@ function ProductModal({
   onClose: () => void;
   onSave: (values: {
     id?: string;
+    newItemId?: string;
     sku: string;
     name: string;
     price: number;
@@ -737,6 +738,12 @@ function ProductModal({
   );
 
   const [busy, setBusy] = useState(false);
+  // New items: one id per distinct attempt, so a retry/double-click of the same entry cannot
+  // create two items (the server returns the existing one). Editing any field starts a new attempt.
+  const newItemId = useRef(crypto.randomUUID());
+  useEffect(() => {
+    newItemId.current = crypto.randomUUID();
+  }, [form, units, imageUrl]);
 
   // Derived Gross Profit & Margin
   const sellPriceNum = Number(form.price) || 0;
@@ -1051,7 +1058,7 @@ function ProductModal({
               setBusy(true);
               try {
                 await onSave({
-                  ...(item ? { id: item.id } : {}),
+                  ...(item ? { id: item.id } : { newItemId: newItemId.current }),
                   sku: form.sku.trim() || generateSku(),
                   name: form.name.trim(),
                   price: Number(form.price),

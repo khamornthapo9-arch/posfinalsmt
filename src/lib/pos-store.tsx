@@ -120,6 +120,8 @@ interface PosContextValue {
   }>;
   saveItem: (input: {
     id?: string;
+    /** New items only: id chosen by the form per attempt so a retry can never create two items. */
+    newItemId?: string;
     sku: string;
     name: string;
     price: number;
@@ -243,6 +245,17 @@ const POST_SALE_ERRORS: [string, string][] = [
   ["ACCESS_DENIED", "ဤဆိုင်တွင် အရောင်းသိမ်းရန် ခွင့်ပြုချက် မရှိပါ"],
   ["NOT_AUTHENTICATED", "ဝင်ရောက်မှု သက်တမ်းကုန်သွားပါပြီ၊ ပြန်လည် ဝင်ပါ"],
   ["SALE_ID_CONFLICT", "အရောင်း အမှတ်စဉ် ထပ်နေသည်၊ ထပ်မံကြိုးစားပါ"],
+];
+
+/** Maps create_item_with_opening_stock's error codes to Burmese messages. */
+const CREATE_ITEM_ERRORS: [string, string][] = [
+  ["SKU_EXISTS", "ဤ SKU ဖြင့် ကုန်ပစ္စည်း ရှိပြီးသား (သိမ်းထားသည့် ပစ္စည်းများ အပါအဝင်) ဖြစ်သည်"],
+  ["INVALID_OPENING_STOCK", "အစပျိုးလက်ကျန်သည် အနုတ် မဖြစ်ရပါ"],
+  ["INVALID_ITEM", "ကုန်ပစ္စည်း အချက်အလက် မမှန်ကန်ပါ (အမည်၊ SKU၊ ဈေးနှုန်း စစ်ပါ)"],
+  ["ACCESS_DENIED", "ကုန်ပစ္စည်း ထည့်ရန် ခွင့်ပြုချက် မရှိပါ"],
+  ["NOT_AUTHENTICATED", "ဝင်ရောက်မှု သက်တမ်းကုန်သွားပါပြီ၊ ပြန်လည် ဝင်ပါ"],
+  ["QUANTITY_NOT_REPRESENTABLE", "ဤလက်ကျန်ပမာဏကို သိမ်း၍ မရပါ (ဒသမ မသုံးနိုင်ပါ)"],
+  ["ITEM_ID_CONFLICT", "ကုန်ပစ္စည်း အမှတ်စဉ် ထပ်နေသည်၊ ထပ်မံကြိုးစားပါ"],
 ];
 
 /** Maps adjust_stock's error codes to Burmese messages. */
@@ -701,27 +714,60 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   const saveItem = useCallback<PosContextValue["saveItem"]>(
     async (input) => {
       if (!storeId) throw new Error("No active store");
-      const payload = {
-        store_id: storeId,
-        sku: input.sku,
-        name: input.name,
-        price: input.price,
-        cost_price: input.cost_price,
-        stock_quantity: input.stock_quantity,
-        min_stock_threshold: input.min_stock_threshold,
-        category: input.category?.trim() || DEFAULT_CATEGORY,
-        barcode: input.barcode?.trim() || null,
-        qr_value: input.qr_value?.trim() || null,
-        ...(input.image_url !== undefined ? { image_url: input.image_url } : {}),
-      };
+      const category = input.category?.trim() || DEFAULT_CATEGORY;
+      const barcode = input.barcode?.trim() || null;
+      const qrValue = input.qr_value?.trim() || null;
       let itemId = input.id;
       if (itemId) {
-        const { error } = await supabase.from("items").update(payload).eq("id", itemId);
+        // Editing never writes stock_quantity: the form's number is a stale cached copy and would
+        // overwrite sales/purchases/adjustments made since. Stock changes only through
+        // adjustments, sales and purchases, each of which records a movement.
+        const { error } = await supabase
+          .from("items")
+          .update({
+            store_id: storeId,
+            sku: input.sku,
+            name: input.name,
+            price: input.price,
+            cost_price: input.cost_price,
+            min_stock_threshold: input.min_stock_threshold,
+            category,
+            barcode,
+            qr_value: qrValue,
+            ...(input.image_url !== undefined ? { image_url: input.image_url } : {}),
+          })
+          .eq("id", itemId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from("items").insert(payload).select("id").single();
-        if (error) throw error;
-        itemId = data.id;
+        // Create = item + units + OPENING movement in one database transaction.
+        const newId = input.newItemId ?? crypto.randomUUID();
+        const { error } = await supabase.rpc("create_item_with_opening_stock", {
+          p_store_id: storeId,
+          p_item_id: newId,
+          p_sku: input.sku,
+          p_name: input.name,
+          p_price: input.price,
+          p_cost_price: input.cost_price,
+          p_opening_stock: input.stock_quantity,
+          p_min_stock_threshold: input.min_stock_threshold,
+          p_category: category,
+          p_barcode: barcode,
+          p_qr_value: qrValue,
+          p_image_url: input.image_url ?? null,
+          p_units: (input.units ?? []).map((u) => ({
+            unit_name: u.unit_name,
+            conversion: u.conversion,
+            price: u.price,
+            is_default: Boolean(u.is_default),
+          })),
+        });
+        if (error) {
+          const raw = error.message ?? "";
+          const hit = CREATE_ITEM_ERRORS.find(([code]) => raw.includes(code));
+          throw new Error(hit ? hit[1] : "ကုန်ပစ္စည်း သိမ်းဆည်း၍ မရပါ — ထပ်ကြိုးစားပါ");
+        }
+        await refreshCatalog();
+        return;
       }
 
       if (itemId && input.units) {
@@ -802,15 +848,34 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         DEMO_CATALOG.map((i) => i.sku),
       );
     const existingSkus = new Set((existing ?? []).map((r) => r.sku));
-    const toInsert = DEMO_CATALOG.filter((i) => !existingSkus.has(i.sku)).map((i) => ({
-      ...i,
-      store_id: storeId,
-    }));
+    const toInsert = DEMO_CATALOG.filter((i) => !existingSkus.has(i.sku));
     if (toInsert.length === 0) return 0;
-    const { error } = await supabase.from("items").insert(toInsert);
-    if (error) throw error;
-    await refreshCatalog();
-    return toInsert.length;
+    // Each demo item is created through the same function so its opening stock gets a movement.
+    let created = 0;
+    try {
+      for (const i of toInsert) {
+        const { error } = await supabase.rpc("create_item_with_opening_stock", {
+          p_store_id: storeId,
+          p_item_id: crypto.randomUUID(),
+          p_sku: i.sku,
+          p_name: i.name,
+          p_price: i.price,
+          p_cost_price: i.cost_price,
+          p_opening_stock: i.stock_quantity,
+          p_min_stock_threshold: i.min_stock_threshold,
+          p_category: i.category,
+          p_barcode: null,
+          p_qr_value: null,
+          p_image_url: null,
+          p_units: [],
+        });
+        if (error) throw error;
+        created++;
+      }
+    } finally {
+      if (created > 0) await refreshCatalog();
+    }
+    return created;
   }, [refreshCatalog, storeId]);
 
   const refreshTabs = useCallback(async () => {
