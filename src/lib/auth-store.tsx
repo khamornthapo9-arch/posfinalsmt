@@ -19,6 +19,9 @@ export interface StoreRecord {
   receipt_header: string | null;
   receipt_footer: string | null;
   parent_store_id: string | null;
+  telegram_chat_id?: string | null;
+  telegram_username?: string | null;
+  telegram_notify_enabled?: boolean;
 }
 
 interface AuthContextValue {
