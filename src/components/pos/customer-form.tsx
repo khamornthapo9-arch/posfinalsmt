@@ -22,7 +22,7 @@ const phoneKey = (phone: string) => phone.replace(/\D/g, "");
 type Errors = Partial<Record<"name" | "phone" | "email", string>>;
 
 /** Pure validation, so it can be reused and tested without rendering. */
-export function validateCustomer(
+function validateCustomer(
   values: Omit<CustomerFormValues, "id">,
   existing: Customer[],
   selfId?: string,

@@ -397,6 +397,8 @@ export function PosShell({
   }, [
     loading,
     roleLoading,
+    session,
+    store,
     isActive,
     role,
     pathname,
