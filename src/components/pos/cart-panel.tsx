@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   Minus,
@@ -69,10 +68,10 @@ interface CartPanelProps {
   payments: PaymentOption[];
   onChangeQty: (itemId: string, delta: number, unitName?: string) => void;
   onRemove: (itemId: string, unitName?: string) => void;
-  onNotesChange: (value: string) => void;
-  onSelectPayment: (methodId: string) => void;
-  onToggleSplit: (methodId: string) => void;
-  onSplitChange: (methodId: string, amount: number) => void;
+  onNotesChange: (notes: string) => void;
+  onSelectPayment: (method: string) => void;
+  onToggleSplit: (method: string) => void;
+  onSplitChange: (method: string, amount: number) => void;
   onToggleSplitMode: () => void;
   onPickCustomer: () => void;
   onPark: () => void;
@@ -81,74 +80,27 @@ interface CartPanelProps {
   onPayAndClose: () => void;
 }
 
-/** Quantity input that commits on blur or Enter. */
-function QtyInput({
-  value,
-  label,
-  onCommit,
-}: {
-  value: number;
-  label: string;
-  onCommit: (qty: number) => void;
-}) {
-  const [draft, setDraft] = useState(String(value));
-
-  useEffect(() => {
-    setDraft(String(value));
-  }, [value]);
-
-  const commit = () => {
-    const next = Number(draft);
-
-    if (
-      draft.trim() === "" ||
-      !Number.isFinite(next) ||
-      next < 1 ||
-      next === value
-    ) {
-      setDraft(String(value));
-      return;
-    }
-
-    onCommit(next);
-    setDraft(String(value));
-  };
-
-  return (
-    <input
-      type="number"
-      inputMode="numeric"
-      min={1}
-      step={1}
-      value={draft}
-      aria-label={label}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") e.currentTarget.blur();
-        if (e.key === "Escape") setDraft(String(value));
-      }}
-      className="h-8 w-10 touch:h-10 rounded-md border border-transparent bg-transparent text-center text-sm font-bold tabular-nums text-foreground outline-none hover:border-border focus:border-ring focus:ring-2 focus:ring-ring/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-    />
-  );
-}
-
-/** Exact amount plus a few useful round cash amounts. */
 function quickAmounts(due: number): number[] {
   if (due <= 0) return [];
-
-  const steps =
-    due >= 500 ? [1000, 5000, 10000, 50000] : [10, 50, 100];
-
-  const rounded = steps
-    .map((step) => Math.ceil(due / step) * step)
-    .filter((value) => value > due);
-
-  return [due, ...Array.from(new Set(rounded)).slice(0, 3)];
+  const set = new Set<number>();
+  set.add(due);
+  const magnitudes = [500, 1000, 5000, 10000, 50000];
+  for (const step of magnitudes) {
+    if (step > due) {
+      set.add(step);
+      break;
+    }
+  }
+  for (const step of [1000, 5000, 10000, 50000]) {
+    const next = Math.ceil(due / step) * step;
+    if (next > due) set.add(next);
+  }
+  return Array.from(set).sort((a, b) => a - b).slice(0, 4);
 }
 
 export function CartPanel({
   cart,
+  items,
   isRestaurant,
   activeTable,
   notes,
@@ -190,11 +142,7 @@ export function CartPanel({
   onSendToKitchen,
   onPayAndClose,
 }: CartPanelProps) {
-  const unitCount = cart.reduce(
-    (sum, line) => sum + line.quantity,
-    0,
-  );
-
+  const unitCount = cart.reduce((sum, line) => sum + line.quantity, 0);
   const [confirmClear, setConfirmClear] = useState(false);
   const [showCustomer, setShowCustomer] = useState(false);
 
@@ -204,7 +152,6 @@ export function CartPanel({
     }
   }, [cart.length]);
 
-  // Open customer selection automatically when credit requires a customer.
   useEffect(() => {
     if (needsCreditCustomer) {
       setShowCustomer(true);
@@ -213,13 +160,9 @@ export function CartPanel({
 
   const splitInvalid =
     splitMode &&
-    (
-      Math.round(remaining * 100) !== 0 ||
-      Object.values(splits).some((amount) => amount < 0)
-    );
+    (Math.round(remaining * 100) !== 0 || Object.values(splits).some((amount) => amount < 0));
 
-  const digitalUnconfirmed =
-    digitalDue > 0 && !digitalConfirmed;
+  const digitalUnconfirmed = digitalDue > 0 && !digitalConfirmed;
 
   const checkoutDisabled =
     cart.length === 0 ||
@@ -234,23 +177,15 @@ export function CartPanel({
   );
 
   const activeDigital = splitMode
-    ? digitalMethods
-        .filter((p) => (splits[p.id] ?? 0) > 0)
-        .map((p) => p.label)
-    : digitalMethods
-        .filter((p) => p.id === payment)
-        .map((p) => p.label);
+    ? digitalMethods.filter((p) => (splits[p.id] ?? 0) > 0).map((p) => p.label)
+    : digitalMethods.filter((p) => p.id === payment).map((p) => p.label);
 
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden border-l border-cart-border bg-cart">
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden bg-cart">
       {/* Cart header */}
       <div className="flex shrink-0 items-center justify-between border-b border-cart-border bg-cart-header px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="text-sm font-semibold">
-            လက်ရှိ ရောင်းချမှု
-          </span>
-
-          {/* Keep this stable for the add-to-cart animation target. */}
+          <span className="text-sm font-semibold">လက်ရှိ ရောင်းချမှု</span>
           <span data-cart-target className="inline-flex">
             <span
               key={unitCount}
@@ -275,7 +210,6 @@ export function CartPanel({
               >
                 ရှင်းမည်
               </button>
-
               <button
                 type="button"
                 onClick={() => setConfirmClear(false)}
@@ -296,96 +230,106 @@ export function CartPanel({
           ))}
       </div>
 
-      {/* Cart items: this area receives the available height. */}
-      <div className="min-h-[100px] flex-1 divide-y divide-border/60 overflow-y-auto overscroll-contain">
-        {cart.length === 0 ? (
-          <div className="animate-fade-in flex h-full flex-col items-center justify-center gap-1 p-4 text-center text-muted-foreground">
-            <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-              <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+      {/* Customer bar (Compact) */}
+      <div className="shrink-0 border-b border-cart-border bg-background/50 px-3 py-1.5">
+        {customer ? (
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1.5 truncate">
+              <UserCheck className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span className="font-semibold truncate">{customer.name}</span>
+              {customer.phone && (
+                <span className="text-[11px] text-muted-foreground truncate">({customer.phone})</span>
+              )}
             </div>
+            <button
+              type="button"
+              onClick={onClearCustomer}
+              className="press ml-2 text-muted-foreground hover:text-destructive"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onPickCustomer}
+            className="press flex w-full items-center justify-between rounded-md border border-dashed border-border px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
+          >
+            <span className="flex items-center gap-1.5">
+              <UserRound className="h-3.5 w-3.5" />
+              <span>ဝယ်သူ ရွေးချယ်ရန်</span>
+            </span>
+            <span className="text-[10px] text-primary font-semibold">+ ရွေးမည်</span>
+          </button>
+        )}
+      </div>
 
-            <p className="text-sm font-medium text-foreground/80">
-              ဈေးဝယ်ခြင်းတောင်း လွတ်နေပါသည်
-            </p>
-
-            <p className="text-xs">
-              ကုန်ပစ္စည်းကို နှိပ်၍ ထည့်ပါ
-            </p>
+      {/* Cart items: Priority scrollable area with independent scrolling */}
+      <div className="min-h-0 flex-1 divide-y divide-border/60 overflow-y-auto overscroll-contain">
+        {cart.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center p-6 text-center text-muted-foreground">
+            <ShoppingCart className="h-10 w-10 stroke-[1.25] text-muted-foreground/40" />
+            <p className="mt-2 text-xs font-semibold">ပစ္စည်း မရှိသေးပါ</p>
+            <p className="text-[11px]">ဘယ်ဘက်မှ ပစ္စည်းများကို နှိပ်၍ ထည့်ပါ</p>
           </div>
         ) : (
           cart.map((line) => (
             <div
               key={`${line.item_id}-${line.unit_name ?? "base"}`}
-              className="animate-line-in flex items-center justify-between gap-2 px-2.5 py-2 text-sm"
+              className="flex items-center justify-between gap-2 p-2.5 transition-colors hover:bg-accent/40"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium leading-5 text-foreground">
-                  {line.name}
-                </p>
-
-                <p className="truncate text-xs text-muted-foreground tabular-nums">
-                  {line.sku ? `${line.sku} · ` : ""}
-                  {money(line.unit_price, currencySymbol)}
-                  {line.unit_name ? ` / ${line.unit_name}` : ""}
-                </p>
-
-                {(line.conversion ?? 1) > 1 && (
-                  <p className="text-[11px] text-muted-foreground tabular-nums">
-                    1 {line.unit_name ?? "ယူနစ်"} = {line.conversion}
-                    {" · "}
-                    {line.quantity * (line.conversion ?? 1)} ခု
-                    လက်ကျန်မှ နှုတ်မည်
-                  </p>
-                )}
-
-                <p className="text-sm font-semibold tabular-nums text-foreground">
-                  {money(
-                    line.quantity * line.unit_price,
-                    currencySymbol,
+                <p className="truncate text-xs font-semibold text-foreground">{line.name}</p>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span className="tabular-nums font-medium text-foreground">
+                    {money(line.unit_price, currencySymbol)}
+                  </span>
+                  {line.unit_name && (
+                    <span className="rounded bg-muted px-1 text-[10px]">{line.unit_name}</span>
                   )}
-                </p>
+                </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-0.5">
+              {/* Quantity buttons */}
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
-                  onClick={() =>
-                    onChangeQty(line.item_id, -1, line.unit_name)
-                  }
+                  onClick={() => onChangeQty(line.item_id, -1, line.unit_name)}
                   aria-label={`${line.name} အရေအတွက် လျှော့ရန်`}
-                  className="press flex h-8 w-8 touch:h-10 touch:w-10 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
+                  className="press flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-3.5 w-3.5" />
                 </button>
 
-                <QtyInput
+                <input
+                  type="number"
+                  min="1"
                   value={line.quantity}
-                  label={`${line.name} အရေအတွက်`}
-                  onCommit={(qty) =>
-                    onSetQty(line.item_id, qty, line.unit_name)
-                  }
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val) && val > 0) {
+                      onSetQty(line.item_id, val, line.unit_name);
+                    }
+                  }}
+                  className="h-7 w-10 rounded border border-input bg-card text-center text-xs font-semibold tabular-nums outline-none"
                 />
 
                 <button
                   type="button"
-                  onClick={() =>
-                    onChangeQty(line.item_id, 1, line.unit_name)
-                  }
+                  onClick={() => onChangeQty(line.item_id, 1, line.unit_name)}
                   aria-label={`${line.name} အရေအတွက် တိုးရန်`}
-                  className="press flex h-8 w-8 touch:h-10 touch:w-10 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
+                  className="press flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                 </button>
 
                 <button
                   type="button"
-                  onClick={() =>
-                    onRemove(line.item_id, line.unit_name)
-                  }
+                  onClick={() => onRemove(line.item_id, line.unit_name)}
                   aria-label={`${line.name} ဖယ်ရှားရန်`}
-                  className="press ml-0.5 flex h-8 w-8 touch:h-10 touch:w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  className="press ml-1 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -393,418 +337,107 @@ export function CartPanel({
         )}
       </div>
 
-      {/* Compact, scrollable checkout footer */}
-      <div className="max-h-[58%] shrink-0 space-y-2 overflow-y-auto border-t border-cart-border bg-card/70 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        {isRestaurant && (
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => onNotesChange(e.target.value)}
-            placeholder="မီးဖိုချောင် / စားပွဲ မှတ်ချက်..."
-            className="h-8 touch:h-10 w-full rounded-md border border-input bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-ring"
-          />
-        )}
-
-        {/* Compact subtotal and tax */}
+      {/* Compact Checkout Panel at the Bottom */}
+      <div className="shrink-0 space-y-2 border-t border-cart-border bg-card/90 p-2.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-xs">
+        {/* Subtotal & Tax */}
         <div className="space-y-0.5 text-xs">
           <div className="flex justify-between text-muted-foreground">
             <span>စုစုပေါင်း</span>
-            <span className="tabular-nums">
-              {money(subtotal, currencySymbol)}
-            </span>
+            <span className="tabular-nums">{money(subtotal, currencySymbol)}</span>
           </div>
-
           {taxPercent > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>အခွန် ({taxPercent}%)</span>
-              <span className="tabular-nums">
-                {money(tax, currencySymbol)}
-              </span>
+              <span className="tabular-nums">{money(tax, currencySymbol)}</span>
             </div>
           )}
         </div>
 
-        {/* Total */}
+        {/* Total Due */}
         <div className="flex items-center justify-between border-t border-border/80 pt-1.5 font-bold text-foreground">
           <span className="text-sm">ကျသင့်ငွေ</span>
-          <span
-            key={total}
-            className="badge-pop text-lg tabular-nums text-primary"
-          >
+          <span key={total} className="badge-pop text-lg tabular-nums text-primary">
             {money(total, currencySymbol)}
           </span>
         </div>
 
-        {/* Payment mode */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium text-muted-foreground">
-            ငွေပေးချေမှု
-          </span>
-
-          <button
-            type="button"
-            onClick={onToggleSplitMode}
-            aria-pressed={splitMode}
-            className={cn(
-              "press inline-flex min-h-7 touch:min-h-9 items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold",
-              splitMode
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border bg-background text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <Users className="h-3.5 w-3.5" />
-            {splitMode ? "ပုံမှန်" : "ခွဲပေးမည်"}
-          </button>
-        </div>
-
-        {/* Single payment */}
-        {!splitMode ? (
-          <div className="grid grid-cols-2 gap-1.5">
-            {payments.map((p) => {
-              const style = paymentStyle(p.tone);
-
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => onSelectPayment(p.id)}
-                  aria-pressed={payment === p.id}
-                  className={cn(
-                    "press flex h-9 touch:h-10 items-center justify-center gap-1.5 rounded-md border px-2 text-xs font-semibold",
-                    payment === p.id ? style.active : style.idle,
-                  )}
-                >
-                  {p.logo && (
-                    <img
-                      src={p.logo}
-                      alt=""
-                      aria-hidden="true"
-                      draggable={false}
-                      className="h-4 w-4 shrink-0 rounded-md ring-1 ring-black/10"
-                    />
-                  )}
-
-                  <span className="truncate">{p.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          /* Split payment */
-          <div className="space-y-1.5 rounded-md border border-border bg-background p-1.5">
-            {payments.map((p) => {
-              const active = Object.prototype.hasOwnProperty.call(
-                splits,
-                p.id,
-              );
-
-              return (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between gap-1.5"
-                >
-                  <button
-                    type="button"
-                    onClick={() => onToggleSplit(p.id)}
-                    aria-pressed={active}
-                    className={cn(
-                      "press flex h-9 touch:h-10 flex-1 items-center gap-1.5 rounded-md border px-2 text-left text-xs font-medium",
-                      active
-                        ? paymentStyle(p.tone).active
-                        : paymentStyle(p.tone).idle,
-                    )}
-                  >
-                    {p.logo && (
-                      <img
-                        src={p.logo}
-                        alt=""
-                        aria-hidden="true"
-                        draggable={false}
-                        className="h-4 w-4 shrink-0 rounded-md ring-1 ring-black/10"
-                      />
-                    )}
-
-                    <span className="truncate">{p.label}</span>
-                  </button>
-
-                  {active && (
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      step="any"
-                      value={splits[p.id] ?? 0}
-                      onChange={(e) =>
-                        onSplitChange(
-                          p.id,
-                          Math.max(0, Number(e.target.value) || 0),
-                        )
-                      }
-                      aria-label={`${p.label} ပမာဏ`}
-                      className="h-9 touch:h-10 w-24 rounded-md border border-input bg-card px-2 text-right text-xs font-semibold tabular-nums outline-none focus:ring-2 focus:ring-ring"
-                    />
-                  )}
-                </div>
-              );
-            })}
-
-            <div className="flex items-center justify-between border-t border-border/60 pt-1.5 text-xs">
-              <span className="text-muted-foreground">
-                ကျန်ငွေ
-              </span>
-
-              <span
+        {/* Payment mode selector */}
+        <div className="flex flex-wrap gap-1">
+          {payments.map((p) => {
+            const active = splitMode ? (splits[p.id] ?? 0) > 0 : payment === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => (splitMode ? onToggleSplit(p.id) : onSelectPayment(p.id))}
                 className={cn(
-                  "font-bold tabular-nums",
-                  Math.round(remaining * 100) === 0
-                    ? "text-success"
-                    : "text-destructive",
+                  "press flex-1 min-w-[70px] rounded-md border py-1.5 px-2 text-center text-xs font-semibold transition-colors",
+                  active
+                    ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                    : "border-border bg-background text-foreground hover:bg-accent",
                 )}
               >
-                {money(remaining, currencySymbol)}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Customer selector: collapsed by default to save cart space. */}
-        <div
-          className={cn(
-            "overflow-hidden rounded-md border",
-            needsCreditCustomer
-              ? "border-destructive/50 bg-destructive/10"
-              : "border-border bg-background",
-          )}
-        >
-          <button
-            type="button"
-            onClick={() => setShowCustomer((current) => !current)}
-            aria-expanded={showCustomer}
-            className="press flex min-h-8 touch:min-h-10 w-full items-center gap-2 px-2 text-left"
-          >
-            {customer ? (
-              <UserCheck
-                className="h-4 w-4 shrink-0 text-primary"
-                aria-hidden="true"
-              />
-            ) : (
-              <UserRound
-                className={cn(
-                  "h-4 w-4 shrink-0",
-                  needsCreditCustomer
-                    ? "text-destructive"
-                    : "text-muted-foreground",
-                )}
-                aria-hidden="true"
-              />
-            )}
-
-            <span className="min-w-0 flex-1 truncate text-xs font-medium">
-              {customer
-                ? customer.name
-                : needsCreditCustomer
-                  ? "အကြွေးအတွက် ဖောက်သည်ရွေးပါ"
-                  : "ဖောက်သည် ထည့်ရန် (optional)"}
-            </span>
-
-            {customer && (
-              <span className="text-[11px] text-muted-foreground">
-                ပြောင်းရန်
-              </span>
-            )}
-
-            <ChevronDown
-              className={cn(
-                "h-4 w-4 shrink-0 transition-transform",
-                showCustomer && "rotate-180",
-              )}
-            />
-          </button>
-
-          {showCustomer && (
-            <div className="space-y-1.5 border-t border-border/60 p-2">
-              {customer?.phone && (
-                <p className="text-xs text-muted-foreground">
-                  {customer.phone}
-                </p>
-              )}
-
-              {customer && (
-                <p className="text-xs text-muted-foreground tabular-nums">
-                  လက်ရှိ အကြွေးကျန်{" "}
-                  {money(customer.balance, currencySymbol)}
-                </p>
-              )}
-
-              {creditPortion > 0 && customer && (
-                <p className="text-xs font-medium text-muted-foreground tabular-nums">
-                  ယခု အကြွေး{" "}
-                  {money(creditPortion, currencySymbol)}
-                </p>
-              )}
-
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={onPickCustomer}
-                  className="press min-h-8 touch:min-h-10 flex-1 rounded-md border border-border bg-background px-2 text-xs font-semibold hover:bg-accent"
-                >
-                  {customer ? "ဖောက်သည် ပြောင်းရန်" : "ဖောက်သည် ရွေးရန်"}
-                </button>
-
-                {customer && (
-                  <button
-                    type="button"
-                    onClick={onClearCustomer}
-                    aria-label="ဖောက်သည် ဖယ်ရှားရန်"
-                    className="press flex h-8 w-8 touch:h-10 touch:w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+                {p.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Cash received and change */}
-        {cashDue > 0 && (
-          <div className="space-y-1.5 rounded-md border border-border bg-background p-1.5">
-            <div className="flex items-center justify-between gap-2 text-xs">
-              <label
-                htmlFor="cash-received"
-                className="min-w-0 flex-1 font-medium text-muted-foreground"
-              >
-                ငွေသား{" "}
-                {money(cashDue, currencySymbol)}
-              </label>
-
+        {/* Cash quick amounts & change */}
+        {payment === "ငွေသား" && !splitMode && (
+          <div className="space-y-1.5 rounded-md border border-border/60 bg-background/50 p-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">လက်ခံငွေ</span>
               <input
-                id="cash-received"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                step="any"
+                type="text"
+                inputMode="numeric"
                 value={cashReceived}
-                placeholder={String(cashDue)}
-                onChange={(e) =>
-                  onCashReceivedChange(e.target.value)
-                }
-                aria-invalid={cashShort}
-                className={cn(
-                  "h-8 touch:h-10 w-24 rounded-md border bg-card px-2 text-right text-xs font-semibold tabular-nums outline-none focus:ring-2 focus:ring-ring",
-                  cashShort
-                    ? "border-destructive"
-                    : "border-input",
-                )}
+                onChange={(e) => onCashReceivedChange(e.target.value)}
+                className="h-8 w-28 rounded-md border border-input bg-card px-2 text-right text-xs font-semibold tabular-nums outline-none"
               />
             </div>
-
             <div className="flex flex-wrap gap-1">
-              {quickAmounts(cashDue).map((amount, index) => (
+              {quickAmounts(cashDue).map((amount, idx) => (
                 <button
                   key={amount}
                   type="button"
-                  onClick={() =>
-                    onCashReceivedChange(String(amount))
-                  }
-                  className="press min-h-7 touch:min-h-9 rounded-md border border-border bg-card px-2 text-[11px] font-medium tabular-nums hover:bg-accent"
+                  onClick={() => onCashReceivedChange(String(amount))}
+                  className="press rounded border border-border bg-card px-2 py-0.5 text-[11px] font-medium hover:bg-accent"
                 >
-                  {index === 0
-                    ? "အတိအကျ"
-                    : money(amount, currencySymbol)}
+                  {idx === 0 ? "အတိအကျ" : money(amount, currencySymbol)}
                 </button>
               ))}
             </div>
-
             {cashShort ? (
-              <p role="alert" className="text-xs font-medium text-destructive">
-                လက်ခံရရှိငွေ မလောက်ပါ
-              </p>
+              <p className="text-[11px] font-medium text-destructive">လက်ခံရရှိငွေ မလောက်ပါ</p>
             ) : (
               <div className="flex justify-between text-xs font-semibold">
-                <span className="text-muted-foreground">
-                  အမ်းငွေ
-                </span>
-
-                <span className="tabular-nums">
-                  {money(changeDue, currencySymbol)}
-                </span>
+                <span className="text-muted-foreground">အမ်းငွေ</span>
+                <span className="tabular-nums">{money(changeDue, currencySymbol)}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Digital payment confirmation */}
-        {digitalDue > 0 && (
-          <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border bg-background p-1.5 text-xs">
-            <input
-              type="checkbox"
-              checked={digitalConfirmed}
-              onChange={(e) =>
-                onDigitalConfirmedChange(e.target.checked)
-              }
-              className="mt-0.5 h-4 w-4 touch:h-5 touch:w-5 shrink-0"
-            />
-
-            <span>
-              <span className="block font-semibold tabular-nums">
-                {activeDigital.join(" + ")} ဖြင့်{" "}
-                {money(digitalDue, currencySymbol)}
-              </span>
-
-              <span className="text-muted-foreground">
-                ငွေလွှဲဝင်ကြောင်း ကိုယ်တိုင်စစ်ဆေးပြီး အတည်ပြုပါ။
-                စနစ်မှ အလိုအလျောက် စစ်ဆေးခြင်း မရှိပါ။
-              </span>
-            </span>
-          </label>
-        )}
-
-        {/* Checkout buttons */}
-        {isRestaurant && activeTable != null ? (
-          <div className="flex gap-1.5 pt-0.5">
-            <button
-              type="button"
-              disabled={cart.length === 0 || busy}
-              onClick={onSendToKitchen}
-              className="press h-9 touch:h-11 flex-1 rounded-md border border-border bg-background text-xs font-semibold text-foreground hover:bg-accent disabled:opacity-50"
-            >
-              ခေတ္တသိမ်းမည်
-            </button>
-
-            <button
-              type="button"
-              disabled={checkoutDisabled}
-              onClick={onPayAndClose}
-              className="press h-9 touch:h-11 flex-[1.5] rounded-md bg-primary text-xs font-bold text-primary-foreground shadow-btn hover:bg-primary/90 disabled:opacity-50 disabled:shadow-none"
-            >
-              ရှင်းပြီးပိတ်မည် ·{" "}
-              {money(total, currencySymbol)}
-            </button>
-          </div>
-        ) : (
-          <div className="flex gap-1.5 pt-0.5">
-            <button
-              type="button"
-              disabled={cart.length === 0 || busy}
-              onClick={onPark}
-              className="press h-9 touch:h-11 flex-1 rounded-md border border-border bg-background text-xs font-medium text-foreground hover:bg-accent disabled:opacity-50"
-            >
-              ခဏဆိုင်း
-            </button>
-
-            <button
-              type="button"
-              disabled={checkoutDisabled}
-              onClick={onComplete}
-              className="press h-9 touch:h-11 flex-[2] rounded-md bg-primary text-xs font-bold text-primary-foreground shadow-btn hover:bg-primary/90 disabled:opacity-50 disabled:shadow-none"
-            >
-              စာရင်းထွက်မည် ·{" "}
-              {money(total, currencySymbol)}
-            </button>
-          </div>
-        )}
+        {/* Action Buttons */}
+        <div className="flex gap-1.5 pt-1">
+          <button
+            type="button"
+            disabled={cart.length === 0 || busy}
+            onClick={onPark}
+            className="press h-9 flex-1 rounded-md border border-border bg-background text-xs font-medium hover:bg-accent disabled:opacity-50"
+          >
+            ခဏဆိုင်း
+          </button>
+          <button
+            type="button"
+            disabled={checkoutDisabled}
+            onClick={onComplete}
+            className="press h-9 flex-[2] rounded-md bg-primary text-xs font-bold text-primary-foreground shadow-btn hover:bg-primary/90 disabled:opacity-50"
+          >
+            စာရင်းထွက်မည် · {money(total, currencySymbol)}
+          </button>
+        </div>
       </div>
     </aside>
   );

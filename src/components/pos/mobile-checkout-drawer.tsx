@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CartPanel, type CartLine } from "./cart-panel";
 import type { CachedItem } from "@/lib/pos-db";
@@ -63,8 +63,6 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
-  // While open: Escape closes, Tab is trapped inside the sheet, the page behind stops scrolling,
-  // focus moves into the sheet, and returns to whatever opened it on close.
   useEffect(() => {
     if (!open) return;
     const trigger = document.activeElement as HTMLElement | null;
@@ -114,7 +112,6 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
       inert={!open}
       className={cn(
         "fixed inset-0 z-50 md:hidden",
-        // `invisible` (after the slide finishes) removes the closed sheet from the tab order.
         open ? "visible" : "invisible pointer-events-none [transition:visibility_0s_linear_320ms]",
       )}
     >
@@ -130,28 +127,43 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
       />
       <div
         className={cn(
-          "sheet-motion absolute inset-x-0 bottom-0 top-[max(4rem,env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] flex flex-col rounded-t-2xl border-t border-cart-border bg-cart shadow-pop",
+          "sheet-motion absolute inset-x-0 bottom-0 top-[max(3rem,env(safe-area-inset-top))] flex flex-col rounded-t-2xl border-t border-cart-border bg-cart shadow-pop pb-[env(safe-area-inset-bottom)]",
           open ? "translate-y-0" : "translate-y-full",
         )}
       >
-        <div className="flex items-center justify-between rounded-t-2xl border-b border-cart-border bg-cart-header py-2 pr-2 pl-4">
-          {/* Grab handle: visual cue that this is a dismissible sheet. */}
+        {/* Drop Down Header with Chevron & Grab handle */}
+        <div className="relative flex items-center justify-between rounded-t-2xl border-b border-cart-border bg-cart-header px-3 py-2">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ငွေရှင်းလွှာ ချုံ့မည်"
+            className="press flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <ChevronDown className="h-4 w-4" />
+            <span>ပစ္စည်းစာရင်းသို့</span>
+          </button>
+
+          {/* Centered drag handle */}
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute top-1.5 left-1/2 h-1 w-10 -translate-x-1/2 rounded-full bg-border"
+            onClick={onClose}
+            className="absolute top-2 left-1/2 h-1.5 w-12 -translate-x-1/2 cursor-pointer rounded-full bg-border hover:bg-muted-foreground/40 transition-colors"
           />
-          <h2 className="pt-2 text-base font-semibold">ငွေရှင်းရန်</h2>
+
+          <h2 className="text-sm font-semibold">ငွေရှင်းရန်</h2>
+
           <button
             ref={closeRef}
             type="button"
             onClick={onClose}
             tabIndex={open ? 0 : -1}
             aria-label="ပိတ်ရန်"
-            className="press mt-2 flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
+            className="press flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
+
         <div className="min-h-0 flex-1">
           <CartPanel {...cartProps} />
         </div>
