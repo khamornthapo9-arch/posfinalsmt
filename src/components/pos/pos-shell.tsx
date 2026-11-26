@@ -580,7 +580,7 @@ export function PosShell({
           <header className="pt-safe border-b border-header-border bg-header/95 backdrop-blur-md">
             {/* Flex + wrap (not a fixed 3-column grid): a crowded toolbar drops to its own row
                 instead of pushing the page wider than the screen. */}
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-2 px-3 py-2.5 sm:gap-x-3 sm:px-4 sm:py-3">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-2 px-2.5 py-2 sm:gap-x-3 sm:px-4 sm:py-3">
               <button
                 type="button"
                 onClick={() => setDrawerOpen(true)}
