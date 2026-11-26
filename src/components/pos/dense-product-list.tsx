@@ -159,8 +159,8 @@ export function DenseProductList({
   return (
     <div className="flex h-full flex-col">
       {/* Search + view toggle + scan */}
-      <div className="sticky top-0 z-10 space-y-3 border-b border-border bg-card p-3">
-        <div className="flex gap-2">
+      <div className="sticky top-0 z-10 space-y-2.5 border-b border-border bg-card/95 p-2.5 backdrop-blur-sm sm:space-y-3 sm:p-3">
+        <div className="flex gap-1.5 sm:gap-2">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -170,7 +170,7 @@ export function DenseProductList({
               type="search"
               enterKeyHint="search"
               aria-label="ကုန်ပစ္စည်း ရှာဖွေရန်"
-              className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm shadow-xs outline-none transition-[border-color,box-shadow] hover:border-ring/40 focus:border-ring focus:ring-[3px] focus:ring-ring/25"
+              className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm shadow-xs outline-none transition-[border-color,box-shadow] hover:border-ring/40 focus:border-ring focus:ring-[3px] focus:ring-ring/25 touch:h-12"
             />
           </div>
 
@@ -244,7 +244,7 @@ export function DenseProductList({
         {view === "grid" ? (
           <div
             key="grid"
-            className="animate-fade-in grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2.5 p-3 sm:gap-3 sm:p-4"
+            className="animate-fade-in grid grid-cols-2 gap-2 p-2.5 sm:grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] sm:gap-3 sm:p-4 md:grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(12rem,1fr))]"
           >
             {filtered.map((item) => {
               const status = stockStatus(item.stock_quantity, item.min_stock_threshold);
@@ -295,18 +295,18 @@ export function DenseProductList({
                       {!outOfStock && (
                         <span
                           aria-hidden="true"
-                          className="absolute bottom-1.5 right-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-btn"
+                          className="absolute bottom-1.5 right-1.5 flex h-9 w-9 touch:h-10 touch:w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-btn"
                         >
                           <Plus className="h-4 w-4" />
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-1 flex-col gap-1 p-2.5">
-                      <p className="line-clamp-2 min-h-12 text-sm font-semibold leading-6">
+                    <div className="flex flex-1 flex-col gap-1 p-2 sm:p-2.5">
+                      <p className="line-clamp-2 min-h-10 text-xs font-semibold leading-5 sm:min-h-12 sm:text-sm sm:leading-6">
                         {item.name}
                       </p>
                       <div className="mt-auto flex items-baseline justify-between gap-2">
-                        <span className="text-sm font-bold tabular-nums text-foreground">
+                        <span className="text-xs font-bold tabular-nums text-foreground sm:text-sm">
                           {fmt(item.price)}
                         </span>
                         {status === "ok" && (
