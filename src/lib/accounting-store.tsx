@@ -75,12 +75,41 @@ export const PURCHASE_CANCELLED = "CANCELLED";
 export const canReceiveLegacy = (status: string) =>
   status === PURCHASE_ORDERED || status === PURCHASE_PENDING;
 
-/**
- * The legacy receive adds line.quantity to stock and writes unit_cost as the item cost, which is
- * only correct for base units. Purchases with any pack/carton line stay unreceivable until G2.
- */
-export const hasNonBaseUnit = (purchase: { lines: { conversion?: number }[] }) =>
-  purchase.lines.some((line) => (line.conversion ?? 1) > 1);
+/** How a purchase prepayment was made. Codes match the ledger accounts they are credited to. */
+export const PURCHASE_PAYMENT_METHODS = ["CASH", "KBZPAY", "WAVEPAY"] as const;
+export type PurchasePaymentMethod = (typeof PURCHASE_PAYMENT_METHODS)[number];
+export const PURCHASE_PAYMENT_LABEL: Record<PurchasePaymentMethod, string> = {
+  CASH: "ငွေသား",
+  KBZPAY: "KBZ Pay",
+  WAVEPAY: "Wave Pay",
+};
+export const isPurchasePaymentMethod = (value: unknown): value is PurchasePaymentMethod =>
+  typeof value === "string" && (PURCHASE_PAYMENT_METHODS as readonly string[]).includes(value);
+
+/** Maps receive_purchase's error codes to Burmese messages. */
+const RECEIVE_PURCHASE_ERRORS: [string, string][] = [
+  ["payment_method_required", "ကြိုတင်ပေးငွေ ပေးချေခဲ့သော နည်းလမ်း (ငွေသား / KBZ Pay / Wave Pay) ရွေးပါ"],
+  ["invalid_payment_method", "ငွေပေးချေမှု နည်းလမ်း မမှန်ကန်ပါ"],
+  ["not_authorized", "ကုန်ပစ္စည်း လက်ခံရန် ခွင့်ပြုချက် မရှိပါ"],
+  ["not_authenticated", "ဝင်ရောက်မှု သက်တမ်းကုန်သွားပါပြီ၊ ပြန်လည် ဝင်ပါ"],
+  ["purchase_not_found", "ဝယ်ယူမှု အော်ဒါ မတွေ့ပါ"],
+  ["purchase_not_receivable", "ဤအော်ဒါကို လက်ခံ၍ မရပါ — အတည်ပြုပြီးသော အော်ဒါများသာ လက်ခံနိုင်သည်"],
+  ["partially_received", "ဤအော်ဒါတွင် တစ်စိတ်တစ်ပိုင်း လက်ခံမှု ရှိပြီးသား ဖြစ်သည်"],
+  ["total_mismatch", "အော်ဒါ စုစုပေါင်းနှင့် စာရင်းမကိုက်ပါ — အော်ဒါကို ပြန်ပြင်ပါ"],
+  ["empty_purchase", "အော်ဒါတွင် ပစ္စည်း မရှိပါ"],
+  ["item_not_found", "အော်ဒါထဲရှိ ပစ္စည်းတစ်ခု မတွေ့ပါ (သို့) ဤဆိုင်နှင့် မသက်ဆိုင်ပါ"],
+  ["quantity_too_large", "လက်ကျန် ပမာဏ ကန့်သတ်ချက် ကျော်လွန်နေသည်"],
+  ["supplier_not_found", "ကုန်သွင်းသူ မတွေ့ပါ"],
+  ["invalid_amount_paid", "ကြိုတင်ပေးငွေ မမှန်ကန်ပါ"],
+  ["invalid_conversion", "ယူနစ် ပြောင်းလဲနှုန်း မမှန်ကန်ပါ"],
+  ["invalid_quantity", "အရေအတွက် မမှန်ကန်ပါ"],
+];
+
+export const receivePurchaseErrorMessage = (error: unknown): string => {
+  const raw = (error as { message?: string } | null)?.message ?? "";
+  const hit = RECEIVE_PURCHASE_ERRORS.find(([code]) => raw.includes(code));
+  return hit ? hit[1] : "လက်ခံ၍ မရပါ — ထပ်ကြိုးစားပါ";
+};
 
 /** Only drafts and cancelled orders may be deleted; anything that may have moved stock may not. */
 export const canDeletePurchase = (status: string) =>
@@ -92,6 +121,8 @@ export interface Purchase {
   status: string;
   total_amount: number;
   amount_paid: number;
+  /** How the prepayment was made; null on older orders (asked for at receive time). */
+  payment_method: PurchasePaymentMethod | null;
   notes: string | null;
   created_at: string;
   lines: PurchaseLine[];
@@ -129,6 +160,7 @@ interface PurchaseRow {
   status: string;
   total_amount: number | string;
   amount_paid: number | string;
+  payment_method: string | null;
   notes: string | null;
   created_at: string;
   purchase_items:
@@ -199,6 +231,8 @@ interface AccountingContextValue {
     supplierId: string | null;
     lines: PurchaseLine[];
     amountPaid: number;
+    /** Required in the UI when amountPaid > 0. */
+    paymentMethod: PurchasePaymentMethod | null;
     notes: string;
   }) => Promise<void>;
   /** Edit a DRAFT purchase (lines, supplier, notes). Optionally confirm it in the same save. */
@@ -207,12 +241,21 @@ interface AccountingContextValue {
     supplierId: string | null;
     lines: PurchaseLine[];
     amountPaid: number;
+    paymentMethod: PurchasePaymentMethod | null;
     notes: string;
     confirm?: boolean;
   }) => Promise<void>;
   /** DRAFT → ORDERED. Changes status only: no stock, cost, supplier balance or ledger effect. */
   confirmPurchase: (purchaseId: string) => Promise<void>;
-  receivePurchase: (purchaseId: string) => Promise<void>;
+  /**
+   * Receives the WHOLE purchase in one database transaction (stock in base units, last cost,
+   * movements, supplier balance, ledger, status). Returns true when it was already received.
+   * `paymentMethod` is only needed when the order has a prepayment but no recorded method.
+   */
+  receivePurchase: (
+    purchaseId: string,
+    paymentMethod?: PurchasePaymentMethod,
+  ) => Promise<{ alreadyReceived: boolean }>;
   deletePurchase: (purchaseId: string) => Promise<void>;
   saveExpense: (input: {
     id?: string;
@@ -267,7 +310,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
         supabase
           .from("purchases")
           .select(
-            "id,supplier_id,status,total_amount,amount_paid,notes,created_at,purchase_items(item_id,quantity,unit_cost,unit_name,conversion,received_quantity,items(name))",
+            "id,supplier_id,status,total_amount,amount_paid,payment_method,notes,created_at,purchase_items(item_id,quantity,unit_cost,unit_name,conversion,received_quantity,items(name))",
           )
           .eq("store_id", storeId)
           .order("created_at", { ascending: false }),
@@ -297,6 +340,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
           status: row.status,
           total_amount: Number(row.total_amount),
           amount_paid: Number(row.amount_paid),
+          payment_method: isPurchasePaymentMethod(row.payment_method) ? row.payment_method : null,
           notes: row.notes ?? null,
           created_at: row.created_at,
           lines: (row.purchase_items ?? []).map((line) => ({
@@ -477,7 +521,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   );
 
   const createPurchase = useCallback<AccountingContextValue["createPurchase"]>(
-    async ({ status, supplierId, lines, amountPaid, notes }) => {
+    async ({ status, supplierId, lines, amountPaid, paymentMethod, notes }) => {
       if (!storeId) throw new Error("No active store");
       const total = lines.reduce((sum, line) => sum + line.quantity * line.unit_cost, 0);
       const { data, error } = await supabase
@@ -488,6 +532,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
           status: status ?? PURCHASE_ORDERED,
           total_amount: total,
           amount_paid: amountPaid,
+          payment_method: amountPaid > 0 ? paymentMethod : null,
           notes: notes || null,
         })
         .select("id")
@@ -513,13 +558,14 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   // Draft edit/confirm run as database functions (see migration 20261124040000): the header and
   // lines are replaced in one transaction, so a failure leaves the original draft untouched.
   const updateDraftPurchase = useCallback<AccountingContextValue["updateDraftPurchase"]>(
-    async ({ purchaseId, supplierId, lines, amountPaid, notes, confirm }) => {
+    async ({ purchaseId, supplierId, lines, amountPaid, paymentMethod, notes, confirm }) => {
       if (!storeId) throw new Error("No active store");
       if (confirm && lines.length === 0) throw new Error("Add at least one line before confirming");
       const { error } = await supabase.rpc("update_draft_purchase", {
         p_purchase_id: purchaseId,
         p_supplier_id: supplierId,
         p_amount_paid: amountPaid,
+        p_payment_method: amountPaid > 0 ? paymentMethod : null,
         p_notes: notes,
         p_confirm: Boolean(confirm),
         p_lines: lines.map((line) => ({
@@ -546,56 +592,21 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
     [refreshAll, storeId],
   );
 
-  const receivePurchase = useCallback(
-    async (purchaseId: string) => {
-      if (!storeId) return;
-      const purchase = purchases.find((p) => p.id === purchaseId);
-      if (!purchase) return;
-      if (!canReceiveLegacy(purchase.status)) throw new Error("This purchase cannot be received");
-      if (hasNonBaseUnit(purchase))
-        throw new Error("Purchases in non-base units cannot be received yet");
-      const unpaid = Math.max(purchase.total_amount - purchase.amount_paid, 0);
-
-      // Increment stock for each received line.
-      for (const line of purchase.lines) {
-        const { data } = await supabase
-          .from("items")
-          .select("stock_quantity")
-          .eq("id", line.item_id)
-          .maybeSingle();
-        await supabase
-          .from("items")
-          .update({
-            stock_quantity: (data?.stock_quantity ?? 0) + line.quantity,
-            cost_price: line.unit_cost,
-          })
-          .eq("id", line.item_id);
-      }
-
-      await postEntries(
-        [
-          { account: ACCOUNTS.INVENTORY, direction: "DEBIT", amount: purchase.total_amount },
-          { account: ACCOUNTS.PAYABLE, direction: "CREDIT", amount: unpaid },
-          { account: ACCOUNTS.CASH, direction: "CREDIT", amount: purchase.amount_paid },
-        ],
-        { type: "PURCHASE", id: purchaseId, memo: "ဝယ်ယူမှု လက်ခံရရှိ" },
-      );
-
-      if (unpaid > 0 && purchase.supplier_id) {
-        const supplier = suppliers.find((s) => s.id === purchase.supplier_id);
-        await supabase
-          .from("suppliers")
-          .update({ balance: Number(((supplier?.balance ?? 0) + unpaid).toFixed(2)) })
-          .eq("id", purchase.supplier_id);
-      }
-
-      await supabase
-        .from("purchases")
-        .update({ status: PURCHASE_RECEIVED, received_at: new Date().toISOString() })
-        .eq("id", purchaseId);
+  // Receiving runs as ONE database function (migration 20261126040000): stock, last cost,
+  // inventory movements, supplier balance, ledger and status commit together or not at all.
+  const receivePurchase = useCallback<AccountingContextValue["receivePurchase"]>(
+    async (purchaseId, paymentMethod) => {
+      if (!storeId) throw new Error("No active store");
+      const { data, error } = await supabase.rpc("receive_purchase", {
+        p_purchase_id: purchaseId,
+        ...(paymentMethod ? { p_payment_method: paymentMethod } : {}),
+      });
+      if (error) throw new Error(receivePurchaseErrorMessage(error));
       await refreshAll();
+      const result = (data ?? {}) as { already_received?: boolean };
+      return { alreadyReceived: result.already_received === true };
     },
-    [postEntries, purchases, refreshAll, storeId, suppliers],
+    [refreshAll, storeId],
   );
 
   const deletePurchase = useCallback(

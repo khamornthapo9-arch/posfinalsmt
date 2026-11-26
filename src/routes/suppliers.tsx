@@ -8,10 +8,13 @@ import {
   useAccountingStore,
   canDeletePurchase,
   canReceiveLegacy,
-  hasNonBaseUnit,
+  isPurchasePaymentMethod,
   PURCHASE_DRAFT,
   PURCHASE_ORDERED,
+  PURCHASE_PAYMENT_LABEL,
+  PURCHASE_PAYMENT_METHODS,
   type Purchase,
+  type PurchasePaymentMethod,
   type Supplier,
 } from "@/lib/accounting-store";
 import { usePos } from "@/lib/pos-store";
@@ -86,6 +89,7 @@ function SuppliersPage() {
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [editingDraft, setEditingDraft] = useState<Purchase | null>(null);
   const [paying, setPaying] = useState<Supplier | null>(null);
+  const [receiving, setReceiving] = useState<Purchase | null>(null);
 
   if (!enabled) {
     return (
@@ -188,8 +192,7 @@ function SuppliersPage() {
             const statusMeta =
               PURCHASE_STATUS_LABEL[purchase.status] ?? unknownStatusMeta(purchase.status);
             const isDraft = purchase.status === PURCHASE_DRAFT;
-            const nonBase = hasNonBaseUnit(purchase);
-            const receivable = canReceiveLegacy(purchase.status) && !nonBase;
+            const receivable = canReceiveLegacy(purchase.status);
             return (
               <div key={purchase.id} className="rounded-md border border-border bg-card p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -234,19 +237,9 @@ function SuppliersPage() {
                         </button>
                       </>
                     )}
-                    {canReceiveLegacy(purchase.status) && nonBase && (
-                      <span className="max-w-48 text-[11px] leading-tight text-muted-foreground">
-                        ယူနစ်ကြီး (ဘူး/ဗူး) ဖြင့် မှာထားသောကြောင့် လက်ခံခြင်းကို နောက်အဆင့်တွင်
-                        ထည့်သွင်းမည်
-                      </span>
-                    )}
                     {receivable && (
                       <button
-                        onClick={() => {
-                          void receivePurchase(purchase.id)
-                            .then(() => toast.success("ကုန်ပစ္စည်း လက်ခံရရှိပြီးပါပြီ"))
-                            .catch(() => toast.error("လက်ခံ၍ မရပါ"));
-                        }}
+                        onClick={() => setReceiving(purchase)}
                         className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground"
                       >
                         <PackageCheck className="h-3.5 w-3.5" /> ရရှိပြီး
@@ -333,6 +326,22 @@ function SuppliersPage() {
               status === PURCHASE_DRAFT
                 ? "မူကြမ်းကို သိမ်းဆည်းပြီးပါပြီ"
                 : "ဝယ်ယူမှု အော်ဒါကို အတည်ပြုပြီးပါပြီ",
+            );
+          }}
+        />
+      )}
+      {receiving && (
+        <ReceiveModal
+          purchase={receiving}
+          fmt={fmt}
+          onClose={() => setReceiving(null)}
+          onConfirm={async (method) => {
+            const { alreadyReceived } = await receivePurchase(receiving.id, method);
+            setReceiving(null);
+            toast.success(
+              alreadyReceived
+                ? "ဤအော်ဒါကို လက်ခံပြီးသား ဖြစ်ပါသည်"
+                : "ကုန်ပစ္စည်း လက်ခံရရှိပြီးပါပြီ",
             );
           }}
         />
@@ -456,6 +465,7 @@ function PurchaseModal({
       conversion: number;
     }[];
     amountPaid: number;
+    paymentMethod: PurchasePaymentMethod | null;
     notes: string;
   }) => Promise<void>;
 }) {
@@ -486,6 +496,9 @@ function PurchaseModal({
     })),
   );
   const [amountPaid, setAmountPaid] = useState(String(initial?.amount_paid ?? 0));
+  const [paymentMethod, setPaymentMethod] = useState<PurchasePaymentMethod | "">(
+    initial?.payment_method ?? "",
+  );
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [busy, setBusy] = useState(false);
 
@@ -507,7 +520,7 @@ function PurchaseModal({
     const u = currentUnits.find((unit) => unit.unit_name === unitName);
     const conv = u ? u.conversion : 1;
     const baseCost = currentItem?.cost ?? 0;
-    setCost(String(baseCost * conv));
+    setCost(String(Number((baseCost * conv).toFixed(4))));
   };
 
   const addLine = () => {
@@ -533,12 +546,18 @@ function PurchaseModal({
   // One in-flight save at a time; failures keep the dialog open so nothing typed is lost.
   const submit = (status: typeof PURCHASE_DRAFT | typeof PURCHASE_ORDERED) => {
     if (busy) return;
+    const paid = Number(amountPaid) || 0;
+    if (paid > 0 && !isPurchasePaymentMethod(paymentMethod)) {
+      toast.error("ကြိုတင်ပေးငွေ ပေးချေသည့် နည်းလမ်း ရွေးပါ");
+      return;
+    }
     setBusy(true);
     void onSave({
       status,
       supplierId: supplierId || null,
       lines,
-      amountPaid: Number(amountPaid) || 0,
+      amountPaid: paid,
+      paymentMethod: paid > 0 && isPurchasePaymentMethod(paymentMethod) ? paymentMethod : null,
       notes: notes.trim(),
     })
       .catch(() => toast.error("မသိမ်းနိုင်ပါ — ထပ်ကြိုးစားပါ"))
@@ -712,6 +731,29 @@ function PurchaseModal({
             </div>
           )}
 
+          {Number(amountPaid) > 0 && (
+            <div>
+              <label className={labelClass} htmlFor="p-method">
+                ကြိုတင်ပေးငွေ ပေးချေသည့် နည်းလမ်း
+              </label>
+              <select
+                id="p-method"
+                value={paymentMethod}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setPaymentMethod(isPurchasePaymentMethod(v) ? v : "");
+                }}
+                className={inputClass}
+              >
+                <option value="">— ရွေးပါ —</option>
+                {PURCHASE_PAYMENT_METHODS.map((m) => (
+                  <option key={m} value={m}>
+                    {PURCHASE_PAYMENT_LABEL[m]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
               <label className={labelClass} htmlFor="p-paid">
@@ -762,6 +804,129 @@ function PurchaseModal({
             className="h-12 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             အော်ဒါ အတည်ပြုမည်
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReceiveModal({
+  purchase,
+  fmt,
+  onClose,
+  onConfirm,
+}: {
+  purchase: Purchase;
+  fmt: (n: number) => string;
+  onClose: () => void;
+  onConfirm: (method?: PurchasePaymentMethod) => Promise<void>;
+}) {
+  const [method, setMethod] = useState<PurchasePaymentMethod | "">(purchase.payment_method ?? "");
+  const [busy, setBusy] = useState(false);
+  const paid = purchase.amount_paid;
+  const unpaid = Math.max(purchase.total_amount - paid, 0);
+  const needsMethod = paid > 0 && !purchase.payment_method;
+  const chosen = purchase.payment_method ?? (isPurchasePaymentMethod(method) ? method : undefined);
+  const canConfirm = !busy && (paid <= 0 || chosen !== undefined);
+
+  // One in-flight receive at a time; the database function is also idempotent.
+  const confirm = () => {
+    if (!canConfirm) return;
+    setBusy(true);
+    void onConfirm(needsMethod ? chosen : undefined)
+      .catch((error: unknown) =>
+        toast.error(error instanceof Error ? error.message : "လက်ခံ၍ မရပါ — ထပ်ကြိုးစားပါ"),
+      )
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
+      <div className="max-h-full w-full max-w-md overflow-y-auto rounded-md border border-border bg-card p-5 shadow-lg">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">ကုန်ပစ္စည်း လက်ခံရရှိခြင်း</h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <ul className="space-y-1 text-xs">
+          {purchase.lines.map((line, i) => {
+            const conv = line.conversion ?? 1;
+            return (
+              <li key={i} className="flex justify-between gap-2">
+                <span>
+                  {line.name || "—"} × {line.quantity} {line.unit_name ? `(${line.unit_name})` : ""}
+                </span>
+                <span className="shrink-0 font-medium">
+                  + {line.quantity * conv} ခု
+                  {conv > 1 && (
+                    <span className="ml-1 font-normal text-muted-foreground">
+                      ({line.quantity} × {conv})
+                    </span>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="mt-3 space-y-1 border-t border-border pt-3 text-xs">
+          <p className="flex justify-between">
+            <span>စုစုပေါင်း</span>
+            <span className="font-medium">{fmt(purchase.total_amount)}</span>
+          </p>
+          <p className="flex justify-between">
+            <span>ကြိုတင်ပေးငွေ</span>
+            <span className="font-medium">
+              {fmt(paid)}
+              {chosen && ` · ${PURCHASE_PAYMENT_LABEL[chosen]}`}
+            </span>
+          </p>
+          <p className="flex justify-between">
+            <span>ကုန်သွင်းသူသို့ ပေးရန် ကြွေး</span>
+            <span className="font-medium">{fmt(unpaid)}</span>
+          </p>
+        </div>
+        {needsMethod && (
+          <div className="mt-3">
+            <label className={labelClass} htmlFor="r-method">
+              ကြိုတင်ပေးငွေ ပေးချေခဲ့သည့် နည်းလမ်း
+            </label>
+            <select
+              id="r-method"
+              value={method}
+              onChange={(e) => {
+                const v = e.target.value;
+                setMethod(isPurchasePaymentMethod(v) ? v : "");
+              }}
+              className={inputClass}
+            >
+              <option value="">— ရွေးပါ —</option>
+              {PURCHASE_PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {PURCHASE_PAYMENT_LABEL[m]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          လက်ခံပြီးပါက လက်ကျန်စာရင်း၊ ဝယ်ရင်းဈေး (နောက်ဆုံးဈေး) နှင့် စာရင်းကိုင်မှတ်တမ်းများ တစ်ပြိုင်နက်
+          ပြောင်းလဲမည်။
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-medium hover:bg-accent"
+          >
+            မလုပ်တော့ပါ
+          </button>
+          <button
+            disabled={!canConfirm}
+            onClick={confirm}
+            className="inline-flex h-10 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          >
+            <PackageCheck className="h-4 w-4" /> လက်ခံမည်
           </button>
         </div>
       </div>
