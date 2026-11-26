@@ -1,5 +1,46 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import {
+  ArrowRight,
+  BarChart2,
+  BarChart3,
+  Barcode,
+  Boxes,
+  Building2,
+  Check,
+  CheckCircle2,
+  Coins,
+  CreditCard,
+  FileSpreadsheet,
+  Globe,
+  Image as ImageIcon,
+  KeyRound,
+  Layers,
+  LayoutGrid,
+  Mail,
+  MapPin,
+  Network,
+  Package,
+  PackageCheck,
+  Phone,
+  QrCode,
+  Receipt,
+  ScanLine,
+  Send,
+  ShieldAlert,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingCart,
+  Smartphone,
+  Sparkles,
+  Star,
+  Store,
+  Tag,
+  TrendingUp,
+  Tv2,
+  Users,
+  WifiOff,
+  Zap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LottiePlayer } from "@/components/landing/lottie-player";
 
@@ -14,7 +55,7 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:title",
-        content: "SMT POS — လက်လီအရောင်းနှင့် စတိုးစီမံခန့်ခွဲမှုစနစ်",
+        content: "SMT POS — ခေတ်သစ် လက်လီအရောင်းနှင့် စတိုးစီမံခန့်ခွဲမှုစနစ်",
       },
       {
         property: "og:description",
@@ -29,137 +70,56 @@ export const Route = createFileRoute("/")({
 
 const myanmarSerif = { fontFamily: "'Noto Serif Myanmar', serif" };
 
-const FEATURE_CARDS = [
-  {
-    title: "ဘားကုဒ်ဖြင့် အမြန်ငွေရှင်း",
-    body: "ကုန်ပစ္စည်းကို စကင်န်ဖတ်ပြီး ခြင်းတောင်းထဲ ထည့်ကာ ငွေရှင်းနိုင်သည်။",
-  },
-  {
-    title: "အော့ဖ်လိုင်း ရောင်းချမှု",
-    body: "လိုင်းပြတ်ချိန်တွင်လည်း အရောင်းဆက်လုပ်နိုင်ပြီး ပြန်ချိတ်သည့်အခါ ဒေတာ ချိန်ညှိသည်။",
-  },
-  {
-    title: "ကုန်လက်ကျန် စီမံခြင်း",
-    body: "SKU၊ ယူနစ်၊ အနိမ့်ဆုံးပမာဏနှင့် လက်ကျန် သတိပေးချက်ကို တစ်နေရာတည်းတွင် ကြည့်နိုင်သည်။",
-  },
-  {
-    title: "ဆိုင်ခွဲ စီမံမှု",
-    body: "Pro တွင် ဆိုင်ခွဲကုဒ်နှင့် PIN ဖြင့် ဆိုင်ခွဲများစွာကို ပင်မအကောင့်မှ စီမံနိုင်သည်။",
-  },
-  {
-    title: "အကြွေးနှင့် ဖောက်သည်",
-    body: "ဖောက်သည်အကြွေး၊ ငွေလက်ခံမှုနှင့် နေ့ချုပ်စာရင်းကို စနစ်တကျ မှတ်တမ်းတင်သည်။",
-  },
-  {
-    title: "အမြတ်နှင့် အစီရင်ခံစာ",
-    body: "နေ့စဉ်အရောင်း၊ ကုန်ကျစရိတ်နှင့် အသားတင်အမြတ်ကို ရှင်းလင်းစွာ ပြသသည်။",
-  },
-] as const;
-
-const OPS = [
-  "ဘားကုဒ် ပြင်ဆင်ခြင်းနှင့် ကုန်ပစ္စည်း ထည့်သွင်းခြင်း",
-  "လက်ကား / လက်လီ ယူနစ် စီမံခြင်း",
-  "အမြတ်ငွေ နေ့ချုပ် တွက်ချက်ခြင်း",
-  "ဆိုင်ခွဲများကို live ကြည့်ခြင်း (Pro)",
-  "Excel နှင့် CSV ထုတ်ယူခြင်း",
-] as const;
-
-const PRO_POINTS = [
-  {
-    title: "ဆိုင်ခွဲများ ကွန်ရက်ချိတ်ဆက်ခြင်း",
-    body: "ဆိုင်ခွဲကုဒ်နှင့် ၄ လုံး PIN ဖြင့် ဆိုင်ခွဲပေါင်းများစွာကို ပင်မအကောင့်တစ်ခုတည်းကနေ တိုက်ရိုက် စီမံခန့်ခွဲနိုင်သည်။",
-  },
-  {
-    title: "အော့ဖ်လိုင်းစနစ်",
-    body: "အင်တာနက်လိုင်းကျချိန်မှာတောင် အရောင်းစာရင်းနှင့် လုပ်ဆောင်ချက်ကို တိကျအောင် လုပ်ပေးနိုင်သည်။",
-  },
-  {
-    title: "ဘောက်ချာဒီဇိုင်း",
-    body: "ဆိုင်ရဲ့ ကိုယ်ပိုင် အမှတ်တံဆိပ် Logo၊ ဖုန်းနံပါတ်၊ လိပ်စာနှင့် အောက်ခြေ အမှာစကားများကို စိတ်ကြိုက် ပြင်ဆင်ထည့်သွင်းနိုင်သည်။",
-  },
-] as const;
-
-const CAPABILITIES_LEFT = [
-  "ဘားကုဒ်နှင့် QR ငွေရှင်းစနစ်",
-  "အော့ဖ်လိုင်း ရောင်းချမှု",
-  "ကုန်ပစ္စည်း လက်ကျန် စီမံ",
-  "KBZPay / WavePay ငွေခွဲပေးချေ",
-  "ဖောက်သည် အကြွေးစာရင်း",
-  "ဝန်ထမ်း အခန်းကဏ္ဍ",
-  "ခြင်းတောင်း ခေတ္တထိန်း",
-] as const;
-
-const CAPABILITIES_RIGHT = [
-  "ဆိုင်ခွဲများ စီမံခန့်ခွဲမှု",
-  "ဆိုင်သုံးစရိတ် စာရင်းမှတ်ခြင်း",
-  "နေ့ချုပ်စာရင်း ပရင့်ထုတ်ခြင်း",
-  "အသားတင်အမြတ်ငွေ အစီရင်ခံစာ",
-  "စိတ်ကြိုက် ဆိုင် Logo ဘောက်ချာ",
-  "Excel / CSV ထုတ်ယူခြင်း",
-  "ကုန်သွင်းသူနှင့် ဝယ်ယူမှု",
-] as const;
-
-function Frame({
-  children,
-  className = "",
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`relative overflow-hidden rounded-xl border border-stone-200 bg-white shadow-[0_12px_40px_-16px_rgba(28,25,23,0.18)] ${className}`}
-    >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-stone-300 to-transparent" />
-      {children}
-    </div>
-  );
-}
-
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#f4f1ea] text-stone-900 antialiased selection:bg-amber-200/50">
-      {/* ── Nav ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-stone-200/90 bg-[#f4f1ea]/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-2.5">
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20">
+      {/* =========================================================
+          ၁။ မီနူးဘား (NAVIGATION BAR - မူရင်း Logo ထိန်းသိမ်းထားသည်)
+      ========================================================= */}
+      <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-8">
+          <Link to="/" className="flex items-center gap-3">
             <LottiePlayer src="/animations/s-logo.json" className="h-10 w-10" />
-            <div className="leading-tight">
-              <p className="text-[15px] font-bold tracking-tight text-stone-900">SMT POS</p>
-              <p className="text-[11px] font-medium text-stone-500">အရောင်းနှင့် စာရင်းစနစ်</p>
+            <div className="flex flex-col">
+              <span className="text-lg font-bold tracking-tight text-foreground leading-none">
+                SMT POS
+              </span>
+              <span className="mt-1 text-[11px] font-semibold text-primary">
+                အရောင်းနှင့် စာရင်းစနစ်
+              </span>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-sm font-medium text-stone-600 md:flex">
-            <a href="#hero" className="transition-colors hover:text-stone-900">
+          <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
+            <a href="#hero" className="transition-colors hover:text-primary">
               မူလ
             </a>
-            <a href="#features" className="transition-colors hover:text-stone-900">
+            <a href="#features" className="transition-colors hover:text-primary">
               လုပ်ဆောင်ချက်များ
             </a>
-            <a href="#pro-capabilities" className="transition-colors hover:text-stone-900">
+            <a href="#pro-capabilities" className="transition-colors hover:text-primary">
               ပရိုစနစ်များ
             </a>
-            <a href="#plans" className="transition-colors hover:text-stone-900">
+            <a href="#plans" className="transition-colors hover:text-primary">
               အစီအစဉ်များ
             </a>
-            <a href="#contact" className="transition-colors hover:text-stone-900">
+            <a href="#contact" className="transition-colors hover:text-primary">
               ဆက်သွယ်ရန်
             </a>
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               asChild
               variant="ghost"
               size="sm"
-              className="hidden h-9 text-stone-700 hover:bg-stone-200/70 sm:inline-flex"
+              className="hidden sm:inline-flex text-xs font-bold"
             >
               <Link to="/login">အကောင့်ဝင်ရန်</Link>
             </Button>
             <Button
               asChild
-              className="h-9 rounded-lg bg-[#1c1917] px-4 text-sm font-semibold text-white hover:bg-stone-800"
+              className="h-10 rounded-lg bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-btn hover:bg-primary/90"
             >
               <Link to="/login" search={{ mode: "signup" }}>
                 အခမဲ့ စတင်ရန်
@@ -170,205 +130,340 @@ export default function LandingPage() {
       </header>
 
       <main>
-        {/* ── Hero ──────────────────────────────────────────── */}
-        <section id="hero" className="relative overflow-hidden">
+        {/* =========================================================
+            ၂။ ပင်မမိတ်ဆက် (HERO SECTION - လက်လီစတိုးသီးသန့်)
+        ========================================================= */}
+        <section id="hero" className="hero-glow relative overflow-hidden py-16 lg:py-24">
           <div
-            aria-hidden
-            className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-amber-200/30 blur-3xl"
+            aria-hidden="true"
+            className="dot-grid pointer-events-none absolute inset-0 opacity-60"
           />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -bottom-20 left-10 h-64 w-64 rounded-full bg-sky-200/25 blur-3xl"
-          />
-
-          <div className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:py-24">
-            <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-12">
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
+            <div className="grid items-center gap-12 lg:grid-cols-12">
+              {/* ဘယ်ဘက်ကော်လံ: ခေါင်းစဉ်နှင့် ခလုတ်များ */}
               <div className="lg:col-span-6 space-y-6">
-                <div className="inline-flex items-center gap-2 rounded-full border border-stone-300 bg-white/80 px-3 py-1 text-xs font-semibold text-stone-600 shadow-sm">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  ဗားရှင်း ၁.၂ · လက်လီဆိုင်များအတွက်
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-xs">
+                  <span className="pulse-dot relative flex h-2 w-2 text-success">
+                    <span className="h-2 w-2 rounded-full bg-success" />
+                  </span>
+                  <span>ဗားရှင်း ၁.၂</span>
                 </div>
 
                 <h1
                   style={myanmarSerif}
-                  className="text-3xl font-bold leading-[1.25] tracking-tight text-stone-900 sm:text-4xl lg:text-[2.65rem] lg:leading-[1.28]"
+                  className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-[52px] lg:leading-[1.25]"
                 >
-                  ဆိုင်ကောင်တာမှ ရောင်းချ၊ လက်ကျန်စစ်၊ နေ့ချုပ်စာရင်းထုတ် — တစ်စနစ်တည်း
+                  SMT POS မှာ ဖြည့်ဆည်းပေးထားသည့်အရာများ -
                 </h1>
 
-                <p className="max-w-xl text-base leading-relaxed text-stone-600 sm:text-lg">
-                  SMT POS သည် မြန်မာလက်လီဆိုင်များအတွက် ရေးသားထားသော အရောင်းနှင့် စာရင်းစနစ်
-                  ဖြစ်သည်။ ဘားကုဒ်စကင်န်၊ အော့ဖ်လိုင်းရောင်းချမှု၊ ဆိုင်ခွဲစီမံမှုနှင့်
-                  အမြတ်စာရင်းကို တစ်နေရာတည်းတွင် လုပ်ဆောင်နိုင်သည်။
+                <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+                  စတိုးဆိုင်၊ မီနီမတ်စ်နှင့် လက်လီလက်ကား ဆိုင်များအတွက် ရည်ရွယ်ထားပြီး၊ ဘားကုဒ်
+                  Scan၊ ငွေခွဲပြီးပေးချေတာ၊ ကုန်လက်ကျန်၊ ဝယ်/ ရောင်း အကြွေးနှင့်
+                  ဆိုင်ခွဲများချိတ်ဆက်နိုင်ပါတယ်။
                 </p>
 
-                <div className="flex flex-wrap items-center gap-3 pt-1">
+                <div className="flex flex-wrap items-center gap-4 pt-2">
                   <Button
                     asChild
-                    className="h-11 rounded-lg bg-[#1c1917] px-6 text-sm font-semibold text-white shadow-md hover:bg-stone-800"
+                    size="lg"
+                    className="h-12 rounded-lg bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-brand hover:bg-primary/90"
                   >
                     <Link to="/login" search={{ mode: "signup" }}>
-                      အခမဲ့ စတင်အသုံးပြုမည်
+                      အခမဲ့ အကောင့်ဖွင့်မည်
                     </Link>
                   </Button>
                   <Button
                     asChild
                     variant="outline"
-                    className="h-11 rounded-lg border-stone-300 bg-white/70 px-6 text-sm font-semibold text-stone-800 hover:bg-white"
+                    size="lg"
+                    className="h-12 rounded-lg border-input px-8 text-sm font-semibold hover:bg-accent"
                   >
                     <Link to="/register">ဝင်ရောက်ရန်</Link>
                   </Button>
                 </div>
-
-                <dl className="grid grid-cols-2 gap-4 border-t border-stone-200/90 pt-6 sm:grid-cols-4">
-                  {[
-                    ["Offline", "လိုင်းမရှိလည်း ရောင်းနိုင်"],
-                    ["Barcode", "စကင်န်ဖြင့် အမြန်ထည့်"],
-                    ["Branches", "Pro တွင် စီမံနိုင်"],
-                    ["မြန်မာစာ", "UI အပြည့်အဝ"],
-                  ].map(([k, v]) => (
-                    <div key={k}>
-                      <dt className="text-sm font-bold text-stone-900">{k}</dt>
-                      <dd className="mt-0.5 text-xs leading-snug text-stone-500">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
               </div>
 
-              <div className="lg:col-span-6">
-                <Frame className="mx-auto max-w-lg bg-gradient-to-b from-white to-stone-50 p-4 sm:p-6">
-                  <LottiePlayer
-                    src="/animations/computer.json"
-                    className="mx-auto aspect-square w-full max-w-md"
-                  />
-                </Frame>
+              {/* ညာဘက်ကော်လံ: အရောင်းစက် Mockup ပြသမှု */}
+              <div className="lg:col-span-6 relative flex items-center justify-center">
+                <div className="absolute -top-12 -left-8 h-72 w-72 rounded-full bg-primary/15 blur-2xl -z-10" />
+                <div className="absolute -bottom-8 -right-8 h-80 w-80 rounded-full bg-info/10 blur-2xl -z-10" />
+
+                <LottiePlayer
+                  src="/animations/computer.json"
+                  className="w-full max-w-lg aspect-square"
+                />
+              </div>
+            </div>
+
+            {/* အောက်ခြေ အဓိက လက်လီလုပ်ဆောင်ချက် ၅ ခု */}
+            <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-card p-5 shadow-card border border-border text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-pop">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary shadow-sm mb-3">
+                  <ScanLine className="h-5 w-5 stroke-[2]" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">ဘားကုဒ် Scan</span>
+              </div>
+
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-card p-5 shadow-card border border-border text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-pop">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary shadow-sm mb-3">
+                  <WifiOff className="h-5 w-5 stroke-[2]" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">Offline မုဒ်</span>
+              </div>
+
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-card p-5 shadow-card border border-border text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-pop">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary shadow-sm mb-3">
+                  <Boxes className="h-5 w-5 stroke-[2]" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">ကုန်လက်ကျန်</span>
+              </div>
+
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-card p-5 shadow-card border border-border text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-pop">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary shadow-sm mb-3">
+                  <Building2 className="h-5 w-5 stroke-[2]" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">
+                  ဆိုင်ခွဲများ စီမံခြင်း
+                </span>
+              </div>
+
+              <div className="flex flex-col items-center justify-center rounded-2xl bg-card p-5 shadow-card border border-border text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-pop col-span-2 sm:col-span-1">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-soft text-primary shadow-sm mb-3">
+                  <Receipt className="h-5 w-5 stroke-[2]" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">
+                  ဝယ်/ရောင်း အကြွေးစာရင်း
+                </span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── Operations banner ─────────────────────────────── */}
-        <section className="border-y border-stone-800 bg-[#1c1917] text-stone-100">
-          <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-            <div className="grid items-center gap-10 lg:grid-cols-12">
-              <div className="order-2 lg:order-1 lg:col-span-5">
-                <Frame className="border-stone-700 bg-stone-900/50 p-3 sm:p-4">
-                  <LottiePlayer
-                    src="/animations/Computer_Programming.json"
-                    className="mx-auto aspect-square w-full max-w-sm"
-                  />
-                </Frame>
+        {/* =========================================================
+            ၃။ ခရမ်းရောင် GRADIENT အပိုင်း (OPERATIONS BANNER)
+        ========================================================= */}
+        <section className="relative overflow-hidden bg-brand-gradient py-20 text-white">
+          <div className="mx-auto max-w-7xl px-4 sm:px-8">
+            {/* အပေါ်ဘက် Pill ၅ ခု */}
+            <div className="mb-14 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white ring-1 ring-white/20">
+                  <Barcode className="h-4 w-4 stroke-[2]" />
+                </div>
+                <span className="text-xs font-bold">ဘားကုဒ်ကို ပြင်ဆင်ခြင်း</span>
               </div>
 
-              <div className="order-1 space-y-5 lg:order-2 lg:col-span-7">
-                <h2 style={myanmarSerif} className="text-2xl font-bold sm:text-3xl">
-                  နေ့စဉ် ဆိုင်လုပ်ငန်းအတွက် လိုအပ်သည်များကို ဖြည့်ဆည်းပေးသည်
-                </h2>
-                <p className="text-sm leading-relaxed text-stone-300 sm:text-base">
-                  ကောင်တာမှ စာရင်းအထိ — ရောင်းချခြင်း၊ လက်ကျန်ထိန်းခြင်းနှင့် နေ့ချုပ်
-                  ထုတ်ယူခြင်းကို တစ်ခုတည်းသော စနစ်ဖြင့် စီမံနိုင်သည်။
-                </p>
-                <ol className="space-y-2.5">
-                  {OPS.map((line, i) => (
-                    <li
-                      key={line}
-                      className="flex gap-3 rounded-lg border border-stone-700/80 bg-stone-900/60 px-3.5 py-2.5 text-sm leading-relaxed"
-                    >
-                      <span className="font-mono text-xs text-amber-400/90">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ol>
+              <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white ring-1 ring-white/20">
+                  <Package className="h-4 w-4 stroke-[2]" />
+                </div>
+                <span className="text-xs font-bold">လက်ကား စီမံနိုင်ခြင်း</span>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white ring-1 ring-white/20">
+                  <TrendingUp className="h-4 w-4 stroke-[2]" />
+                </div>
+                <span className="text-xs font-bold">အမြတ်ငွေ တွက်ချက်ခြင်း</span>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white ring-1 ring-white/20">
+                  <Network className="h-4 w-4 stroke-[2]" />
+                </div>
+                <span className="text-xs font-bold">ဆိုင်ခွဲများကို live လုပ်ပေးခြင်း</span>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-md p-3 border border-white/20 col-span-2 sm:col-span-1">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white ring-1 ring-white/20">
+                  <FileSpreadsheet className="h-4 w-4 stroke-[2]" />
+                </div>
+                <span className="text-xs font-bold">Excel နှင့် CSV ထုတ်ယူနိုင်ခြင်း</span>
               </div>
             </div>
-          </div>
-        </section>
 
-        {/* ── Features ──────────────────────────────────────── */}
-        <section id="features" className="bg-[#f4f1ea]">
-          <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
-            <div className="mx-auto max-w-2xl text-center">
-              <LottiePlayer
-                src="/animations/Open_Excel_at_Cloud.json"
-                className="mx-auto mb-4 h-28 w-28 sm:h-32 sm:w-32"
-              />
-              <h2
-                style={myanmarSerif}
-                className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl"
-              >
-                အဓိက လုပ်ဆောင်ချက်များ
-              </h2>
-              <p className="mt-2 text-sm text-stone-600 sm:text-base">
-                လက်လီဆိုင်များအတွက် လက်တွေ့အသုံးဝင်သော အပိုင်းများကို စုစည်းထားသည်။
-              </p>
-            </div>
+            {/* Split Banner */}
+            <div className="grid items-center gap-12 lg:grid-cols-12">
+              <div className="lg:col-span-6 flex justify-center">
+                <LottiePlayer
+                  src="/animations/Computer_Programming.json"
+                  className="w-full max-w-md aspect-square"
+                />
+              </div>
 
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {FEATURE_CARDS.map((card, i) => (
-                <article
-                  key={card.title}
-                  className="group rounded-xl border border-stone-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+              <div className="lg:col-span-6 space-y-6">
+                <h2
+                  style={myanmarSerif}
+                  className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl leading-snug"
                 >
-                  <span className="font-mono text-xs font-semibold text-amber-700/80">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <h3
-                    style={myanmarSerif}
-                    className="mt-2 text-base font-bold text-stone-900 sm:text-[17px]"
-                  >
-                    {card.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-stone-600">{card.body}</p>
-                </article>
-              ))}
+                  မြန်ဆန်ပြီး တိကျသော လက်လီငွေရှင်းကောင်တာ
+                </h2>
+                <p className="text-base text-white/90 leading-relaxed sm:text-lg">
+                  လူစည်ကားတဲ့ စတိုးဆိုင်များအတွက် အထူးဒီဇိုင်းဆင်ထားပါတယ်။ ငွေရှင်းဖို့
+                  တန်းစီဖို့မလိုပဲ ခေတ္တစောင့်ဆိုင်းစနစ် (Holding) ဖြင့် အဆင်ပြေပြေ
+                  ရောင်းချနိုင်ပါတယ်။
+                </p>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-2">
+                  <div className="flex items-center gap-3 rounded-xl bg-white px-5 py-3 text-foreground shadow-pop">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                      <Zap className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-bold">မြန်ဆန်စွာ ပေးချေနိုင်မှု</span>
+                  </div>
+
+                  <div className="flex items-center gap-3 rounded-xl bg-white px-5 py-3 text-foreground shadow-pop">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                      <WifiOff className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-bold">Offline သုံးနိုင်</span>
+                  </div>
+
+                  <div className="flex items-center gap-3 rounded-xl bg-white px-5 py-3 text-foreground shadow-pop">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                      <Coins className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-bold">အမြတ်ငွေ တိကျမှု</span>
+                  </div>
+
+                  <div className="flex items-center gap-3 rounded-xl bg-white px-5 py-3 text-foreground shadow-pop">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                      <Building2 className="h-4 w-4" />
+                    </div>
+                    <span className="text-xs font-bold">ဆိုင်ခွဲများစွာနဲ့ ချိတ်ဆက်နိုင်</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ── Pro capabilities ──────────────────────────────── */}
+        {/* =========================================================
+            ၄။ ကုန်ပစ္စည်းလက်ကျန်နှင့် စာရင်းဇယား (INVENTORY & DISPATCH)
+        ========================================================= */}
+        <section id="features" className="py-20 lg:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-8">
+            <LottiePlayer
+              src="/animations/Open_Excel_at_Cloud.json"
+              className="w-full mx-auto max-w-xl aspect-square"
+            />
+
+            {/* အဓိက လက်လီအင်္ဂါရပ် ၃ ခု */}
+            <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-card transition-shadow duration-200 hover:shadow-pop">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary mb-4">
+                  <ScanLine className="h-5 w-5" />
+                </div>
+                <h3 style={myanmarSerif} className="text-base font-semibold text-foreground">
+                  ဘားကုဒ်ဖြင့် အမြန်ငွေရှင်းဖို့
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  USB/Bluetooth ဘားကုဒ်ဖတ်စက် သို့မဟုတ် ဖုန်းကင်မရာဖြင့် ဘောက်ချာကို ချက်ချင်း
+                  ထုတ်ယူနိုင်ပါသည်။
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-card transition-shadow duration-200 hover:shadow-pop">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary mb-4">
+                  <Boxes className="h-5 w-5" />
+                </div>
+                <h3 style={myanmarSerif} className="text-base font-semibold text-foreground">
+                  ဝယ်ဈေးနှင့် အမြတ်ငွေတွက်ချက်မှု
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  ဝယ်ဈေးနှင့် ရောင်းဈေးများကို အလိုအလျောက် တွက်ချက်ပေးလို့ ဘောက်ချာတစ်ခုချင်းစီရဲ့
+                  အသားတင်အမြတ်ငွေကို အတိအကျ ကြည့်ရှုနိုင်ပါတယ်။
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-card transition-shadow duration-200 hover:shadow-pop">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-soft text-primary mb-4">
+                  <Users className="h-5 w-5" />
+                </div>
+                <h3 style={myanmarSerif} className="text-base font-semibold text-foreground">
+                  ဖောက်သည် အကြွေးစာရင်း
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  အကြွေးရောင်းချမှုများ၊ ပြန်ဆပ်ငွေများနှင့် ဖောက်သည်တစ်ဦးချင်းစီ၏
+                  အကြွေးကျန်စာရင်းများကို စနစ်တကျ မှတ်တမ်းတင် ထိန်းသိမ်းနိုင်သည်။
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            ၅။ ပရိုအချက်အလက်များနှင့် လုံခြုံရေး (PRO CAPABILITIES)
+        ========================================================= */}
         <section
           id="pro-capabilities"
-          className="border-y border-stone-800 bg-[#1c1917] text-stone-100"
+          className="relative overflow-hidden bg-brand-gradient py-20 text-white"
         >
-          <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
-            <div className="grid items-center gap-10 lg:grid-cols-12">
-              <div className="lg:col-span-5">
-                <Frame className="border-stone-700 bg-stone-900/40 p-3 sm:p-5">
-                  <LottiePlayer
-                    src="/animations/OTP_Verification.json"
-                    className="mx-auto aspect-square w-full max-w-md"
-                  />
-                </Frame>
+          <div className="mx-auto max-w-7xl px-4 sm:px-8">
+            <div className="grid items-center gap-12 lg:grid-cols-12">
+              <div className="lg:col-span-6 flex justify-center">
+                <LottiePlayer
+                  src="/animations/OTP_Verification.json"
+                  className="w-full max-w-md aspect-square"
+                />
               </div>
 
-              <div className="space-y-6 lg:col-span-7">
-                <div className="inline-flex rounded-md border border-stone-600 bg-stone-800/80 px-2.5 py-1 text-xs font-semibold text-stone-200">
-                  SMT POS Pro
+              <div className="lg:col-span-6 space-y-6">
+                <div className="inline-flex items-center gap-2 rounded bg-white/20 px-2.5 py-1 text-xs font-bold text-white">
+                  SMT POS Pro တွင် ပါဝင်လာသော စနစ်သစ်များ
                 </div>
                 <h2
                   style={myanmarSerif}
-                  className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl lg:leading-snug"
+                  className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl leading-snug"
                 >
                   ဆိုင်ခွဲရှိသော စတိုးကြီးများအတွက် ပရိုစနစ်များ
                 </h2>
 
-                <div className="divide-y divide-stone-700 overflow-hidden rounded-xl border border-stone-700 bg-stone-900/50">
-                  {PRO_POINTS.map((p) => (
-                    <div key={p.title} className="px-5 py-4">
-                      <h3 style={myanmarSerif} className="text-sm font-bold text-white sm:text-base">
-                        {p.title}
-                      </h3>
-                      <p className="mt-1.5 text-sm leading-relaxed text-stone-300">{p.body}</p>
-                    </div>
-                  ))}
+                <div className="rounded-2xl border border-white/20 bg-white/10 p-6 backdrop-blur-md space-y-4 text-xs text-white/90 leading-relaxed">
+                  <div>
+                    <h4
+                      style={myanmarSerif}
+                      className="text-sm font-bold text-white flex items-center gap-2"
+                    >
+                      <Building2 className="h-4 w-4" /> ဆိုင်ခွဲများ ကွန်ရက်ချိတ်ဆက်ခြင်း
+                    </h4>
+                    <p className="mt-1">
+                      ဆိုင်ခွဲကုဒ်နှင့် ၄ လုံး PIN ဖြင့် ဆိုင်ခွဲပေါင်းများစွာကို
+                      ပင်မအကောင့်တစ်ခုတည်းကနေ တိုက်ရိုက် စီမံခန့်ခွဲနိုင်သည်။
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4
+                      style={myanmarSerif}
+                      className="text-sm font-bold text-white flex items-center gap-2"
+                    >
+                      <ImageIcon className="h-4 w-4" /> အော့ဖ်လိုင်းစနစ်
+                    </h4>
+                    <p className="mt-1">
+                      အင်တာနက်လိုင်းကျချိန်မှာတောင် အရောင်းစာရင်းနဲ့ လုပ်ဆောင်ချက်ကို တိကျအောင်
+                      လုပ်ပေးနိုင်သည်။
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4
+                      style={myanmarSerif}
+                      className="text-sm font-bold text-white flex items-center gap-2"
+                    >
+                      <Receipt className="h-4 w-4" /> ဘောက်ချာဒီဇိုင်း
+                    </h4>
+                    <p className="mt-1">
+                      ဆိုင်ရဲ့ ကိုယ်ပိုင် အမှတ်တံဆိပ် Logo၊ ဖုန်းနံပါတ်၊ လိပ်စာနှင့် အောက်ခြေ
+                      အမှာစကားများကို စိတ်ကြိုက် ပြင်ဆင်ထည့်သွင်းနိုင်သည်။
+                    </p>
+                  </div>
                 </div>
 
                 <Button
                   asChild
                   variant="outline"
-                  className="h-10 border-stone-500 bg-transparent text-sm font-semibold text-white hover:bg-white hover:text-stone-900"
+                  className="border-white bg-transparent text-white hover:bg-white hover:text-primary"
                 >
                   <Link to="/login" search={{ mode: "signup" }}>
                     Pro အစီအစဉ်သို့ အဆင့်မြှင့်တင်ရန်
@@ -379,105 +474,218 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── 14 capabilities + phone Lottie ────────────────── */}
-        <section id="capabilities" className="bg-white">
-          <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+        {/* =========================================================
+            ၆။ ဖုန်းနှင့် အဓိက အင်္ဂါရပ် ၁၄ ခု (14 RETAIL CAPABILITIES)
+        ========================================================= */}
+        <section id="capabilities" className="py-20 lg:py-24 bg-muted/60">
+          <div className="mx-auto max-w-7xl px-4 sm:px-8">
             <h2
               style={myanmarSerif}
-              className="text-center text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl"
+              className="text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
             >
               အဓိက လက်လီလုပ်ဆောင်ချက် ၁၄ ခု
             </h2>
-            <p className="mt-2 text-center text-sm text-stone-600">
+            <p className="mt-2 text-center text-xs text-muted-foreground sm:text-sm">
               လက်လီဆိုင်များအတွက် ဖြည့်ဆည်းပေးထားသည့် အရာများ
             </p>
 
-            <div className="mt-12 grid items-center gap-8 lg:grid-cols-12">
-              <ul className="space-y-2.5 lg:col-span-4">
-                {CAPABILITIES_LEFT.map((c, i) => (
-                  <li
-                    key={c}
-                    className="flex items-center gap-3 rounded-lg border border-stone-200 bg-[#f4f1ea]/60 px-3.5 py-2.5 text-sm font-medium text-stone-800"
-                  >
-                    <span className="w-5 shrink-0 font-mono text-[11px] text-stone-400">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    {c}
-                  </li>
-                ))}
-              </ul>
+            <div className="mt-14 grid items-center gap-8 lg:grid-cols-12">
+              {/* ဘယ်ဘက် Pill ၇ ခု */}
+              <div className="lg:col-span-4 space-y-3">
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <ScanLine className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    ဘားကုဒ် & QR ငွေရှင်းစနစ်
+                  </span>
+                </div>
 
-              <div className="flex justify-center lg:col-span-4">
-                <Frame className="w-full max-w-[280px] bg-gradient-to-b from-white to-stone-50 p-3">
-                  <LottiePlayer
-                    src="/animations/phone.json"
-                    className="mx-auto aspect-square w-full"
-                  />
-                </Frame>
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <WifiOff className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    အင်တာနက်မလို Offline စနစ်
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <Boxes className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    ကုန်နည်းလျှင် သတိပေးချက်
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <Package className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    ဘူး၊ ဖာ၊ အထုပ် လက်ကားစီမံမှု
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <Tag className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    ဘားကုဒ် တံဆိပ်ထုတ်စနစ်
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <CreditCard className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    KBZPay / WavePay ငွေခွဲပြီး ပေးချေစနစ်
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <Users className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    ဖောက်သည်ရဲ့ အကြွေးစာရင်း
+                  </span>
+                </div>
               </div>
 
-              <ul className="space-y-2.5 lg:col-span-4">
-                {CAPABILITIES_RIGHT.map((c, i) => (
-                  <li
-                    key={c}
-                    className="flex items-center gap-3 rounded-lg border border-stone-200 bg-[#f4f1ea]/60 px-3.5 py-2.5 text-sm font-medium text-stone-800"
-                  >
-                    <span className="w-5 shrink-0 font-mono text-[11px] text-stone-400">
-                      {String(i + 8).padStart(2, "0")}
-                    </span>
-                    {c}
-                  </li>
-                ))}
-              </ul>
+              {/* အလယ် ဖုန်းမျက်နှာပြင် */}
+              <div className="lg:col-span-4 flex justify-center">
+                <LottiePlayer
+                  src="/animations/phone.json"
+                  className="w-full max-w-[300px] aspect-square"
+                />
+              </div>
+
+              {/* ညာဘက် Pill ၇ ခု */}
+              <div className="lg:col-span-4 space-y-3">
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <Building2 className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    ဆိုင်ခွဲများ စီမံခန့်ခွဲမှု
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <KeyRound className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    ဆိုင်ရှင်က ထိန်းချုပ်သည့် လျှို့ဝှက် PIN
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    အော့ဖ်လိုင်း သိမ်းဆည်းမှု
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <Coins className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    ဆိုင်သုံးစရိတ် စာရင်းမှတ်ခြင်း
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    နေ့ချုပ်စာရင်း ပရင့်ထုတ်ခြင်း
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    အသားတင်အမြတ်ငွေ အစီရင်ခံစာ
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-card border border-border">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                    <Receipt className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-[13px] font-semibold text-foreground">
+                    စိတ်ကြိုက် ဆိုင် Logo ဘောက်ချာ
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ── Plans ─────────────────────────────────────────── */}
-        <section id="plans" className="border-t border-stone-200 bg-[#f4f1ea]">
-          <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
+        {/* =========================================================
+            ၇။ စျေးနှုန်းနှင့် အစီအစဉ်များ (FREE VS PRO PLANS)
+        ========================================================= */}
+        <section id="plans" className="py-20 lg:py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-8 text-center">
             <h2
               style={myanmarSerif}
-              className="text-center text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl"
+              className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
             >
-              သင့်ဆိုင်နှင့် ကိုက်ညီသော အစီအစဉ်
+              သင့်ဆိုင်နှင့် ကိုက်ညီသော အစီအစဉ်ကတော့
             </h2>
-            <p className="mx-auto mt-2 max-w-lg text-center text-sm text-stone-600">
-              အခမဲ့ စတင်သုံးစွဲနိုင်ပြီး ဆိုင်ခွဲနှင့် အဆင့်မြင့် စီမံမှုအတွက် Pro သို့
-              မြှင့်တင်နိုင်သည်။
+            <p className="mt-2 text-xs text-muted-foreground sm:text-sm">
+              အခမဲ့ စတင်သုံးစွဲနိုင်ပြီး ပိုလွယ်ကူသည့် စီမံမှုအတွက် Pro အဆင့်ကို
+              မြှင့်တင်သင့်ပါတယ်..
             </p>
 
-            <div className="mx-auto mt-12 grid max-w-3xl gap-6 sm:grid-cols-2">
-              {/* Free */}
-              <div className="flex flex-col overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
-                <div className="border-b border-stone-200 bg-stone-50 px-6 py-5">
-                  <p className="text-xs font-medium text-stone-500">စတင်သူများအတွက်</p>
-                  <p style={myanmarSerif} className="mt-1 text-2xl font-bold text-stone-900">
+            <div className="mt-12 grid gap-8 sm:grid-cols-2 max-w-4xl mx-auto text-left">
+              {/* အခမဲ့ အစီအစဉ် */}
+              <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-card">
+                <div className="bg-brand-deep p-6 text-white text-center">
+                  <span className="text-xs font-semibold text-white/70">စတင်သူများအတွက်</span>
+                  <div style={myanmarSerif} className="text-4xl font-bold mt-1">
                     အခမဲ့ (Free)
-                  </p>
-                  <p className="mt-1 text-sm text-stone-500">ဆိုင်ငယ်တစ်ဆိုင်အတွက် သင့်တော်သည်</p>
+                  </div>
+                  <p className="text-sm text-white/70 mt-1">ဆိုင်ငယ်တစ်ဆိုင်အတွက် သင့်တော်သည်</p>
                 </div>
-                <ul className="flex-1 space-y-2.5 px-6 py-5 text-sm text-stone-700">
-                  {[
-                    "ကုန်ပစ္စည်း ၃၀၀ အထိ သိမ်းဆည်းနိုင်",
-                    "အင်တာနက်မလိုဘဲ အော့ဖ်လိုင်း ရောင်းချနိုင်",
-                    "ဖောက်သည်နှင့် ကုန်သွင်းသူ ၂၀ ဦး",
-                    "အရောင်းကောင်တာ ခြင်းတောင်း ၁ ခု ခေတ္တထိန်းနိုင်",
-                    "နေ့စဉ် အရောင်းအကျဉ်းချုပ် အစီရင်ခံစာ",
-                    "စံသတ်မှတ်ချက် ဘောက်ချာထုတ်ယူမှု",
-                  ].map((t) => (
-                    <li key={t} className="flex gap-2">
-                      <span className="text-stone-400">–</span>
-                      <span>{t}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="px-6 pb-6">
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="w-full rounded-lg border-stone-300 text-sm font-semibold"
-                  >
+                <div className="p-6 space-y-3.5 text-sm text-muted-foreground">
+                  <p className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>ကုန်ပစ္စည်း ၃၀၀ အထိ သိမ်းဆည်းနိုင်</span>
+                  </p>
+                  <p className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>အင်တာနက်မလိုဘဲ အော့ဖ်လိုင်း ရောင်းချနိုင်</span>
+                  </p>
+                  <p className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>ဖောက်သည်နှင့် ကုန်သွင်းသူ ၂၀ ဦး</span>
+                  </p>
+                  <p className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>အရောင်းကောင်တာ ခြင်းတောင်း ၁ ခု ခေတ္တထိန်းနိုင်</span>
+                  </p>
+                  <p className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>နေ့စဉ် အရောင်းအကျဉ်းချုပ် အစီရင်ခံစာ</span>
+                  </p>
+                  <p className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>စံသတ်မှတ်ချက် ဘောက်ချာထုတ်ယူမှု</span>
+                  </p>
+
+                  <Button asChild variant="outline" className="w-full mt-6 text-xs font-bold">
                     <Link to="/login" search={{ mode: "signup" }}>
                       အခမဲ့ စတင်အသုံးပြုမည်
                     </Link>
@@ -485,38 +693,53 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Pro */}
-              <div className="flex flex-col overflow-hidden rounded-xl border-2 border-stone-900 bg-white shadow-md">
-                <div className="border-b border-stone-800 bg-[#1c1917] px-6 py-5 text-white">
-                  <p className="text-xs font-medium text-stone-300">စီးပွားရေးဆိုင်များအတွက်</p>
-                  <p style={myanmarSerif} className="mt-1 text-2xl font-bold">
-                    Pro
-                  </p>
-                  <p className="mt-1 text-sm text-stone-300">ဆိုင်ခွဲနှင့် အပြည့်အဝ စီမံမှု</p>
+              {/* ပရို အစီအစဉ် */}
+              <div className="rounded-2xl border-2 border-primary bg-card overflow-hidden shadow-brand relative">
+                <span className="absolute top-3 right-3 rounded bg-amber-400 px-2.5 py-0.5 text-[10px] font-semibold text-foreground">
+                  အကြံပြုထားသည်
+                </span>
+                <div className="bg-primary p-6 text-white text-center">
+                  <span className="text-xs font-bold text-white/80">ပရို စီးပွားရေးအစီအစဉ်</span>
+                  <div style={myanmarSerif} className="text-4xl font-bold mt-1">
+                    Admin အဆင့်မြှင့်တင်ရန်
+                  </div>
+                  <p className="text-sm text-white/80 mt-1">ဆိုင်ခွဲရှိသော စတိုးကြီးများအတွက်</p>
                 </div>
-                <ul className="flex-1 space-y-2.5 px-6 py-5 text-sm text-stone-700">
-                  {[
-                    "ကုန်ပစ္စည်း အရေအတွက် ကန့်သတ်မရှိ",
-                    "ဆိုင်ခွဲများ စီမံခြင်း",
-                    "ဖောက်သည် / ကုန်သွင်းသူ ကန့်သတ်မရှိ",
-                    "ဝန်ထမ်း အခန်းကဏ္ဍ",
-                    "အမြတ်နှင့် ကုန်ကျစရိတ် အစီရင်ခံစာ",
-                    "စိတ်ကြိုက် ဘောက်ချာ ဒီဇိုင်း",
-                  ].map((t) => (
-                    <li key={t} className="flex gap-2">
-                      <span className="text-stone-400">–</span>
-                      <span>{t}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="px-6 pb-6">
+                <div className="p-6 space-y-3.5 text-sm text-muted-foreground">
+                  <p className="flex items-start gap-2.5 font-semibold text-foreground">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>ဆိုင်ခွဲများ ကွန်ရက်ချိတ်ဆက်ခြင်း (ဆိုင်ခွဲကုဒ် + PIN)</span>
+                  </p>
+                  <p className="flex items-start gap-2.5 font-semibold text-foreground">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>ကုန်ပစ္စည်း အရေအတွက် အကန့်အသတ်မရှိ</span>
+                  </p>
+                  <p className="flex items-start gap-2.5 font-semibold text-foreground">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>အော့ဖ်လိုင်း ပစ္စည်းဓာတ်ပုံ သိမ်းဆည်းမှုစနစ်</span>
+                  </p>
+                  <p className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>ဖောက်သည်နှင့် အကြွေးစာရင်း အကန့်အသတ်မရှိ</span>
+                  </p>
+                  <p className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>ဆိုင်သုံးစရိတ်နှင့် အသားတင်အမြတ် စာရင်းများ</span>
+                  </p>
+                  <p className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>နေ့ချုပ်စာရင်း (EOD) ပရင့်ထုတ်ခြင်းနှင့် CSV ထုတ်ယူမှု</span>
+                  </p>
+                  <p className="flex items-start gap-2.5">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>စိတ်ကြိုက် ဆိုင် Logo ပါ ဘောက်ချာဒီဇိုင်း</span>
+                  </p>
+
                   <Button
                     asChild
-                    className="w-full rounded-lg bg-[#1c1917] text-sm font-semibold text-white hover:bg-stone-800"
+                    className="w-full mt-6 bg-primary text-white text-xs font-bold hover:bg-primary/90"
                   >
-                    <Link to="/login" search={{ mode: "signup" }}>
-                      Pro စတင်မည်
-                    </Link>
+                    <Link to="/settings/plan">ပရိုအချက်အလက် ကြည့်ရှုရန်</Link>
                   </Button>
                 </div>
               </div>
@@ -524,95 +747,127 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Contact ───────────────────────────────────────── */}
-        <section id="contact" className="border-t border-stone-200 bg-white">
-          <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
-            <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
-              <div>
-                <h2
-                  style={myanmarSerif}
-                  className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl"
-                >
-                  ဆက်သွယ်ရန်
-                </h2>
-                <p className="mt-3 max-w-md text-sm leading-relaxed text-stone-600 sm:text-base">
-                  အသုံးပြုမှု၊ Pro အစီအစဉ် သို့မဟုတ် ဆိုင်တပ်ဆင်ပေးခြင်းနှင့် ပတ်သက်၍
-                  မေးမြန်းနိုင်ပါသည်။
-                </p>
-                <dl className="mt-8 space-y-5 text-sm">
-                  <div>
-                    <dt className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-                      ဖုန်း
-                    </dt>
-                    <dd className="mt-1 font-medium text-stone-900">၀၉ · · · · · · · · · ·</dd>
+        {/* =========================================================
+            ၈။ ဆက်သွယ်ရန် (CONTACT & SUPPORT)
+        ========================================================= */}
+        <section id="contact" className="border-t border-border bg-muted/60 py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-8">
+            <div className="grid gap-12 lg:grid-cols-12">
+              <div className="lg:col-span-5 space-y-6">
+                <div>
+                  <span className="text-xs font-bold text-primary">
+                    ကူညီထောက်ပံ့မှုနှင့် စုံစမ်းရန်
+                  </span>
+                  <h3 style={myanmarSerif} className="text-2xl font-semibold text-foreground mt-1">
+                    တိုက်ရိုက် ဆက်သွယ်ရန်
+                  </h3>
+                </div>
+
+                <div className="space-y-5 text-xs">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                      <Phone className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">ဖုန်း / Telegram / Viber</p>
+                      <p className="text-muted-foreground mt-0.5">
+                        ၀၉ ၁၂၃ ၄၅၆ ၇၈၉ (တိုက်ရိုက်လိုင်း)
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase tracking-wider text-stone-400">
-                      Viber / Telegram
-                    </dt>
-                    <dd className="mt-1 font-medium text-stone-900">တောင်းဆိုချက်ပို့ပြီး ဆက်သွယ်ပါ</dd>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">အီးမေးလ်</p>
+                      <p className="text-muted-foreground mt-0.5">support@smtpos.com</p>
+                    </div>
                   </div>
-                </dl>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                      <CreditCard className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">ငွေပေးချေမှု နည်းလမ်းများ</p>
+                      <p className="text-muted-foreground mt-0.5">
+                        KBZPay, WavePay, AYA Pay, CB Pay နှင့် ငွေသား
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <form
-                className="space-y-4 rounded-xl border border-stone-200 bg-[#f4f1ea]/50 p-5 shadow-sm sm:p-6"
-                onSubmit={(e) => e.preventDefault()}
-              >
-                <div>
-                  <label className="text-sm font-medium text-stone-800">အမည်</label>
-                  <input
-                    type="text"
-                    className="mt-1.5 w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-stone-500"
-                    placeholder="သင့်အမည်"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-stone-800">
-                    ဖုန်း သို့မဟုတ် Viber / Telegram
-                  </label>
-                  <input
-                    type="text"
-                    className="mt-1.5 w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-stone-500"
-                    placeholder="၀၉..."
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-stone-800">
-                    မေးမြန်းလိုသောအကြောင်းအရာ
-                  </label>
-                  <textarea
-                    rows={3}
-                    className="mt-1.5 w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-stone-500"
-                    placeholder="သိရှိလိုသော အချက်အလက်များကို ရေးသားပေးပါ..."
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="h-10 rounded-lg bg-[#1c1917] px-5 text-sm font-semibold text-white hover:bg-stone-800"
+              <div className="lg:col-span-7 rounded-2xl border border-border bg-card p-8 shadow-card">
+                <span className="text-xs font-bold text-primary">မေးမြန်းရန်</span>
+                <h3
+                  style={myanmarSerif}
+                  className="text-2xl font-semibold text-foreground mt-1 mb-6"
                 >
-                  မက်ဆေ့ခ်ျ ပို့မည်
-                </Button>
-              </form>
+                  သိရှိလိုသည်များကို မေးမြန်းနိုင်ပါသည်
+                </h3>
+
+                <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">သင့်ဆိုင်အမည်</label>
+                    <input
+                      type="text"
+                      className="mt-1.5 w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-sm shadow-xs transition-[border-color,box-shadow] placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-[3px] focus:ring-ring/25"
+                      placeholder="ဥပမာ — ရွှေမန္တလေး မီနီမတ်စ်"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground">
+                      ဖုန်း သို့မဟုတ် Viber/Telegram
+                    </label>
+                    <input
+                      type="text"
+                      className="mt-1.5 w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-sm shadow-xs transition-[border-color,box-shadow] placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-[3px] focus:ring-ring/25"
+                      placeholder="၀၉..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground">
+                      မေးမြန်းလိုသောအကြောင်းအရာ
+                    </label>
+                    <textarea
+                      rows={3}
+                      className="mt-1.5 w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-sm shadow-xs transition-[border-color,box-shadow] placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-[3px] focus:ring-ring/25"
+                      placeholder="သိရှိလိုသော အချက်အလက်များကို ရေးသားပေးပါ..."
+                    />
+                  </div>
+
+                  <Button className="h-10 rounded-lg bg-primary px-6 text-xs font-bold text-white hover:bg-primary/90">
+                    မက်ဆေ့ခ်ျ ပို့မည်
+                  </Button>
+                </form>
+              </div>
             </div>
           </div>
         </section>
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────── */}
-      <footer className="border-t border-stone-200 bg-[#f4f1ea] py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-4 text-xs text-stone-500 sm:flex-row sm:items-center sm:px-6">
+      {/* =========================================================
+          ၉။ စာမျက်နှာ အောက်ခြေ (FOOTER - မူရင်း Logo ပါဝင်သည်)
+      ========================================================= */}
+      <footer className="border-t border-border py-8 bg-card">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:px-8 text-xs text-muted-foreground">
           <div className="flex items-center gap-2.5">
-            <LottiePlayer src="/animations/s-logo.json" className="h-7 w-7" />
+            <LottiePlayer src="/animations/s-logo.json" className="h-6 w-6" />
             <p>
-              © {new Date().getFullYear()} SMT POS · လက်လီအရောင်းနှင့် စတိုးစီမံခန့်ခွဲမှုစနစ်
+              © {new Date().getFullYear()} SMT POS. ခေတ်သစ် လက်လီအရောင်းနှင့်
+              စတိုးစီမံခန့်ခွဲမှုစနစ်။
             </p>
           </div>
-          <div className="flex gap-5 font-medium text-stone-600">
-            <Link to="/login" className="hover:text-stone-900">
+          <div className="flex items-center gap-6 font-medium">
+            <Link to="/login" className="hover:text-foreground">
               အကောင့်ဝင်ရန်
             </Link>
-            <Link to="/register" className="font-semibold text-stone-900 hover:underline">
+            <Link to="/register" className="hover:text-foreground font-bold text-primary">
               အရောင်းကောင်တာဖွင့်မည်
             </Link>
           </div>
