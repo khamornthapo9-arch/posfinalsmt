@@ -88,7 +88,10 @@ export const isPurchasePaymentMethod = (value: unknown): value is PurchasePaymen
 
 /** Maps receive_purchase's error codes to Burmese messages. */
 const RECEIVE_PURCHASE_ERRORS: [string, string][] = [
-  ["payment_method_required", "ကြိုတင်ပေးငွေ ပေးချေခဲ့သော နည်းလမ်း (ငွေသား / KBZ Pay / Wave Pay) ရွေးပါ"],
+  [
+    "payment_method_required",
+    "ကြိုတင်ပေးငွေ ပေးချေခဲ့သော နည်းလမ်း (ငွေသား / KBZ Pay / Wave Pay) ရွေးပါ",
+  ],
   ["invalid_payment_method", "ငွေပေးချေမှု နည်းလမ်း မမှန်ကန်ပါ"],
   ["not_authorized", "ကုန်ပစ္စည်း လက်ခံရန် ခွင့်ပြုချက် မရှိပါ"],
   ["not_authenticated", "ဝင်ရောက်မှု သက်တမ်းကုန်သွားပါပြီ၊ ပြန်လည် ဝင်ပါ"],
