@@ -706,19 +706,19 @@ function RegisterPage() {
           : `${store?.name ?? "Store"} · ${cashierName || "ကောင်တာ"}`
       }
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <RegisterStatus />
           <button
             type="button"
             onClick={() => setHeldOpen(true)}
-            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
+            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-accent sm:px-3"
           >
             ဆိုင်းငံ့ ({heldOrders.length})
           </button>
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
-            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
+            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-accent sm:px-3"
           >
             <span className="sm:hidden">မှတ်တမ်း</span>
             <span className="hidden sm:inline">အရောင်းမှတ်တမ်း (ပြန်အမ်း)</span>
@@ -728,7 +728,7 @@ function RegisterPage() {
     >
       {/* Tablet + desktop split: flexible catalog + a cart that stays 300–400px wide, so the
           checkout never gets squeezed (a fixed 40% left only ~210px beside the sidebar on tablets). */}
-      <div className="hidden h-[calc(100dvh-var(--pos-chrome,64px))] md:grid md:grid-cols-[minmax(0,1fr)_clamp(300px,38vw,400px)]">
+      <div className="hidden h-[calc(100dvh-var(--pos-chrome,64px))] md:grid md:grid-cols-[minmax(0,1fr)_minmax(280px,34vw)] lg:grid-cols-[minmax(0,1fr)_clamp(320px,36vw,420px)] xl:grid-cols-[minmax(0,1fr)_clamp(340px,32vw,440px)]">
         <div className="min-w-0 overflow-hidden bg-background">
           <DenseProductList
             viewMode={viewMode}
