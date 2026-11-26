@@ -7,7 +7,7 @@ import { PosShell } from "@/components/pos/pos-shell";
 import { useAccountingStore } from "@/lib/accounting-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
-import { PAY_METHODS } from "./customers";
+import { PAY_METHODS } from "@/lib/pay-methods";
 
 export const Route = createFileRoute("/expenses")({
   ssr: false,
