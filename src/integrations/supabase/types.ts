@@ -642,6 +642,7 @@ export type Database = {
           created_at: string;
           id: string;
           notes: string | null;
+          payment_method: string | null;
           received_at: string | null;
           status: string;
           store_id: string;
@@ -654,6 +655,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           notes?: string | null;
+          payment_method?: string | null;
           received_at?: string | null;
           status?: string;
           store_id: string;
@@ -666,6 +668,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           notes?: string | null;
+          payment_method?: string | null;
           received_at?: string | null;
           status?: string;
           store_id?: string;
@@ -1083,8 +1086,16 @@ export type Database = {
           p_confirm?: boolean;
           p_lines: Json;
           p_notes: string;
+          p_payment_method?: string | null;
           p_purchase_id: string;
           p_supplier_id: string | null;
+        };
+        Returns: Json;
+      };
+      receive_purchase: {
+        Args: {
+          p_payment_method?: string | null;
+          p_purchase_id: string;
         };
         Returns: Json;
       };
