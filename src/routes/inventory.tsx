@@ -1557,4 +1557,3 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
     document.body,
   );
 }
-```[cite: 2]
