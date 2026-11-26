@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 const QRCodeCanvas = lazy(() =>
   import("@/components/lazy/label-codes").then((m) => ({ default: m.QRCodeCanvas })),
 );
@@ -826,9 +827,11 @@ function ProductModal({
     );
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
-      <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-xl">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
+      <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
           <h2 className="text-sm font-semibold">
             {item ? "ကုန်ပစ္စည်း အချက်အလက် ပြင်ဆင်ရန်" : "ကုန်ပစ္စည်း အသစ် ထည့်ရန်"}
@@ -1154,7 +1157,8 @@ function ProductModal({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1181,8 +1185,10 @@ function StockAdjustmentModal({
 
   const delta = (Number(newQuantity) || 0) - (Number(item.stock_quantity) || 0);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
       <div className="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
           <div>
@@ -1289,7 +1295,8 @@ function StockAdjustmentModal({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1325,8 +1332,10 @@ function ImportModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
           <h2 className="text-sm font-semibold">CSV ဖြင့် ကုန်ပစ္စည်းများ ထည့်သွင်းရန်</h2>
@@ -1444,7 +1453,8 @@ function ImportModal({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1457,8 +1467,10 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
     mode === "barcode" ? item.barcode || item.sku : item.qr_value || item.sku
   ).trim();
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-3 sm:p-5">
       <div className="w-full max-w-sm rounded-lg border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
           <h2 className="text-sm font-semibold">လေဘယ် ထုတ်ယူရန်</h2>
@@ -1541,6 +1553,8 @@ function LabelModal({ item, onClose }: { item: CachedItem; onClose: () => void }
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
+```[cite: 1]
