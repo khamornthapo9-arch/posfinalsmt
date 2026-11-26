@@ -782,3 +782,54 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------------------------------------------------------------
+ * Responsive UX polish (layout only — no business logic)
+ * ------------------------------------------------------------- */
+
+/* Very small phones: keep 2-col product grids readable without horizontal scroll. */
+@media (max-width: 379px) {
+  .pos-app {
+    font-size: 15px;
+  }
+}
+
+/* Comfortable reading + denser POS chrome on large desktops. */
+@media (min-width: 1280px) {
+  .pos-app main {
+    letter-spacing: 0.005em;
+  }
+}
+
+/* Prefer content to never force page-wide horizontal scroll on narrow devices. */
+.pos-app {
+  overflow-x: clip;
+}
+
+.pos-app table {
+  max-width: 100%;
+}
+
+/* Scrollable tables on small screens without clipping sticky actions. */
+.pos-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Larger, thumb-friendly controls on coarse pointers only. */
+@media (pointer: coarse) {
+  .pos-app .press {
+    min-height: 2.5rem;
+  }
+  .pos-app button.press:not(.rounded-full) {
+    min-height: 2.5rem;
+  }
+}
+
+/* Reduce layout jump when virtual keyboards open on mobile. */
+@supports (height: 100dvh) {
+  .pos-app {
+    min-height: 100dvh;
+  }
+}
