@@ -1,1 +1,1837 @@
-LOADING
+import { createFileRoute } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Plus, Printer, Search, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import { PosShell } from "@/components/pos/pos-shell";
+import { ScannerModal } from "@/components/pos/scanner-modal";
+import { DenseProductList } from "@/components/pos/dense-product-list";
+import { CartPanel, type CartLine } from "@/components/pos/cart-panel";
+import { MobileCheckoutBar } from "@/components/pos/mobile-checkout-bar";
+import { SaleError } from "@/lib/pos-store";
+import { findByCode, baseQuantityFor } from "@/lib/product-lookup";
+import { RegisterStatus } from "@/components/pos/register-status";
+import { ShiftStatus } from "@/components/pos/shift-status";
+import { useProductViewMode } from "@/lib/use-product-view";
+import { MobileCheckoutDrawer } from "@/components/pos/mobile-checkout-drawer";
+import { usePos, type HeldOrder, type OrderSummary, type PaymentSplit } from "@/lib/pos-store";
+import { useAccountingStore, CREDIT_METHOD, type Customer } from "@/lib/accounting-store";
+import { useStoreSettings } from "@/lib/use-store-settings";
+import { ManagerPinModal } from "@/components/pos/manager-pin-modal";
+import { useStoreLogo } from "@/lib/use-store-logo";
+import { useReceiptSettings } from "@/lib/receipt-settings";
+import { useRole } from "@/lib/roles";
+import { useAuth } from "@/lib/auth-store";
+import type { CachedItem, ItemUnit } from "@/lib/pos-db";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/register")({
+  ssr: false,
+  head: () => ({
+    meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { title: "POS Register — SMT POS" },
+      {
+        name: "description",
+        content:
+          "Retail checkout with barcode and QR scanning, tax totals, receipts and offline sales.",
+      },
+      { property: "og:title", content: "POS Register — SMT POS" },
+      {
+        property: "og:description",
+        content: "Offline-capable retail checkout with scanning, tax and receipts.",
+      },
+    ],
+  }),
+  component: RegisterPage,
+});
+
+interface Receipt {
+  lines: CartLine[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  paymentMethod: string;
+  splits?: PaymentSplit[];
+  timestamp: string;
+  offline: boolean;
+  tableNumber?: number | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  previousDebt?: number;
+  newDebt?: number;
+  cashReceived?: number;
+  change?: number;
+  /** Server sale reference, or a clearly marked local OFF- reference for queued sales. */
+  reference?: string;
+}
+
+interface KitchenTicket {
+  tableNumber: number;
+  lines: CartLine[];
+  notes: string;
+  timestamp: string;
+}
+
+const PAYMENTS: { id: string; label: string; logo?: string; tone: string }[] = [
+  // `tone` picks the colour set in lib/payment-style.ts: cash green, KBZ blue, Wave yellow, credit rose
+  { id: "ငွေသား", label: "ငွေသား", tone: "cash" },
+  { id: "kbzpay", label: "KBZ Pay", logo: "/kbzpay.webp", tone: "kbz" },
+  { id: "wavepay", label: "Wave Pay", logo: "/wavepay.webp", tone: "wave" },
+  { id: CREDIT_METHOD, label: CREDIT_METHOD, tone: "credit" },
+];
+
+const TABLE_COUNT = 12;
+
+function RegisterPage() {
+  const {
+    items,
+    lowStockItems,
+    recordSale,
+    openTabs,
+    holdTab,
+    closeTab,
+    heldOrders,
+    holdOrder,
+    deleteHeldOrder,
+    recentOrders,
+    refundOrder,
+    loading,
+    isOnline,
+  } = usePos();
+  const {
+    fmt,
+    taxRate,
+    taxPercent,
+    isRestaurant,
+    isPro,
+    store,
+    symbol,
+    address,
+    cashierName,
+    phoneNumbers,
+  } = useStoreSettings();
+  const { customers, quickAddCustomer, postSale } = useAccountingStore();
+  const { canApprove } = useRole();
+  const { isBranchDevice } = useAuth();
+  const logoUrl = useStoreLogo();
+  const { settings: receiptSettings } = useReceiptSettings();
+
+  const [viewMode, setViewMode] = useProductViewMode();
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("အားလုံး");
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [payment, setPayment] = useState<string>("ငွေသား");
+  const [splitMode, setSplitMode] = useState(false);
+  const [splits, setSplits] = useState<Record<string, number>>({});
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [ticket, setTicket] = useState<KitchenTicket | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [activeTable, setActiveTable] = useState<number | null>(null);
+  const [notes, setNotes] = useState("");
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [holdNoteOpen, setHoldNoteOpen] = useState(false);
+  const [heldOpen, setHeldOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [cashReceived, setCashReceived] = useState("");
+  const [digitalConfirmed, setDigitalConfirmed] = useState(false);
+  // One idempotency key per checkout attempt. It is reused on retry of the same cart and replaced
+  // when the cart, payment or customer changes, so a double click can never post two sales.
+  const txnRef = useRef<{ id: string; sig: string } | null>(null);
+  const submitLock = useRef(false);
+  const [pendingApproval, setPendingApproval] = useState<((ok: boolean) => void) | null>(null);
+
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  const activeTab = useMemo(
+    () =>
+      activeTable == null ? null : (openTabs.find((t) => t.table_number === activeTable) ?? null),
+    [openTabs, activeTable],
+  );
+
+  const addToCart = useCallback((item: CachedItem, unit?: ItemUnit) => {
+    const unitName = unit?.unit_name;
+    const conversion = unit?.conversion ?? 1;
+    const unitPrice = unit?.price ?? item.price;
+    setCart((prev) => {
+      const existing = prev.find(
+        (line) => line.item_id === item.id && (line.unit_name ?? "base") === (unitName ?? "base"),
+      );
+      const nextQty = (existing?.quantity ?? 0) + 1;
+      // Every line of this item counts (e.g. 1 carton + 3 pieces), in base units.
+      const baseQty = baseQuantityFor(prev, item.id) + conversion;
+      if (baseQty > item.stock_quantity) {
+        toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
+        return prev;
+      }
+      if (existing) {
+        return prev.map((line) =>
+          line.item_id === item.id && (line.unit_name ?? "base") === (unitName ?? "base")
+            ? { ...line, quantity: nextQty, stock: item.stock_quantity }
+            : line,
+        );
+      }
+      return [
+        ...prev,
+        {
+          item_id: item.id,
+          sku: item.sku,
+          name: item.name,
+          quantity: 1,
+          unit_price: unitPrice,
+          unit_name: unitName,
+          conversion,
+          stock: item.stock_quantity,
+        },
+      ];
+    });
+  }, []);
+
+  const addBySku = useCallback(
+    (rawCode: string) => {
+      const result = findByCode(itemsRef.current, rawCode);
+      if (result.kind === "none") {
+        toast.error(`"${rawCode.trim()}" အတွက် ပစ္စည်း မတွေ့ပါ`);
+        return;
+      }
+      if (result.kind === "ambiguous") {
+        toast.error(
+          `"${rawCode.trim()}" ကုဒ်နှင့် ပစ္စည်း ${result.items.length} ခု ကိုက်ညီနေသည်။ ရှာဖွေရန်နေရာမှ ရွေးပါ`,
+        );
+        setQuery(rawCode.trim());
+        return;
+      }
+      if (result.item.stock_quantity <= 0) {
+        toast.error(`${result.item.name} — ပစ္စည်းပြတ်နေသည်`);
+        return;
+      }
+      addToCart(result.item);
+      toast.success(`${result.item.name} ထည့်ပြီးပါပြီ`);
+    },
+    [addToCart],
+  );
+
+  // Keyboard-wedge barcode scanners type a fast burst of keys ending in Enter. Ignore ordinary
+  // typing (fields, dialogs, shortcuts) and pause while the camera scanner is open so one scan
+  // can never add twice.
+  useEffect(() => {
+    if (scannerOpen) return;
+    let buffer = "";
+    let lastKey = 0;
+    let timer: number | undefined;
+    const reset = () => {
+      buffer = "";
+      window.clearTimeout(timer);
+    };
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          'input,textarea,select,[contenteditable=""],[contenteditable="true"],[role="dialog"],[role="textbox"],[role="combobox"]',
+        )
+      ) {
+        reset();
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key === "Escape") {
+        reset();
+        return;
+      }
+      const now = Date.now();
+      if (now - lastKey > 120) buffer = "";
+      lastKey = now;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(reset, 300);
+      if (event.key === "Enter") {
+        if (buffer.length >= 3) {
+          event.preventDefault();
+          addBySku(buffer);
+        }
+        reset();
+        return;
+      }
+      if (event.key.length === 1) buffer += event.key;
+    };
+    window.addEventListener("keydown", handler);
+    window.addEventListener("blur", reset);
+    return () => {
+      reset();
+      window.removeEventListener("keydown", handler);
+      window.removeEventListener("blur", reset);
+    };
+  }, [addBySku, scannerOpen]);
+
+  const subtotal = cart.reduce((sum, line) => sum + line.quantity * line.unit_price, 0);
+  const tax = subtotal * taxRate;
+  const total = subtotal + tax;
+  const splitPaid = Object.values(splits).reduce((sum, n) => sum + n, 0);
+  const remaining = Math.round((total - splitPaid) * 100) / 100;
+  const creditPortion = splitMode
+    ? (splits[CREDIT_METHOD] ?? 0)
+    : payment === CREDIT_METHOD
+      ? total
+      : 0;
+  const needsCreditCustomer = creditPortion > 0 && !customer;
+  const cents = (n: number) => Math.round(n * 100);
+  const CASH_METHOD = "ငွေသား";
+  const cashDue = splitMode ? (splits[CASH_METHOD] ?? 0) : payment === CASH_METHOD ? total : 0;
+  const digitalDue = splitMode
+    ? Object.entries(splits)
+        .filter(([method]) => method !== CASH_METHOD && method !== CREDIT_METHOD)
+        .reduce((sum, [, amount]) => sum + amount, 0)
+    : payment !== CASH_METHOD && payment !== CREDIT_METHOD
+      ? total
+      : 0;
+  const cashTendered = cashReceived.trim() === "" ? null : Number(cashReceived);
+  // Empty = exact amount handed over (fast path); a typed amount below the cash due blocks checkout.
+  const cashShort = cashDue > 0 && cashTendered != null && cents(cashTendered) < cents(cashDue);
+  const changeDue =
+    cashDue > 0 && cashTendered != null && cents(cashTendered) > cents(cashDue)
+      ? Math.round((cashTendered - cashDue) * 100) / 100
+      : 0;
+
+  // A confirmation / tendered amount belongs to one specific payment setup: reset on change.
+  const digitalCents = cents(digitalDue);
+  const totalCents = cents(total);
+  useEffect(() => {
+    setDigitalConfirmed(false);
+  }, [payment, splitMode, digitalCents]);
+  useEffect(() => {
+    setCashReceived("");
+  }, [payment, totalCents]);
+
+  const toggleSplit = (methodId: string) => {
+    const enabling = !splits[methodId];
+    if (enabling && methodId === CREDIT_METHOD && !customer) setPickerOpen(true);
+    setSplits((prev) => {
+      const next = { ...prev };
+      if (next[methodId]) {
+        delete next[methodId];
+      } else {
+        next[methodId] = Math.max(remaining, 0);
+      }
+      return next;
+    });
+  };
+
+  const changeQty = (itemId: string, delta: number, unitName?: string) =>
+    setCart((prev) =>
+      prev
+        .map((line) => {
+          if (line.item_id !== itemId) return line;
+          if (unitName && (line.unit_name ?? "base") !== unitName) return line;
+          const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? line.stock ?? 0;
+          const conversion = line.conversion ?? 1;
+          const nextQty = line.quantity + delta;
+          const others = prev.filter((l) => l !== line);
+          if (delta > 0 && baseQuantityFor(others, itemId) + nextQty * conversion > stock) {
+            toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
+            return line;
+          }
+          return { ...line, quantity: nextQty };
+        })
+        .filter((line) => line.quantity > 0),
+    );
+
+  /** Typed quantity: must be a whole number >= 1 and fit stock (all unit lines of the item, base units). */
+  const setQty = (itemId: string, qty: number, unitName?: string) => {
+    if (!Number.isInteger(qty) || qty < 1) {
+      toast.error("အရေအတွက်သည် ၁ နှင့်အထက် ကိန်းပြည့် ဖြစ်ရပါမည်");
+      return;
+    }
+    setCart((prev) => {
+      const target = prev.find(
+        (line) => line.item_id === itemId && (line.unit_name ?? "base") === (unitName ?? "base"),
+      );
+      if (!target) return prev;
+      const stock = items.find((i) => i.id === itemId)?.stock_quantity ?? target.stock ?? 0;
+      const others = prev.filter((l) => l !== target);
+      if (baseQuantityFor(others, itemId) + qty * (target.conversion ?? 1) > stock) {
+        toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
+        return prev;
+      }
+      return prev.map((l) => (l === target ? { ...l, quantity: qty } : l));
+    });
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    setSplits({});
+    setSplitMode(false);
+    setNotes("");
+    if (payment === CREDIT_METHOD) setPayment(CASH_METHOD);
+  };
+
+  const clearCustomer = () => {
+    setCustomer(null);
+    if (payment === CREDIT_METHOD) setPayment(CASH_METHOD);
+    setSplits((prev) => {
+      const next = { ...prev };
+      delete next[CREDIT_METHOD];
+      return next;
+    });
+  };
+
+  const removeFromCart = (itemId: string, unitName?: string) =>
+    setCart((prev) =>
+      prev.filter(
+        (line) => line.item_id !== itemId || (unitName && (line.unit_name ?? "base") !== unitName),
+      ),
+    );
+
+  const toggleSplitMode = () => {
+    setSplitMode((v) => !v);
+    setSplits({});
+    setCashReceived("");
+  };
+
+  const parkOrder = async (note: string) => {
+    if (cart.length === 0) return;
+    try {
+      await holdOrder({
+        lines: cart.map(({ stock: _s, ...line }) => line),
+        total,
+        note,
+      });
+      setCart([]);
+      toast.success("ဘောက်ချာကို ခဏဆိုင်းထားပါပြီ");
+    } catch {
+      toast.error("ခဏဆိုင်း၍ မရပါ");
+    }
+  };
+
+  const openTable = (tableNumber: number) => {
+    const tab = openTabs.find((t) => t.table_number === tableNumber);
+    setActiveTable(tableNumber);
+    setNotes(tab?.notes ?? "");
+    setCart(
+      (tab?.lines ?? []).map((line) => ({
+        item_id: line.item_id,
+        sku: line.sku,
+        name: line.name,
+        quantity: line.quantity,
+        unit_price: line.unit_price,
+        unit_name: line.unit_name,
+        conversion: line.conversion ?? 1,
+        stock: items.find((i) => i.id === line.item_id)?.stock_quantity ?? line.quantity,
+      })),
+    );
+  };
+
+  const leaveTable = () => {
+    setActiveTable(null);
+    setCart([]);
+    setNotes("");
+  };
+
+  const validateStock = () => {
+    const seen = new Set<string>();
+    for (const line of cart) {
+      if (seen.has(line.item_id)) continue;
+      seen.add(line.item_id);
+      const current = items.find((item) => item.id === line.item_id);
+      // Base units already reserved by an open tab (stock was deducted when they were added).
+      const saved = baseQuantityFor(activeTab?.lines ?? [], line.item_id);
+      const needed = baseQuantityFor(cart, line.item_id) - saved;
+      if (needed > 0 && (!current || current.stock_quantity < needed)) {
+        toast.error("ကျန်ရှိသော လက်ကျန်ထက် ပို၍ မရောင်းနိုင်ပါ။");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const availablePayments = PAYMENTS;
+  const cogsFor = (lines: CartLine[]) =>
+    lines.reduce(
+      (sum, line) =>
+        sum + line.quantity * (items.find((i) => i.id === line.item_id)?.cost_price ?? 0),
+      0,
+    );
+
+  const selectPayment = (method: string) => {
+    if (method === CREDIT_METHOD) {
+      setPayment(CREDIT_METHOD);
+      if (!customer) setPickerOpen(true);
+      return;
+    }
+    // A customer may stay attached to cash / digital sales; only credit requires one.
+    setPayment(method);
+  };
+
+  const completeSale = async () => {
+    if (cart.length === 0 || !validateStock()) return;
+    if (splitMode) {
+      const entries = Object.values(splits);
+      if (entries.some((amount) => !Number.isFinite(amount) || amount < 0)) {
+        toast.error("ခွဲပေးငွေ ပမာဏသည် အနုတ် မဖြစ်ရပါ");
+        return;
+      }
+      if (entries.every((amount) => amount === 0)) {
+        toast.error("ငွေပေးချေမှု ပမာဏ ထည့်ပါ");
+        return;
+      }
+      if (cents(entries.reduce((sum, amount) => sum + amount, 0)) !== cents(total)) {
+        toast.error("ခွဲပေးငွေ စုစုပေါင်းသည် ကျသင့်ငွေနှင့် အတိအကျ မကိုက်ညီပါ");
+        return;
+      }
+    }
+    if (cashShort) {
+      toast.error("လက်ခံရရှိငွေသည် ကျသင့်ငွေထက် နည်းနေသည်");
+      return;
+    }
+    const splitList = splitMode
+      ? Object.entries(splits)
+          .map(([method, amount]) => ({ method, amount }))
+          .filter((split) => split.amount > 0)
+      : [{ method: payment, amount: total }];
+    const creditAmount = splitList
+      .filter((split) => split.method === CREDIT_METHOD)
+      .reduce((sum, split) => sum + split.amount, 0);
+    const isCredit = creditAmount > 0;
+    if (isCredit && !customer) {
+      setPickerOpen(true);
+      toast.error("အကြွေးရောင်းရန် ဖောက်သည် ရွေးပါ");
+      return;
+    }
+    if (submitLock.current) return;
+    submitLock.current = true;
+    const signature = JSON.stringify([
+      cart.map((l) => [l.item_id, l.unit_name ?? "", l.quantity, l.unit_price]),
+      total,
+      splitMode ? "SPLIT" : payment,
+      splitList,
+      customer?.id ?? null,
+    ]);
+    if (txnRef.current?.sig !== signature) {
+      txnRef.current = { id: crypto.randomUUID(), sig: signature };
+    }
+    const clientTransactionId = txnRef.current.id;
+    setBusy(true);
+    try {
+      const { offline, saleId, reference, creditPosted, ledgerPosted } = await recordSale({
+        clientTransactionId,
+        customerName: customer?.name ?? null,
+        cashReceived: cashDue > 0 && cashTendered != null && !cashShort ? cashTendered : null,
+        change: cashDue > 0 && cashTendered != null && !cashShort ? changeDue : null,
+        lines: cart.map(({ stock: _stock, ...line }) => line),
+        total,
+        paymentMethod: splitMode ? "SPLIT" : payment,
+        paymentBreakdown: splitList,
+        customerId: customer?.id ?? null,
+        status: "COMPLETED",
+        paymentStatus: !isCredit
+          ? "PAID"
+          : creditAmount >= Math.round(total * 100) / 100
+            ? "UNPAID"
+            : "PARTIAL",
+      });
+      // When the database already wrote the ledger inside post_sale there is nothing left to post.
+      if (!offline && !ledgerPosted) {
+        // The sale itself is already saved. If the accounting/credit posting fails, say so rather
+        // than reporting the sale as failed (which would invite the cashier to ring it up twice).
+        try {
+          await postSale({
+            saleId,
+            subtotal,
+            tax,
+            cogs: cogsFor(cart),
+            paymentMethod: splitMode ? "SPLIT" : payment,
+            splits: splitList,
+            customerId: customer?.id ?? null,
+            skipCredit: creditPosted,
+          });
+        } catch (postError) {
+          console.error("[postSale]", (postError as { message?: string })?.message);
+          toast.warning(
+            `ရောင်းချမှု သိမ်းပြီးပါပြီ (#${reference}) သို့သော် စာရင်းကိုင် မှတ်သွင်းမှု မအောင်မြင်ပါ။ စာရင်းကို စစ်ဆေးပါ`,
+          );
+        }
+      }
+      const previousDebt = customer?.balance ?? 0;
+      setReceipt({
+        lines: cart,
+        subtotal,
+        tax,
+        total,
+        paymentMethod: splitMode ? "SPLIT" : payment,
+        splits: splitList,
+        timestamp: new Date().toLocaleString(),
+        offline,
+        reference,
+        ...(customer ? { customerName: customer.name, customerPhone: customer.phone ?? "" } : {}),
+        ...(isCredit ? { previousDebt, newDebt: previousDebt + creditAmount } : {}),
+        ...(cashDue > 0 && cashTendered != null && !cashShort
+          ? { cashReceived: cashTendered, change: changeDue }
+          : {}),
+      });
+      // The sale is durably saved (server or local queue): only now reset the checkout state.
+      txnRef.current = null;
+      setCart([]);
+      setCustomer(null);
+      setPayment("ငွေသား");
+      setSplitMode(false);
+      setSplits({});
+      setCashReceived("");
+      setDigitalConfirmed(false);
+      toast.success(offline ? "အရောင်းကို အော့ဖ်လိုင်း မှတ်ထားသည်" : "ရောင်းချမှု အောင်မြင်သည်");
+    } catch (err) {
+      // The cart is kept, and the same key is reused if the cashier retries the same checkout.
+      toast.error(
+        err instanceof SaleError
+          ? `အရောင်းစာရင်း မသိမ်းဆည်းနိုင်ပါ — ${err.message}`
+          : "အရောင်းစာရင်း မသိမ်းဆည်းနိုင်ပါ",
+      );
+    } finally {
+      submitLock.current = false;
+      setBusy(false);
+    }
+  };
+
+  const sendToKitchen = async () => {
+    if (activeTable == null || cart.length === 0 || !validateStock()) return;
+    setBusy(true);
+    try {
+      await holdTab({
+        saleId: activeTab?.id,
+        tableNumber: activeTable,
+        lines: cart.map(({ stock: _stock, ...line }) => line),
+        total,
+        notes,
+      });
+      setTicket({
+        tableNumber: activeTable,
+        lines: cart,
+        notes,
+        timestamp: new Date().toLocaleString(),
+      });
+      toast.success(`စားပွဲ ${activeTable} စာရင်း ခေတ္တသိမ်းထားသည်`);
+      leaveTable();
+    } catch {
+      toast.error("စာရင်း မသိမ်းဆည်းနိုင်ပါ");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const payAndClose = async () => {
+    if (activeTable == null || cart.length === 0 || !validateStock()) return;
+    setBusy(true);
+    try {
+      const resolvedId = await holdTab({
+        saleId: activeTab?.id,
+        tableNumber: activeTable,
+        lines: cart.map(({ stock: _s, ...l }) => l),
+        total,
+        notes,
+      });
+      await closeTab({ saleId: resolvedId, total, paymentMethod: payment });
+      setReceipt({
+        lines: cart,
+        subtotal,
+        tax,
+        total,
+        paymentMethod: payment,
+        timestamp: new Date().toLocaleString(),
+        offline: false,
+        tableNumber: activeTable,
+      });
+      toast.success(`စားပွဲ ${activeTable} စာရင်း ပိတ်ပြီးပါပြီ`);
+      leaveTable();
+    } catch {
+      toast.error("စားပွဲ မပိတ်နိုင်ပါ");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ---------- Restaurant floor plan ----------
+  if (isRestaurant && activeTable == null) {
+    return (
+      <PosShell title="စားပွဲများ မြေပုံ" subtitle={`ဖွင့်ထားသော စားပွဲ ${openTabs.length} ခု`}>
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            {Array.from({ length: TABLE_COUNT }, (_, i) => i + 1).map((num) => {
+              const tab = openTabs.find((t) => t.table_number === num);
+              const occupied = Boolean(tab);
+              return (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => openTable(num)}
+                  className={cn(
+                    "flex min-h-28 flex-col justify-between rounded-md border bg-card px-4 py-3 text-left shadow-xs transition-colors",
+                    occupied
+                      ? "border-destructive/40 bg-destructive/5 hover:border-destructive"
+                      : "border-border bg-card hover:border-primary/50",
+                  )}
+                >
+                  <span className="text-sm font-semibold">စားပွဲ {num}</span>
+                  <span
+                    className={cn(
+                      "inline-flex w-fit items-center rounded-sm px-2 py-0.5 text-xs font-medium",
+                      occupied ? "bg-danger-soft text-destructive" : "bg-success-soft text-success",
+                    )}
+                  >
+                    {occupied ? "လူရှိသည်" : "အားသည်"}
+                  </span>
+                  <span className="text-lg font-semibold tabular-nums">
+                    {occupied ? fmt(tab!.total_amount) : "—"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </PosShell>
+    );
+  }
+
+  return (
+    <PosShell
+      title={isRestaurant ? `စားပွဲ ${activeTable}` : "POS / အရောင်းစာရင်း"}
+      subtitle={
+        isRestaurant
+          ? activeTab
+            ? "ဖွင့်ထားသော စားပွဲ"
+            : "အော်ဒါအသစ်"
+          : `${store?.name ?? "Store"} · ${cashierName || "ကောင်တာ"}`
+      }
+      actions={
+        <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+          <RegisterStatus />
+          <ShiftStatus />
+          <button
+            type="button"
+            onClick={() => setHeldOpen(true)}
+            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-accent sm:px-3"
+          >
+            ဆိုင်းငံ့ ({heldOrders.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-accent sm:px-3"
+          >
+            <span className="sm:hidden">မှတ်တမ်း</span>
+            <span className="hidden sm:inline">အရောင်းမှတ်တမ်း (ပြန်အမ်း)</span>
+          </button>
+        </div>
+      }
+    >
+      {/* Tablet + desktop split: flexible catalog + a cart that stays 300–400px wide, so the
+          checkout never gets squeezed (a fixed 40% left only ~210px beside the sidebar on tablets). */}
+      <div className="hidden h-[calc(100dvh-var(--pos-chrome,64px))] md:grid md:grid-cols-[minmax(0,1fr)_minmax(280px,34vw)] lg:grid-cols-[minmax(0,1fr)_clamp(320px,36vw,420px)] xl:grid-cols-[minmax(0,1fr)_clamp(340px,32vw,440px)]">
+        <div className="min-w-0 overflow-hidden bg-background">
+          <DenseProductList
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            items={items}
+            query={query}
+            onQueryChange={setQuery}
+            selectedCategory={category}
+            onCategoryChange={setCategory}
+            lowStockCount={lowStockItems.length}
+            currencySymbol={symbol}
+            loading={loading}
+            offline={!isOnline}
+            onScan={() => setScannerOpen(true)}
+            onAdd={addToCart}
+          />
+        </div>
+
+        {/* Right Cart Panel */}
+        <div className="min-w-0 border-l border-border">
+          <CartPanel
+            cart={cart}
+            items={items}
+            isRestaurant={isRestaurant}
+            activeTable={activeTable}
+            notes={notes}
+            payment={payment}
+            splitMode={splitMode}
+            splits={splits}
+            customer={customer}
+            busy={busy}
+            subtotal={subtotal}
+            tax={tax}
+            total={total}
+            taxPercent={taxPercent}
+            remaining={remaining}
+            creditPortion={creditPortion}
+            cashReceived={cashReceived}
+            cashDue={cashDue}
+            cashShort={cashShort}
+            changeDue={changeDue}
+            digitalDue={digitalDue}
+            digitalConfirmed={digitalConfirmed}
+            onCashReceivedChange={setCashReceived}
+            onDigitalConfirmedChange={setDigitalConfirmed}
+            onSetQty={setQty}
+            onClear={clearCart}
+            onClearCustomer={clearCustomer}
+            needsCreditCustomer={needsCreditCustomer}
+            currencySymbol={symbol}
+            payments={availablePayments}
+            onChangeQty={changeQty}
+            onRemove={removeFromCart}
+            onNotesChange={setNotes}
+            onSelectPayment={selectPayment}
+            onToggleSplit={toggleSplit}
+            onSplitChange={(methodId: string, amount: number) =>
+              setSplits((prev) => ({ ...prev, [methodId]: amount }))
+            }
+            onToggleSplitMode={toggleSplitMode}
+            onPickCustomer={() => setPickerOpen(true)}
+            onPark={() => setHoldNoteOpen(true)}
+            onComplete={() => void completeSale()}
+            onSendToKitchen={() => void sendToKitchen()}
+            onPayAndClose={() => void payAndClose()}
+          />
+        </div>
+      </div>
+
+      {/* Mobile: pinned between the header and the bottom edge of the screen, so the page itself
+          never scrolls. Only the product list scrolls; the checkout bar stays put at the bottom. */}
+      <div className="fixed inset-x-0 bottom-0 top-[var(--pos-chrome,64px)] z-20 flex flex-col bg-background md:hidden">
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <DenseProductList
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            items={items}
+            query={query}
+            onQueryChange={setQuery}
+            selectedCategory={category}
+            onCategoryChange={setCategory}
+            lowStockCount={lowStockItems.length}
+            currencySymbol={symbol}
+            loading={loading}
+            offline={!isOnline}
+            onScan={() => setScannerOpen(true)}
+            onAdd={addToCart}
+          />
+        </div>
+        <MobileCheckoutBar
+          cart={cart}
+          total={total}
+          currencySymbol={symbol}
+          onCheckout={() => setCheckoutOpen(true)}
+        />
+      </div>
+
+      <MobileCheckoutDrawer
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        cart={cart}
+        items={items}
+        isRestaurant={isRestaurant}
+        activeTable={activeTable}
+        notes={notes}
+        payment={payment}
+        splitMode={splitMode}
+        splits={splits}
+        customer={customer}
+        busy={busy}
+        subtotal={subtotal}
+        tax={tax}
+        total={total}
+        taxPercent={taxPercent}
+        remaining={remaining}
+        creditPortion={creditPortion}
+        cashReceived={cashReceived}
+        cashDue={cashDue}
+        cashShort={cashShort}
+        changeDue={changeDue}
+        digitalDue={digitalDue}
+        digitalConfirmed={digitalConfirmed}
+        onCashReceivedChange={setCashReceived}
+        onDigitalConfirmedChange={setDigitalConfirmed}
+        onSetQty={setQty}
+        onClear={clearCart}
+        onClearCustomer={clearCustomer}
+        needsCreditCustomer={needsCreditCustomer}
+        currencySymbol={symbol}
+        payments={availablePayments}
+        onChangeQty={changeQty}
+        onRemove={removeFromCart}
+        onNotesChange={setNotes}
+        onSelectPayment={selectPayment}
+        onToggleSplit={toggleSplit}
+        onSplitChange={(methodId: string, amount: number) =>
+          setSplits((prev) => ({ ...prev, [methodId]: amount }))
+        }
+        onToggleSplitMode={toggleSplitMode}
+        onPickCustomer={() => setPickerOpen(true)}
+        onPark={() => setHoldNoteOpen(true)}
+        onComplete={() => {
+          setCheckoutOpen(false);
+          void completeSale();
+        }}
+        onSendToKitchen={() => {
+          setCheckoutOpen(false);
+          void sendToKitchen();
+        }}
+        onPayAndClose={() => {
+          setCheckoutOpen(false);
+          void payAndClose();
+        }}
+      />
+
+      <ScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={(code) => {
+          setScannerOpen(false);
+          addBySku(code);
+        }}
+      />
+
+      {pickerOpen && (
+        <CustomerPickerModal
+          customers={customers.filter((c) => !c.archived_at)}
+          isBranchDevice={isBranchDevice}
+          onClose={() => {
+            setPickerOpen(false);
+            if (!customer && !splitMode && payment === CREDIT_METHOD) setPayment("ငွေသား");
+          }}
+          onPick={(customer) => {
+            setCustomer(customer);
+            setPickerOpen(false);
+          }}
+          onQuickAdd={quickAddCustomer}
+        />
+      )}
+
+      {holdNoteOpen && (
+        <HoldNoteModal
+          onClose={() => setHoldNoteOpen(false)}
+          onConfirm={(note) => {
+            setHoldNoteOpen(false);
+            void parkOrder(note);
+          }}
+        />
+      )}
+
+      {heldOpen && (
+        <HeldOrdersDrawer
+          orders={heldOrders}
+          fmt={fmt}
+          onClose={() => setHeldOpen(false)}
+          onResume={(order) => {
+            setCart(
+              order.lines.map((line) => ({
+                ...line,
+                stock: items.find((i) => i.id === line.item_id)?.stock_quantity ?? line.quantity,
+              })),
+            );
+            void deleteHeldOrder(order.id);
+            setHeldOpen(false);
+            toast.success("ဘောက်ချာကို ပြန်ဖွင့်ပြီးပါပြီ");
+          }}
+          onDelete={(id) => void deleteHeldOrder(id)}
+        />
+      )}
+
+      {historyOpen && (
+        <OrderHistoryDrawer
+          orders={recentOrders}
+          fmt={fmt}
+          canRefund={isBranchDevice ? true : canApprove}
+          isPro={isPro}
+          onClose={() => setHistoryOpen(false)}
+          onRefund={async (orderId, reason, note) => {
+            // ဆိုင်ခွဲစက်ဖြစ်ပါက မန်နေဂျာ PIN မလိုဘဲ အချိန်မရွေး ပြန်အမ်းနိုင်သည်
+            if (isPro && !isBranchDevice) {
+              const approved = await new Promise<boolean>((resolve) => {
+                setPendingApproval(() => (ok: boolean) => resolve(ok));
+              });
+              if (!approved) return;
+            }
+            try {
+              await refundOrder({ orderId, reason, note });
+              toast.success("ဘောက်ချာ ပြန်အမ်းပြီးပါပြီ");
+            } catch {
+              toast.error("ပြန်အမ်း၍ မရပါ");
+            }
+          }}
+        />
+      )}
+
+      {pendingApproval && (
+        <ManagerPinModal
+          title="ပြန်အမ်းရန် မန်နေဂျာ PIN"
+          onClose={() => {
+            pendingApproval(false);
+            setPendingApproval(null);
+          }}
+          onApproved={() => {
+            pendingApproval(true);
+            setPendingApproval(null);
+          }}
+        />
+      )}
+
+      {receipt && (
+        <ReceiptModal
+          receipt={receipt}
+          storeName={store?.name ?? "SMT POS"}
+          address={address}
+          cashierName={cashierName}
+          phoneNumbers={phoneNumbers}
+          logoUrl={logoUrl}
+          footerNote={receiptSettings.footerNote}
+          paperWidth={receiptSettings.paperWidth}
+          showLogo={receiptSettings.showLogo}
+          fmt={fmt}
+          onClose={() => setReceipt(null)}
+        />
+      )}
+
+      {ticket && <KitchenTicketModal ticket={ticket} onClose={() => setTicket(null)} />}
+    </PosShell>
+  );
+}
+
+function CustomerPickerModal({
+  customers,
+  isBranchDevice = false,
+  onClose,
+  onPick,
+  onQuickAdd,
+}: {
+  customers: Customer[];
+  isBranchDevice?: boolean;
+  onClose: () => void;
+  onPick: (customer: Customer) => void;
+  onQuickAdd: (input: { name: string; phone: string }) => Promise<Customer>;
+}) {
+  const [query, setQuery] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const list = customers.filter((c) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return c.name.toLowerCase().includes(q) || (c.phone ?? "").includes(q);
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+      <div className="flex max-h-[85vh] w-full max-w-md flex-col rounded-md border border-border bg-card p-5 shadow-lg">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">အကြွေး ဖောက်သည် ရွေးရန်</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {adding ? (
+          <div className="space-y-3">
+            <div>
+              <label
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
+                htmlFor="qa-name"
+              >
+                အမည်
+              </label>
+              <input
+                id="qa-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div>
+              <label
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
+                htmlFor="qa-phone"
+              >
+                ဖုန်းနံပါတ်
+              </label>
+              <input
+                id="qa-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                inputMode="tel"
+                className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setAdding(false)}
+                className="h-11 flex-1 rounded-md border border-border text-sm font-medium hover:bg-accent"
+              >
+                နောက်သို့
+              </button>
+              <button
+                type="button"
+                disabled={busy || !name.trim() || !phone.trim()}
+                onClick={() => {
+                  setBusy(true);
+                  void onQuickAdd({ name: name.trim(), phone: phone.trim() })
+                    .then((customer) => {
+                      toast.success("ဖောက်သည် ထည့်ပြီးပါပြီ");
+                      onPick(customer);
+                    })
+                    .catch(() => toast.error("ဖောက်သည် မထည့်နိုင်ပါ"))
+                    .finally(() => setBusy(false));
+                }}
+                className="h-11 flex-1 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                သိမ်းပြီး ရွေးမည်
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="အမည် သို့ ဖုန်းဖြင့် ရှာပါ"
+                className="h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border">
+              {list.map((customer) => (
+                <button
+                  key={customer.id}
+                  type="button"
+                  onClick={() => onPick(customer)}
+                  className="flex w-full items-center justify-between gap-2 border-b border-border px-3 py-3 text-left last:border-0 hover:bg-accent"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{customer.name}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {customer.phone ?? "—"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {customer.balance > 0 ? `အကြွေး ${customer.balance}` : "—"}
+                  </span>
+                </button>
+              ))}
+              {list.length === 0 && (
+                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  ဖောက်သည် မတွေ့ပါ။
+                </p>
+              )}
+            </div>
+            {/* ဆိုင်ခွဲစက်မဟုတ်မှသာ ဖောက်သည်အသစ် ထည့်သွင်းခွင့်ရှိမည် */}
+            {!isBranchDevice ? (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4" /> ဖောက်သည် အမြန်ထည့်မည်
+              </button>
+            ) : (
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                * ဆိုင်ခွဲစက်တွင် ဖောက်သည်အသစ် ထည့်သွင်းခွင့် မရှိပါ။
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReceiptModal({
+  receipt,
+  storeName,
+  address,
+  cashierName,
+  phoneNumbers,
+  logoUrl,
+  footerNote,
+  paperWidth,
+  showLogo,
+  fmt,
+  onClose,
+}: {
+  receipt: Receipt;
+  storeName: string;
+  address: string;
+  cashierName: string;
+  phoneNumbers: string[];
+  logoUrl: string | null;
+  footerNote: string;
+  paperWidth: "58" | "80";
+  showLogo: boolean;
+  fmt: (n: number) => string;
+  onClose: () => void;
+}) {
+  const isCredit = receipt.paymentMethod === CREDIT_METHOD;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
+      <div
+        className={cn(
+          "print-area receipt-sheet my-auto w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg",
+          paperWidth === "58" && "receipt-58",
+        )}
+      >
+        <div className="mb-3 flex items-center justify-between print:hidden">
+          <h2 className="text-sm font-semibold">ပြေစာ</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ပြေစာ ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="text-center">
+          {showLogo && logoUrl && (
+            <img
+              src={logoUrl}
+              alt={`${storeName} လိုဂို`}
+              className="mx-auto mb-2 h-12 w-12 rounded-md object-cover"
+            />
+          )}
+          <p className="text-base font-semibold">{storeName}</p>
+          {address && <p className="text-xs text-muted-foreground">{address}</p>}
+          {phoneNumbers.length > 0 && (
+            <p className="text-xs text-muted-foreground">ဖုန်း — {phoneNumbers.join(" / ")}</p>
+          )}
+          {cashierName && <p className="text-xs text-muted-foreground">ကောင်တာ — {cashierName}</p>}
+          {receipt.tableNumber != null && (
+            <p className="text-xs font-medium">စားပွဲ {receipt.tableNumber}</p>
+          )}
+          {receipt.offline && (
+            <p className="mt-1 text-xs font-medium text-warning">
+              အော့ဖ်လိုင်း အရောင်း — ချိတ်ဆက်ရန် စောင့်ဆိုင်းနေသည်
+            </p>
+          )}
+        </div>
+
+        {receipt.reference && (
+          <p className="mt-1 text-center text-xs tabular-nums text-muted-foreground">
+            ပြေစာ #{receipt.reference}
+          </p>
+        )}
+
+        <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+
+        <table className="w-full text-xs">
+          <thead className="text-left text-muted-foreground">
+            <tr>
+              <th className="pb-1 font-medium">ပစ္စည်း</th>
+              <th className="pb-1 text-center font-medium">အရေ</th>
+              <th className="pb-1 text-right font-medium">နှုန်း</th>
+              <th className="pb-1 text-right font-medium">ပေါင်း</th>
+            </tr>
+          </thead>
+          <tbody>
+            {receipt.lines.map((line) => (
+              <tr key={`${line.item_id}-${line.unit_name ?? "base"}`}>
+                <td className="py-0.5 pr-1">{line.name}</td>
+                <td className="py-0.5 text-center tabular-nums">{line.quantity}</td>
+                <td className="py-0.5 text-right tabular-nums">{fmt(line.unit_price)}</td>
+                <td className="py-0.5 text-right tabular-nums">
+                  {fmt(line.quantity * line.unit_price)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+
+        <div className="text-sm">
+          <div className="flex justify-between text-muted-foreground">
+            <span>စုစုပေါင်း</span>
+            <span className="tabular-nums">{fmt(receipt.subtotal)}</span>
+          </div>
+          <div className="flex justify-between text-muted-foreground">
+            <span>အခွန်</span>
+            <span className="tabular-nums">{fmt(receipt.tax)}</span>
+          </div>
+          <div className="mt-1 flex justify-between font-semibold">
+            <span>ကျသင့်ငွေ</span>
+            <span className="tabular-nums">{fmt(receipt.total)}</span>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            ပေးချေသည့် နည်းလမ်း: {receipt.paymentMethod}
+          </p>
+          {!isCredit && receipt.customerName && (
+            <p className="text-xs text-muted-foreground">ဖောက်သည်: {receipt.customerName}</p>
+          )}
+          {receipt.cashReceived != null && (
+            <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+              <div className="flex justify-between">
+                <span>လက်ခံရရှိငွေ</span>
+                <span className="tabular-nums">{fmt(receipt.cashReceived)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>အမ်းငွေ</span>
+                <span className="tabular-nums">{fmt(receipt.change ?? 0)}</span>
+              </div>
+            </div>
+          )}
+          {receipt.splits && receipt.splits.length > 1 && (
+            <div className="mt-1 space-y-0.5 text-xs">
+              {receipt.splits.map((split) => (
+                <div key={split.method} className="flex justify-between text-muted-foreground">
+                  <span>{split.method}</span>
+                  <span className="tabular-nums">{fmt(split.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {isCredit && (
+          <>
+            <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+            <div className="space-y-0.5 text-xs">
+              <p className="text-sm font-semibold">အကြွေး အချက်အလက်</p>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ဖောက်သည်</span>
+                <span>{receipt.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ဖုန်း</span>
+                <span>{receipt.customerPhone || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ယခင် အကြွေး</span>
+                <span className="tabular-nums">{fmt(receipt.previousDebt ?? 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ယခု ဝယ်ယူမှု</span>
+                <span className="tabular-nums">{fmt(receipt.total)}</span>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <span>စုစုပေါင်း အကြွေး</span>
+                <span className="tabular-nums">{fmt(receipt.newDebt ?? receipt.total)}</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+
+        <div className="text-center text-xs text-muted-foreground">
+          <p>{footerNote || "ဝယ်ယူအားပေးမှုကို ကျေးဇူးအထူးတင်ရှိပါသည်။"}</p>
+          <p className="mt-1">{receipt.timestamp}</p>
+        </div>
+
+        <div className="mt-4 flex gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Printer className="h-4 w-4" /> ပရင့်ထုတ်ရန်
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 flex-1 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
+          >
+            ပြီးပြီ
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KitchenTicketModal({ ticket, onClose }: { ticket: KitchenTicket; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 print:static print:bg-transparent print:p-0">
+      <div className="print-area kitchen-ticket w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg">
+        <div className="mb-3 flex items-center justify-between print:hidden">
+          <h2 className="text-sm font-semibold">မီးဖိုချောင် အော်ဒါလတ်မှတ်</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="လက်မှတ် ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-semibold">စားပွဲ {ticket.tableNumber}</p>
+          <p className="text-xs text-muted-foreground">{ticket.timestamp}</p>
+        </div>
+        <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+        <div className="text-sm">
+          {ticket.lines.map((line) => (
+            <div
+              key={`${line.item_id}-${line.unit_name ?? "base"}`}
+              className="flex justify-between py-0.5"
+            >
+              <span className="truncate pr-2 font-medium">{line.name}</span>
+              <span className="tabular-nums">× {line.quantity}</span>
+            </div>
+          ))}
+        </div>
+        {ticket.notes.trim() && (
+          <>
+            <div className="print-divider my-3 text-[10px] text-muted-foreground" aria-hidden />
+            <p className="text-sm">မှတ်ချက်: {ticket.notes}</p>
+          </>
+        )}
+        <div className="mt-4 flex gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Printer className="h-4 w-4" /> ပရင့်ထုတ်ရန်
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 flex-1 rounded-md border border-border px-3 text-sm font-medium hover:bg-accent"
+          >
+            ပြီးပြီ
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HoldNoteModal({
+  onClose,
+  onConfirm,
+}: {
+  onClose: () => void;
+  onConfirm: (note: string) => void;
+}) {
+  const [note, setNote] = useState("");
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+      <div className="w-full max-w-sm rounded-md border border-border bg-card p-5 shadow-lg">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">ခဏဆိုင်းထားမည်</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <label
+          className="mb-1.5 block text-xs font-medium text-muted-foreground"
+          htmlFor="hold-note"
+        >
+          မှတ်ချက် (ဖောက်သည်အမည် / စားပွဲနံပါတ်)
+        </label>
+        <input
+          id="hold-note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+        />
+        <button
+          type="button"
+          onClick={() => onConfirm(note)}
+          className="mt-4 h-11 w-full rounded-md bg-warning text-sm font-semibold text-white hover:opacity-95"
+        >
+          ခဏဆိုင်းမည်
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function HeldOrdersDrawer({
+  orders,
+  fmt,
+  onClose,
+  onResume,
+  onDelete,
+}: {
+  orders: HeldOrder[];
+  fmt: (n: number) => string;
+  onClose: () => void;
+  onResume: (order: HeldOrder) => void;
+  onDelete: (id: string) => void;
+}) {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex justify-end bg-slate-900/60 backdrop-blur-[1px]"
+      onClick={onClose}
+    >
+      <aside
+        className="flex h-full w-full max-w-md flex-col bg-card shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <h2 className="text-sm font-semibold">ခဏဆိုင်းထားသော ဘောက်ချာများ ({orders.length})</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {orders.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              ဆိုင်းထားသော ဘောက်ချာ မရှိပါ။
+            </p>
+          )}
+          {orders.map((order) => (
+            <div key={order.id} className="mb-3 rounded-md border border-border p-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">{order.note || "မှတ်ချက်မရှိ"}</span>
+                <span className="text-sm font-bold tabular-nums">{fmt(order.total_amount)}</span>
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {new Date(order.created_at).toLocaleString()} · {order.lines.length} မျိုး
+              </p>
+              <ul className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                {order.lines.map((line) => (
+                  <li
+                    key={`${line.item_id}-${line.unit_name ?? "base"}`}
+                    className="flex justify-between"
+                  >
+                    <span className="truncate pr-2">
+                      {line.name} × {line.quantity}
+                    </span>
+                    <span className="tabular-nums">{fmt(line.quantity * line.unit_price)}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onResume(order)}
+                  className="h-10 flex-1 rounded-md bg-success text-xs font-semibold text-white hover:opacity-95"
+                >
+                  ပြန်ဖွင့်မည်
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(order.id)}
+                  aria-label="ဖျက်ရန်"
+                  className="flex h-10 w-10 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
+    </div>,
+    document.body,
+  );
+}
+
+const REFUND_REASONS = ["ပစ္စည်း ပြန်အပ်", "ပစ္စည်း ချွတ်ယွင်း", "အမှားရိုက်မိ", "အခြား"];
+
+function isOrderToday(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
+function isOrderYesterday(dateStr: string): boolean {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  return (
+    d.getFullYear() === yesterday.getFullYear() &&
+    d.getMonth() === yesterday.getMonth() &&
+    d.getDate() === yesterday.getDate()
+  );
+}
+
+function OrderHistoryDrawer({
+  orders,
+  fmt,
+  canRefund,
+  isPro,
+  onClose,
+  onRefund,
+}: {
+  orders: OrderSummary[];
+  fmt: (n: number) => string;
+  canRefund: boolean;
+  isPro: boolean;
+  onClose: () => void;
+  onRefund: (orderId: string, reason: string, note: string) => Promise<void>;
+}) {
+  const [selected, setSelected] = useState<OrderSummary | null>(null);
+  const [reason, setReason] = useState(REFUND_REASONS[0]!);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [filterMode, setFilterMode] = useState<"today" | "yesterday" | "custom" | "all">("today");
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      if (filterMode === "today") return isOrderToday(order.created_at);
+      if (filterMode === "yesterday") return isOrderYesterday(order.created_at);
+      if (filterMode === "custom") return order.created_at.slice(0, 10) === selectedDate;
+      return true;
+    });
+  }, [orders, filterMode, selectedDate]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex justify-end bg-slate-900/60 backdrop-blur-[1px]"
+      onClick={onClose}
+    >
+      <aside
+        className="flex h-full w-full max-w-md flex-col bg-card shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold">ဘောက်ချာ မှတ်တမ်း</h2>
+            {!isPro && (
+              <span className="rounded-sm bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                အခမဲ့ (၂ ရက်သာ)
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="ပိတ်ရန်"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="border-b border-border bg-muted/40 p-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setFilterMode("today");
+                setSelected(null);
+              }}
+              className={cn(
+                "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
+                filterMode === "today"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-foreground hover:bg-accent",
+              )}
+            >
+              ဒီနေ့
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFilterMode("yesterday");
+                setSelected(null);
+              }}
+              className={cn(
+                "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
+                filterMode === "yesterday"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-foreground hover:bg-accent",
+              )}
+            >
+              မနေ့က
+            </button>
+            {isPro ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterMode("custom");
+                    setSelected(null);
+                  }}
+                  className={cn(
+                    "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
+                    filterMode === "custom"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-foreground hover:bg-accent",
+                  )}
+                >
+                  ရက်စွဲရွေးမည်
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterMode("all");
+                    setSelected(null);
+                  }}
+                  className={cn(
+                    "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
+                    filterMode === "all"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-foreground hover:bg-accent",
+                  )}
+                >
+                  အားလုံး
+                </button>
+              </>
+            ) : (
+              <div className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground">
+                <span className="rounded-sm bg-amber-500/10 px-1.5 py-0.5 font-medium text-amber-600 dark:text-amber-400">
+                  PRO
+                </span>
+                <span>ရက်စွဲအစုံကြည့်ရန်</span>
+              </div>
+            )}
+          </div>
+
+          {isPro && filterMode === "custom" && (
+            <div className="mt-2.5 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">ရက်စွဲ:</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {filteredOrders.map((order) => (
+            <button
+              key={order.id}
+              type="button"
+              onClick={() => setSelected(order)}
+              className={cn(
+                "mb-2 flex w-full items-center justify-between gap-2 rounded-md border p-3 text-left transition-colors",
+                selected?.id === order.id
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:bg-accent",
+              )}
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold tabular-nums">
+                  {fmt(order.total_amount)}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {new Date(order.created_at).toLocaleString()} · {order.payment_method}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  "shrink-0 rounded-sm px-2 py-0.5 text-[11px] font-bold text-white",
+                  order.status === "REFUNDED"
+                    ? "bg-destructive"
+                    : order.status === "OPEN" || order.status === "UNPAID"
+                      ? "bg-warning"
+                      : "bg-success",
+                )}
+              >
+                {order.status}
+              </span>
+            </button>
+          ))}
+          {filteredOrders.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              ရွေးချယ်ထားသော ရက်စွဲတွင် မှတ်တမ်း မရှိပါ။
+            </p>
+          )}
+        </div>
+
+        {selected && (
+          <div className="border-t border-border bg-background p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">ဘောက်ချာ အသေးစိတ်</p>
+              <span className="text-xs text-muted-foreground">
+                {new Date(selected.created_at).toLocaleDateString()}
+              </span>
+            </div>
+            <ul className="mt-2 max-h-32 space-y-1 overflow-y-auto text-xs text-muted-foreground">
+              {selected.lines.map((line) => (
+                <li
+                  key={`${line.item_id}-${line.unit_name ?? "base"}`}
+                  className="flex justify-between border-b border-border/40 py-1"
+                >
+                  <span className="truncate pr-2">
+                    {line.name} × {line.quantity}
+                  </span>
+                  <span className="tabular-nums font-medium text-foreground">
+                    {fmt(line.quantity * line.unit_price)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {canRefund && selected.status !== "REFUNDED" && (
+              <div className="mt-3">
+                {isOrderToday(selected.created_at) ? (
+                  <div className="space-y-2">
+                    <select
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      aria-label="အကြောင်းရင်း"
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      {REFUND_REASONS.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="မှတ်ချက် (မဖြစ်မနေ မဟုတ်ပါ)"
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setBusy(true);
+                        void onRefund(selected.id, reason, note).finally(() => {
+                          setBusy(false);
+                          setSelected(null);
+                          setNote("");
+                        });
+                      }}
+                      className="h-10 w-full rounded-md bg-destructive text-xs font-semibold text-white hover:opacity-95 disabled:opacity-50"
+                    >
+                      ဘောက်ချာ ပြန်အမ်းမည်
+                    </button>
+                  </div>
+                ) : (
+                  <p className="rounded-sm bg-muted p-2 text-center text-xs text-muted-foreground">
+                    ယနေ့ ဘောက်ချာများကိုသာ ပြန်အမ်းနိုင်ပါသည်။
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </aside>
+    </div>,
+    document.body,
+  );
+}
