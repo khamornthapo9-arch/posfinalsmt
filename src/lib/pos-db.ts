@@ -52,6 +52,8 @@ export interface PendingSale {
   user_id?: string | null;
   payment_breakdown?: { method: string; amount: number }[];
   customer_id?: string | null;
+  /** Shift active when the sale was rung up; the server re-validates it on sync. */
+  shift_id?: string | null;
   customer_name?: string | null;
   status?: string;
   payment_status?: string;

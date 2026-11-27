@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { supabase } from "@/integrations/supabase/client";
+import { getCachedShiftId } from "@/lib/shift-ref";
 import { useAuth } from "@/lib/auth-store";
 import {
   posDb,
@@ -253,6 +254,10 @@ const POST_SALE_ERRORS: [string, string][] = [
   ["ACCESS_DENIED", "ဤဆိုင်တွင် အရောင်းသိမ်းရန် ခွင့်ပြုချက် မရှိပါ"],
   ["NOT_AUTHENTICATED", "ဝင်ရောက်မှု သက်တမ်းကုန်သွားပါပြီ၊ ပြန်လည် ဝင်ပါ"],
   ["SALE_ID_CONFLICT", "အရောင်း အမှတ်စဉ် ထပ်နေသည်၊ ထပ်မံကြိုးစားပါ"],
+  ["SHIFT_CLOSED", "အလုပ်ပတ် (shift) ပိတ်ပြီးပါပြီ — အလုပ်ပတ်အသစ် ဖွင့်ပြီးမှ ရောင်းပါ"],
+  ["SHIFT_REQUIRED", "ဤဆိုင်တွင် ရောင်းချရန် အလုပ်ပတ် (shift) ဖွင့်ထားရမည်"],
+  ["SHIFT_NOT_FOUND", "အလုပ်ပတ် မတွေ့ပါ — အလုပ်ပတ်စာမျက်နှာတွင် ပြန်စစ်ပါ"],
+  ["SHIFT_ACCESS_DENIED", "ဤအလုပ်ပတ်ကို အသုံးပြုခွင့် မရှိပါ"],
 ];
 
 /** Maps create_item_with_opening_stock's error codes to Burmese messages. */
@@ -300,6 +305,8 @@ interface ServerSaleInput {
   paymentStatus: string;
   createdAt: string;
   isOfflineSync: boolean;
+  /** Shift the sale belongs to (validated again by the server); null when no shift is in use. */
+  shiftId: string | null;
 }
 
 /**
@@ -335,6 +342,7 @@ async function postSaleToServer(
     p_payment_status: input.paymentStatus,
     p_created_at: input.createdAt,
     p_is_offline_sync: input.isOfflineSync,
+    ...(input.shiftId ? { p_shift_id: input.shiftId } : {}),
   });
   if (!rpcError) {
     // Newer database versions write the ledger inside post_sale and say so; older ones do not,
@@ -550,6 +558,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           paymentStatus: sale.payment_status ?? "PAID",
           createdAt: sale.created_at,
           isOfflineSync: true,
+          shiftId: sale.shift_id ?? null,
         });
         await posDb.pending_sales.delete(sale.localId);
       } catch (err) {
@@ -672,6 +681,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
             payment_status: paymentStatus ?? "PAID",
             cash_received: cashReceived ?? null,
             change: change ?? null,
+            shift_id: getCachedShiftId(storeId),
             sync_state: "queued",
             attempts: 0,
             last_error: null,
@@ -707,6 +717,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
           paymentStatus: paymentStatus ?? "PAID",
           createdAt,
           isOfflineSync: false,
+          shiftId: getCachedShiftId(storeId),
         }));
       } catch (err) {
         const kind = classifySaleError(err);
@@ -1129,6 +1140,16 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         ].filter(Boolean) as never[],
       );
 
+      // Drawer effect: the cash part of the original payment leaves the refunder's open shift.
+      // Recorded by the database from the sale itself (idempotent). It is a no-op when no shift is
+      // open, and a failure here must not undo a refund that already happened.
+      const { error: drawerError } = await supabase.rpc("record_refund_cash", {
+        p_sale_id: orderId,
+      });
+      if (drawerError && !/does not exist|schema cache|PGRST202|42883/i.test(drawerError.message)) {
+        console.error("[refund] drawer movement not recorded", drawerError.message);
+      }
+
       await refreshRecentOrders();
       await refreshCatalog();
     },
@@ -1225,16 +1246,24 @@ function PosProviderInner({ children }: { children: ReactNode }) {
 
   const closeTab = useCallback<PosContextValue["closeTab"]>(
     async ({ saleId, total, paymentMethod }) => {
+      // The tab is paid now, so it belongs to the shift that is open now (the database refuses a
+      // closed or foreign shift).
+      const shiftId = getCachedShiftId(storeId);
       const { error } = await supabase
         .from("sales")
-        .update({ status: "COMPLETED", payment_method: paymentMethod, total_amount: total })
+        .update({
+          status: "COMPLETED",
+          payment_method: paymentMethod,
+          total_amount: total,
+          ...(shiftId ? { shift_id: shiftId } : {}),
+        })
         .eq("id", saleId);
       if (error) throw error;
       await refreshTabs();
       await refreshCatalog();
       await refreshRecentOrders();
     },
-    [refreshCatalog, refreshRecentOrders, refreshTabs],
+    [refreshCatalog, refreshRecentOrders, refreshTabs, storeId],
   );
 
   const allItems = items ?? [];
