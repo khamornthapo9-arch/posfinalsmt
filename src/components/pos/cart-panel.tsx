@@ -167,11 +167,7 @@ export function CartPanel({
   // Digital methods (KBZPay / WavePay) complete immediately once selected — no separate
   // confirmation gate. Payment method is still recorded on the sale / receipt / analytics.
   const checkoutDisabled =
-    cart.length === 0 ||
-    busy ||
-    splitInvalid ||
-    needsCreditCustomer ||
-    cashShort;
+    cart.length === 0 || busy || splitInvalid || needsCreditCustomer || cashShort;
 
   const digitalMethods = payments.filter((p) => p.id !== "ငွေသား" && p.id !== CREDIT_METHOD);
 
