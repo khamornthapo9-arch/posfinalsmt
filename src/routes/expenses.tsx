@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Download, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Download, Lock, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { ProLockButton } from "@/components/pos/pro-lock";
 import { PosShell } from "@/components/pos/pos-shell";
 import { useAccountingStore } from "@/lib/accounting-store";
+import { useShift } from "@/lib/shift-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
 import { PAY_METHODS } from "@/lib/pay-methods";
@@ -137,13 +138,26 @@ function ExpensesPage() {
                   <td className="px-4 py-3 text-muted-foreground">{expense.paid_with}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{fmt(expense.amount)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => void deleteExpense(expense.id)}
-                      aria-label="ဖျက်ရန်"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {expense.request_id ? (
+                      <span
+                        title={
+                          expense.shift_id
+                            ? "အလုပ်ပတ်နှင့် ချိတ်ထားသော စာရင်း — ပြင်/ဖျက်၍ မရပါ"
+                            : "စာရင်းကိုင်မှတ်တမ်းနှင့် ချိတ်ထားသည် — ပြင်/ဖျက်၍ မရပါ"
+                        }
+                        className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground"
+                      >
+                        <Lock className="h-3.5 w-3.5" />
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => void deleteExpense(expense.id)}
+                        aria-label="ဖျက်ရန်"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -163,9 +177,13 @@ function ExpensesPage() {
         <ExpenseModal
           onClose={() => setOpen(false)}
           onSave={async (values) => {
-            await saveExpense(values);
-            setOpen(false);
-            toast.success("အသုံးစရိတ်ကို မှတ်တမ်းတင်ပြီးပါပြီ");
+            try {
+              await saveExpense(values);
+              setOpen(false);
+              toast.success("အသုံးစရိတ်ကို မှတ်တမ်းတင်ပြီးပါပြီ");
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "သိမ်း၍ မရပါ");
+            }
           }}
         />
       )}
@@ -184,13 +202,26 @@ function ExpenseModal({
     note: string;
     paidWith: string;
     spentAt: string;
+    fromDrawer: boolean;
+    requestId: string;
   }) => Promise<void>;
 }) {
+  const { activeShift } = useShift();
   const [category, setCategory] = useState(CATEGORIES[0] as string);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [paidWith, setPaidWith] = useState(PAY_METHODS[0] as string);
   const [busy, setBusy] = useState(false);
+  const [fromDrawer, setFromDrawer] = useState(true);
+  const isCash = paidWith === PAY_METHODS[0];
+  const drawerApplies = Boolean(activeShift) && isCash && fromDrawer;
+
+  // One idempotency key per attempt: a retry of the same form can never record the expense twice,
+  // and changing any field starts a new attempt.
+  const requestId = useRef(crypto.randomUUID());
+  useEffect(() => {
+    requestId.current = crypto.randomUUID();
+  }, [category, amount, note, paidWith, drawerApplies]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
@@ -265,6 +296,20 @@ function ExpenseModal({
               ))}
             </div>
           </div>
+          {activeShift && isCash && (
+            <label className="flex items-start gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={fromDrawer}
+                onChange={(e) => setFromDrawer(e.target.checked)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span>
+                ဆိုင်အံဆွဲထဲမှ ထုတ်သုံးသည် — ဖွင့်ထားသော အလုပ်ပတ်၏ ရှိရမည့်ငွေသားမှ တစ်ကြိမ်သာ
+                နုတ်မည်
+              </span>
+            </label>
+          )}
         </div>
         <button
           disabled={busy || !(Number(amount) > 0)}
@@ -276,6 +321,8 @@ function ExpenseModal({
               note: note.trim(),
               paidWith,
               spentAt: new Date().toISOString(),
+              fromDrawer: drawerApplies,
+              requestId: requestId.current,
             }).finally(() => setBusy(false));
           }}
           className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"

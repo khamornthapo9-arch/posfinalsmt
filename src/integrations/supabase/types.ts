@@ -151,6 +151,149 @@ export type Database = {
           },
         ];
       };
+      cash_movements: {
+        Row: {
+          account: string;
+          amount: number;
+          created_at: string;
+          created_by: string;
+          created_by_name: string | null;
+          expense_id: string | null;
+          id: string;
+          movement_type: string;
+          reason: string;
+          reference_id: string | null;
+          request_id: string;
+          shift_id: string;
+          store_id: string;
+        };
+        Insert: {
+          account?: string;
+          amount: number;
+          created_at?: string;
+          created_by: string;
+          created_by_name?: string | null;
+          expense_id?: string | null;
+          id?: string;
+          movement_type: string;
+          reason: string;
+          reference_id?: string | null;
+          request_id: string;
+          shift_id: string;
+          store_id: string;
+        };
+        Update: {
+          account?: string;
+          amount?: number;
+          created_at?: string;
+          created_by?: string;
+          created_by_name?: string | null;
+          expense_id?: string | null;
+          id?: string;
+          movement_type?: string;
+          reason?: string;
+          reference_id?: string | null;
+          request_id?: string;
+          shift_id?: string;
+          store_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_shift_id_fkey";
+            columns: ["shift_id"];
+            isOneToOne: false;
+            referencedRelation: "cashier_shifts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cash_movements_store_id_fkey";
+            columns: ["store_id"];
+            isOneToOne: false;
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      cashier_shifts: {
+        Row: {
+          cash_difference: number | null;
+          close_note: string | null;
+          close_snapshot: Json | null;
+          closed_at: string | null;
+          closed_by: string | null;
+          closed_by_name: string | null;
+          counted_cash: number | null;
+          created_at: string;
+          expected_cash: number | null;
+          id: string;
+          opened_at: string;
+          opened_by: string;
+          opened_by_name: string | null;
+          opening_cash: number;
+          request_id: string;
+          review_note: string | null;
+          review_status: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: string;
+          store_id: string;
+        };
+        Insert: {
+          cash_difference?: number | null;
+          close_note?: string | null;
+          close_snapshot?: Json | null;
+          closed_at?: string | null;
+          closed_by?: string | null;
+          closed_by_name?: string | null;
+          counted_cash?: number | null;
+          created_at?: string;
+          expected_cash?: number | null;
+          id?: string;
+          opened_at?: string;
+          opened_by: string;
+          opened_by_name?: string | null;
+          opening_cash: number;
+          request_id: string;
+          review_note?: string | null;
+          review_status?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: string;
+          store_id: string;
+        };
+        Update: {
+          cash_difference?: number | null;
+          close_note?: string | null;
+          close_snapshot?: Json | null;
+          closed_at?: string | null;
+          closed_by?: string | null;
+          closed_by_name?: string | null;
+          counted_cash?: number | null;
+          created_at?: string;
+          expected_cash?: number | null;
+          id?: string;
+          opened_at?: string;
+          opened_by?: string;
+          opened_by_name?: string | null;
+          opening_cash?: number;
+          request_id?: string;
+          review_note?: string | null;
+          review_status?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: string;
+          store_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cashier_shifts_store_id_fkey";
+            columns: ["store_id"];
+            isOneToOne: false;
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       customers: {
         Row: {
           address: string | null;
@@ -253,6 +396,8 @@ export type Database = {
           id: string;
           note: string | null;
           paid_with: string;
+          request_id: string | null;
+          shift_id: string | null;
           spent_at: string;
           store_id: string;
           updated_at: string;
@@ -264,6 +409,8 @@ export type Database = {
           id?: string;
           note?: string | null;
           paid_with?: string;
+          request_id?: string | null;
+          shift_id?: string | null;
           spent_at?: string;
           store_id: string;
           updated_at?: string;
@@ -275,6 +422,8 @@ export type Database = {
           id?: string;
           note?: string | null;
           paid_with?: string;
+          request_id?: string | null;
+          shift_id?: string | null;
           spent_at?: string;
           store_id?: string;
           updated_at?: string;
@@ -754,6 +903,7 @@ export type Database = {
           refund_note: string | null;
           refund_reason: string | null;
           refunded_at: string | null;
+          shift_id: string | null;
           status: string;
           store_id: string;
           table_number: number | null;
@@ -771,6 +921,7 @@ export type Database = {
           refund_note?: string | null;
           refund_reason?: string | null;
           refunded_at?: string | null;
+          shift_id?: string | null;
           status?: string;
           store_id: string;
           table_number?: number | null;
@@ -788,6 +939,7 @@ export type Database = {
           refund_note?: string | null;
           refund_reason?: string | null;
           refunded_at?: string | null;
+          shift_id?: string | null;
           status?: string;
           store_id?: string;
           table_number?: number | null;
@@ -915,6 +1067,7 @@ export type Database = {
           phone_numbers: string[];
           receipt_footer: string | null;
           receipt_header: string | null;
+          require_shift: boolean;
           tax_rate: number;
           telegram_chat_id: string | null;
           telegram_notify_enabled: boolean | null;
@@ -936,6 +1089,7 @@ export type Database = {
           phone_numbers?: string[];
           receipt_footer?: string | null;
           receipt_header?: string | null;
+          require_shift?: boolean;
           tax_rate?: number;
           telegram_chat_id?: string | null;
           telegram_notify_enabled?: boolean | null;
@@ -957,6 +1111,7 @@ export type Database = {
           phone_numbers?: string[];
           receipt_footer?: string | null;
           receipt_header?: string | null;
+          require_shift?: boolean;
           tax_rate?: number;
           telegram_chat_id?: string | null;
           telegram_notify_enabled?: boolean | null;
@@ -1099,6 +1254,61 @@ export type Database = {
         };
         Returns: Json;
       };
+      open_shift: {
+        Args: {
+          p_opening_cash: number;
+          p_request_id: string;
+          p_staff_name?: string | null;
+          p_store_id: string;
+        };
+        Returns: Json;
+      };
+      record_cash_movement: {
+        Args: {
+          p_amount: number;
+          p_reason: string;
+          p_request_id: string;
+          p_shift_id: string;
+          p_staff_name?: string | null;
+          p_type: string;
+        };
+        Returns: Json;
+      };
+      record_expense: {
+        Args: {
+          p_amount: number;
+          p_category: string;
+          p_note: string;
+          p_paid_with: string;
+          p_request_id: string;
+          p_shift_id?: string | null;
+          p_spent_at?: string | null;
+          p_staff_name?: string | null;
+          p_store_id: string;
+        };
+        Returns: Json;
+      };
+      record_refund_cash: {
+        Args: { p_sale_id: string; p_staff_name?: string | null };
+        Returns: Json;
+      };
+      close_shift: {
+        Args: {
+          p_counted_cash: number;
+          p_note?: string | null;
+          p_shift_id: string;
+          p_staff_name?: string | null;
+        };
+        Returns: Json;
+      };
+      review_shift: {
+        Args: { p_decision: string; p_note?: string | null; p_shift_id: string };
+        Returns: Json;
+      };
+      get_shift_summary: {
+        Args: { p_shift_id: string };
+        Returns: Json;
+      };
       post_sale: {
         Args: {
           p_created_at?: string;
@@ -1109,6 +1319,7 @@ export type Database = {
           p_payment_method: string;
           p_payment_status?: string;
           p_sale_id: string;
+          p_shift_id?: string;
           p_status?: string;
           p_store_id: string;
           p_total: number;

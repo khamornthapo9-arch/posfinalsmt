@@ -88,6 +88,14 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "ငွေကြေး",
     items: [
       {
+        to: "/shifts",
+        label: "အလုပ်ပတ် / ငွေသားစစ်",
+        short: "အလုပ်ပတ်",
+        tone: "expenses",
+        roles: ALL,
+        branch: true,
+      },
+      {
         to: "/expenses",
         label: "အသုံးစရိတ်",
         short: "အသုံးစရိတ်",

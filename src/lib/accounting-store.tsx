@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
+import { shiftErrorMessage, useShift } from "@/lib/shift-store";
 
 /** Chart of accounts used by the double-entry engine. */
 export const ACCOUNTS = {
@@ -15,6 +16,7 @@ export const ACCOUNTS = {
   TAX_PAYABLE: "TAX_PAYABLE",
   COGS: "COGS",
   EXPENSE: "OPERATING_EXPENSE",
+  OWNER_EQUITY: "OWNER_EQUITY",
 } as const;
 
 export const CREDIT_METHOD = "အကြွေး";
@@ -138,6 +140,10 @@ export interface Expense {
   note: string | null;
   paid_with: string;
   spent_at: string;
+  /** Set when the expense was recorded by record_expense (ledger written with it; read-only). */
+  request_id?: string | null;
+  /** Shift whose drawer paid it, when it was paid from the drawer. */
+  shift_id?: string | null;
 }
 
 export interface LedgerEntry {
@@ -267,6 +273,10 @@ interface AccountingContextValue {
     note: string;
     paidWith: string;
     spentAt: string;
+    /** Pay from the open shift's cash drawer (cash only; reduces expected drawer cash once). */
+    fromDrawer?: boolean;
+    /** Idempotency key for this attempt (a retry with the same key never duplicates). */
+    requestId?: string;
   }) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   settleCustomerDebt: (input: {
@@ -283,6 +293,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   const { store } = useAuth();
   const storeId = store?.id ?? null;
   const enabled = Boolean(store?.advanced_accounting_mode);
+  const { activeShift } = useShift();
 
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -319,7 +330,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
           .order("created_at", { ascending: false }),
         supabase
           .from("expenses")
-          .select("id,category,amount,note,paid_with,spent_at")
+          .select("*")
           .eq("store_id", storeId)
           .order("spent_at", { ascending: false }),
         supabase
@@ -358,7 +369,16 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
         })),
       );
       setExpenses(
-        (e.data ?? []).map((row) => ({ ...row, amount: Number(row.amount) })) as Expense[],
+        (e.data ?? []).map((row) => ({
+          id: row.id,
+          category: row.category,
+          amount: Number(row.amount),
+          note: row.note,
+          paid_with: row.paid_with,
+          spent_at: row.spent_at,
+          request_id: row.request_id ?? null,
+          shift_id: row.shift_id ?? null,
+        })),
       );
       setLedger(
         (l.data ?? []).map((row) => ({ ...row, amount: Number(row.amount) })) as LedgerEntry[],
@@ -631,8 +651,31 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   );
 
   const saveExpense = useCallback<AccountingContextValue["saveExpense"]>(
-    async ({ id, category, amount, note, paidWith, spentAt }) => {
+    async ({ id, category, amount, note, paidWith, spentAt, fromDrawer, requestId }) => {
       if (!storeId) throw new Error("No active store");
+      if (!id) {
+        // New expenses go through the database function: expense row, ledger entries and (for a
+        // drawer expense) the shift's cash movement commit together, once per request id.
+        const { error: rpcError } = await supabase.rpc("record_expense", {
+          p_store_id: storeId,
+          p_request_id: requestId ?? crypto.randomUUID(),
+          p_category: category,
+          p_amount: amount,
+          p_note: note,
+          p_paid_with: paidWith,
+          p_spent_at: spentAt,
+          p_shift_id: fromDrawer && activeShift ? activeShift.id : null,
+        });
+        if (!rpcError) {
+          await refreshAll();
+          return;
+        }
+        // Older database (migration not applied yet): keep the previous client-side behaviour.
+        const missing = /could not find the function|schema cache|PGRST202|42883/i.test(
+          rpcError.message,
+        );
+        if (!missing) throw new Error(shiftErrorMessage(rpcError));
+      }
       const payload = {
         store_id: storeId,
         category,
@@ -661,7 +704,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       }
       await refreshAll();
     },
-    [postEntries, refreshAll, storeId],
+    [activeShift, postEntries, refreshAll, storeId],
   );
 
   const deleteExpense = useCallback(
