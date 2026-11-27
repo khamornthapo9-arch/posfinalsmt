@@ -16,6 +16,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { PosProvider } from "../lib/pos-store";
 import { AuthProvider } from "../lib/auth-store";
 import { RoleProvider } from "../lib/roles";
+import { ShiftProvider } from "../lib/shift-store";
 import { AccountingProvider } from "../lib/accounting-store";
 import { Toaster } from "../components/ui/sonner";
 
@@ -152,13 +153,15 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <RoleProvider>
-          <PosProvider>
-            <AccountingProvider>
-              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-              <Outlet />
-              <Toaster position="top-center" />
-            </AccountingProvider>
-          </PosProvider>
+          <ShiftProvider>
+            <PosProvider>
+              <AccountingProvider>
+                {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+                <Outlet />
+                <Toaster position="top-center" />
+              </AccountingProvider>
+            </PosProvider>
+          </ShiftProvider>
         </RoleProvider>
       </AuthProvider>
     </QueryClientProvider>

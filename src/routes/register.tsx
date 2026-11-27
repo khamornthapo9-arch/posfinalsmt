@@ -11,6 +11,7 @@ import { MobileCheckoutBar } from "@/components/pos/mobile-checkout-bar";
 import { SaleError } from "@/lib/pos-store";
 import { findByCode, baseQuantityFor } from "@/lib/product-lookup";
 import { RegisterStatus } from "@/components/pos/register-status";
+import { ShiftStatus } from "@/components/pos/shift-status";
 import { useProductViewMode } from "@/lib/use-product-view";
 import { MobileCheckoutDrawer } from "@/components/pos/mobile-checkout-drawer";
 import { usePos, type HeldOrder, type OrderSummary, type PaymentSplit } from "@/lib/pos-store";
@@ -705,6 +706,7 @@ function RegisterPage() {
       actions={
         <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <RegisterStatus />
+          <ShiftStatus />
           <button
             type="button"
             onClick={() => setHeldOpen(true)}
