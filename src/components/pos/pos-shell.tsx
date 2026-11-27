@@ -5,7 +5,6 @@ import {
   Loader2,
   LogOut,
   Menu,
-  MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
   X,
@@ -23,7 +22,6 @@ import { AnnouncementMarquee } from "@/components/pos/announcement-marquee";
 import { useRole, ROLE_LABEL } from "@/lib/roles";
 import {
   isPathActive,
-  primaryItems,
   trailFor,
   visibleGroups,
   type NavGroup,
@@ -197,46 +195,6 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
 }
 
 /** Phone-only bottom bar. More opens the existing menu drawer, which lists every destination. */
-function BottomNav({ onMore, moreOpen }: { onMore: () => void; moreOpen: boolean }) {
-  const groups = useVisibleGroups();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items = primaryItems(groups);
-  const tab =
-    "press touch:min-h-14 flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium text-muted-foreground transition-colors";
-  return (
-    <nav
-      aria-label="Primary"
-      className="no-print fixed inset-x-0 bottom-0 z-40 flex border-t border-header-border bg-header/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
-    >
-      {items.map((item) => {
-        const Icon = NAV_ICONS[item.tone] ?? ShoppingCart;
-        const active = isPathActive(pathname, item.to, item.exact);
-        return (
-          <Link
-            key={item.to}
-            to={item.to as string}
-            aria-current={active ? "page" : undefined}
-            className={cn(tab, active && "text-primary")}
-          >
-            <Icon className="h-5 w-5" />
-            <span className="max-w-full truncate">{item.short}</span>
-          </Link>
-        );
-      })}
-      <button
-        type="button"
-        onClick={onMore}
-        aria-haspopup="dialog"
-        aria-expanded={moreOpen}
-        className={cn(tab, moreOpen && "text-primary")}
-      >
-        <MoreHorizontal className="h-5 w-5" />
-        <span>နောက်ထပ်</span>
-      </button>
-    </nav>
-  );
-}
-
 function PageBreadcrumb({ pathname }: { pathname: string }) {
   const trail = trailFor(pathname);
   if (trail.length === 0) return null;
@@ -397,8 +355,6 @@ export function PosShell({
   }, [
     loading,
     roleLoading,
-    session,
-    store,
     isActive,
     role,
     pathname,
@@ -464,8 +420,6 @@ export function PosShell({
 
   const rail = collapsed || isTablet;
   // The register keeps its own pinned checkout bar, so the bottom nav is not stacked on top of it.
-  const showBottomNav = pathname !== "/register";
-
   const toggle = () =>
     setCollapsed((prev) => {
       window.localStorage.setItem("pos-sidebar-collapsed", prev ? "0" : "1");
@@ -483,10 +437,7 @@ export function PosShell({
   return (
     <div
       ref={rootRef}
-      className={cn(
-        "pos-app flex min-h-dvh w-full overflow-x-clip bg-background text-foreground",
-        showBottomNav && "max-md:[--pos-bottom-nav:calc(3.5rem_+_env(safe-area-inset-bottom))]",
-      )}
+      className="pos-app flex min-h-dvh w-full overflow-x-clip bg-background text-foreground" 
       style={{ "--pos-chrome": "64px" } as CSSProperties}
     >
       {/* Sidebar: full on desktop, icon rail on tablet, hidden on phones (see drawer) */}
@@ -585,10 +536,7 @@ export function PosShell({
                 type="button"
                 onClick={() => setDrawerOpen(true)}
                 aria-label="Open menu"
-                className={cn(
-                  "press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden",
-                  showBottomNav && "hidden",
-                )}
+                className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden" 
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -614,11 +562,10 @@ export function PosShell({
           <AnnouncementMarquee />
         </div>
 
-        <main className="animate-page-in min-w-0 flex-1 pb-[var(--pos-bottom-nav,0px)]">
+        <main className="animate-page-in min-w-0 flex-1">
           {children}
         </main>
       </div>
-      {showBottomNav && <BottomNav onMore={() => setDrawerOpen(true)} moreOpen={drawerOpen} />}
     </div>
   );
 }

@@ -164,15 +164,14 @@ export function CartPanel({
     splitMode &&
     (Math.round(remaining * 100) !== 0 || Object.values(splits).some((amount) => amount < 0));
 
-  const digitalUnconfirmed = digitalDue > 0 && !digitalConfirmed;
-
+  // Digital methods (KBZPay / WavePay) complete immediately once selected — no separate
+  // confirmation gate. Payment method is still recorded on the sale / receipt / analytics.
   const checkoutDisabled =
     cart.length === 0 ||
     busy ||
     splitInvalid ||
     needsCreditCustomer ||
-    cashShort ||
-    digitalUnconfirmed;
+    cashShort;
 
   const digitalMethods = payments.filter((p) => p.id !== "ငွေသား" && p.id !== CREDIT_METHOD);
 
@@ -278,7 +277,7 @@ export function CartPanel({
           cart.map((line) => (
             <div
               key={`${line.item_id}-${line.unit_name ?? "base"}`}
-              className="flex items-center justify-between gap-2 p-2.5 transition-colors hover:bg-accent/40"
+              className="flex items-center justify-between gap-2 p-2.5 touch:py-3 transition-colors hover:bg-accent/40"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold text-foreground">{line.name}</p>
@@ -298,7 +297,7 @@ export function CartPanel({
                   type="button"
                   onClick={() => onChangeQty(line.item_id, -1, line.unit_name)}
                   aria-label={`${line.name} အရေအတွက် လျှော့ရန်`}
-                  className="press flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
+                  className="press flex h-8 w-8 touch:h-10 touch:w-10 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
                 >
                   <Minus className="h-3.5 w-3.5" />
                 </button>
@@ -313,14 +312,14 @@ export function CartPanel({
                       onSetQty(line.item_id, val, line.unit_name);
                     }
                   }}
-                  className="h-7 w-10 rounded border border-input bg-card text-center text-xs font-semibold tabular-nums outline-none"
+                  className="h-8 w-11 touch:h-10 touch:w-12 rounded border border-input bg-card text-center text-xs font-semibold tabular-nums outline-none"
                 />
 
                 <button
                   type="button"
                   onClick={() => onChangeQty(line.item_id, 1, line.unit_name)}
                   aria-label={`${line.name} အရေအတွက် တိုးရန်`}
-                  className="press flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
+                  className="press flex h-8 w-8 touch:h-10 touch:w-10 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </button>
@@ -329,7 +328,7 @@ export function CartPanel({
                   type="button"
                   onClick={() => onRemove(line.item_id, line.unit_name)}
                   aria-label={`${line.name} ဖယ်ရှားရန်`}
-                  className="press ml-1 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  className="press ml-0.5 flex h-8 w-8 touch:h-10 touch:w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -340,7 +339,7 @@ export function CartPanel({
       </div>
 
       {/* Compact Checkout Panel at the Bottom */}
-      <div className="shrink-0 space-y-2 border-t border-cart-border bg-card/90 p-2.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-xs">
+      <div className="shrink-0 space-y-2 border-t border-cart-border bg-card/95 p-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-xs backdrop-blur-sm sm:p-3">
         {/* Subtotal & Tax */}
         <div className="space-y-0.5 text-xs">
           <div className="flex justify-between text-muted-foreground">

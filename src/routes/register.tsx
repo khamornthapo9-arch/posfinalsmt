@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Printer, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PosShell } from "@/components/pos/pos-shell";
@@ -484,10 +485,6 @@ function RegisterPage() {
       toast.error("လက်ခံရရှိငွေသည် ကျသင့်ငွေထက် နည်းနေသည်");
       return;
     }
-    if (digitalDue > 0 && !digitalConfirmed) {
-      toast.error("ငွေလွှဲ လက်ခံရရှိကြောင်း အတည်ပြုပါ");
-      return;
-    }
     const splitList = splitMode
       ? Object.entries(splits)
           .map(([method, amount]) => ({ method, amount }))
@@ -706,19 +703,19 @@ function RegisterPage() {
           : `${store?.name ?? "Store"} · ${cashierName || "ကောင်တာ"}`
       }
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <RegisterStatus />
           <button
             type="button"
             onClick={() => setHeldOpen(true)}
-            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
+            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-accent sm:px-3"
           >
             ဆိုင်းငံ့ ({heldOrders.length})
           </button>
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
-            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
+            className="press min-h-9 touch:min-h-11 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-accent sm:px-3"
           >
             <span className="sm:hidden">မှတ်တမ်း</span>
             <span className="hidden sm:inline">အရောင်းမှတ်တမ်း (ပြန်အမ်း)</span>
@@ -728,7 +725,7 @@ function RegisterPage() {
     >
       {/* Tablet + desktop split: flexible catalog + a cart that stays 300–400px wide, so the
           checkout never gets squeezed (a fixed 40% left only ~210px beside the sidebar on tablets). */}
-      <div className="hidden h-[calc(100dvh-var(--pos-chrome,64px))] md:grid md:grid-cols-[minmax(0,1fr)_clamp(300px,38vw,400px)]">
+      <div className="hidden h-[calc(100dvh-var(--pos-chrome,64px))] md:grid md:grid-cols-[minmax(0,1fr)_minmax(280px,34vw)] lg:grid-cols-[minmax(0,1fr)_clamp(320px,36vw,420px)] xl:grid-cols-[minmax(0,1fr)_clamp(340px,32vw,440px)]">
         <div className="min-w-0 overflow-hidden bg-background">
           <DenseProductList
             viewMode={viewMode}
@@ -1474,19 +1471,22 @@ function HeldOrdersDrawer({
   onResume: (order: HeldOrder) => void;
   onDelete: (id: string) => void;
 }) {
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60" onClick={onClose}>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex justify-end bg-slate-900/60 backdrop-blur-[1px]"
+      onClick={onClose}
+    >
       <aside
-        className="flex h-full w-full max-w-md flex-col bg-card shadow-xl"
+        className="flex h-full w-full max-w-md flex-col bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <h2 className="text-sm font-semibold">ခဏဆိုင်းထားသော ဘောက်ချာများ ({orders.length})</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="ပိတ်ရန်"
-            className="text-muted-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -1540,7 +1540,8 @@ function HeldOrdersDrawer({
           ))}
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1598,13 +1599,16 @@ function OrderHistoryDrawer({
     });
   }, [orders, filterMode, selectedDate]);
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60" onClick={onClose}>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex justify-end bg-slate-900/60 backdrop-blur-[1px]"
+      onClick={onClose}
+    >
       <aside
-        className="flex h-full w-full max-w-md flex-col bg-card shadow-xl"
+        className="flex h-full w-full max-w-md flex-col bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold">ဘောက်ချာ မှတ်တမ်း</h2>
             {!isPro && (
@@ -1617,7 +1621,7 @@ function OrderHistoryDrawer({
             type="button"
             onClick={onClose}
             aria-label="ပိတ်ရန်"
-            className="text-muted-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -1825,6 +1829,7 @@ function OrderHistoryDrawer({
           </div>
         )}
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }
