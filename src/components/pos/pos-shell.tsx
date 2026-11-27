@@ -1,14 +1,6 @@
 import { LottiePlayer } from "@/components/landing/lottie-player";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import {
-  ChevronDown,
-  Loader2,
-  LogOut,
-  Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
-  X,
-} from "lucide-react";
+import { ChevronDown, Loader2, LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -438,7 +430,7 @@ export function PosShell({
   return (
     <div
       ref={rootRef}
-      className="pos-app flex min-h-dvh w-full overflow-x-clip bg-background text-foreground" 
+      className="pos-app flex min-h-dvh w-full overflow-x-clip bg-background text-foreground"
       style={{ "--pos-chrome": "64px" } as CSSProperties}
     >
       {/* Sidebar: full on desktop, icon rail on tablet, hidden on phones (see drawer) */}
@@ -537,7 +529,7 @@ export function PosShell({
                 type="button"
                 onClick={() => setDrawerOpen(true)}
                 aria-label="Open menu"
-                className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden" 
+                className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-xs md:hidden"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -563,9 +555,7 @@ export function PosShell({
           <AnnouncementMarquee />
         </div>
 
-        <main className="animate-page-in min-w-0 flex-1">
-          {children}
-        </main>
+        <main className="animate-page-in min-w-0 flex-1">{children}</main>
       </div>
     </div>
   );

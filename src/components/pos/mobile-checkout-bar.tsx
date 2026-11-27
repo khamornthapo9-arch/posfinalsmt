@@ -31,7 +31,9 @@ export function MobileCheckoutBar({
           </span>{" "}
           ခု
         </p>
-        <p className="truncate text-lg font-bold leading-7 tabular-nums tracking-tight sm:text-xl">{fmt(total)}</p>
+        <p className="truncate text-lg font-bold leading-7 tabular-nums tracking-tight sm:text-xl">
+          {fmt(total)}
+        </p>
       </div>
       <button
         type="button"
