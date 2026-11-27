@@ -344,6 +344,7 @@ export function PosShell({
     }
     const allowed =
       pathname === "/register" ||
+      pathname.startsWith("/shifts") ||
       (pathname.startsWith("/customers") && canManageCustomers) ||
       (pathname.startsWith("/inventory") && canManageInventory) ||
       (pathname.startsWith("/analytics") && canViewAnalytics) ||

@@ -19,7 +19,21 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/shifts")({
   ssr: false,
   head: () => ({
-    meta: [{ title: "အလုပ်ပတ် / ငွေသားစစ်ဆေးခြင်း — SMT POS" }],
+    meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { title: "အလုပ်ပတ် / ငွေသားစစ်ဆေးခြင်း — SMT POS" },
+      {
+        name: "description",
+        content:
+          "အလုပ်ပတ် စတင်ခြင်း၊ ငွေသား အဝင်/အထွက် စစ်ဆေးခြင်းနှင့် လက်ကျန်ငွေ ညှိနှိုင်းခြင်း။",
+      },
+      { property: "og:title", content: "အလုပ်ပတ် / ငွေသားစစ်ဆေးခြင်း — SMT POS" },
+      {
+        property: "og:description",
+        content: "SMT POS အလုပ်ပတ်နှင့် ငွေသားစစ်ဆေးမှု စီမံခန့်ခွဲခြင်း။",
+      },
+    ],
   }),
   component: ShiftsPage,
 });

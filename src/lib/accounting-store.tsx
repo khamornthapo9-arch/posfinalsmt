@@ -16,6 +16,7 @@ export const ACCOUNTS = {
   TAX_PAYABLE: "TAX_PAYABLE",
   COGS: "COGS",
   EXPENSE: "OPERATING_EXPENSE",
+  OWNER_EQUITY: "OWNER_EQUITY",
 } as const;
 
 export const CREDIT_METHOD = "အကြွေး";
