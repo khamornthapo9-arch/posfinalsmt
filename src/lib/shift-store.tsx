@@ -202,7 +202,8 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
 
   const recordDrawerExpense = useCallback<ShiftContextValue["recordDrawerExpense"]>(
     async ({ category, amount, note, requestId }) => {
-      if (!storeId || !activeShift) throw new Error(shiftErrorMessage({ message: "shift_required" }));
+      if (!storeId || !activeShift)
+        throw new Error(shiftErrorMessage({ message: "shift_required" }));
       const { error } = await supabase.rpc("record_expense", {
         p_store_id: storeId,
         p_request_id: requestId,

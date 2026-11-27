@@ -99,13 +99,12 @@ function ShiftsPage() {
     );
   }
 
-  const pendingReview = history.filter((s) => s.status === "CLOSED" && s.review_status === "PENDING");
+  const pendingReview = history.filter(
+    (s) => s.status === "CLOSED" && s.review_status === "PENDING",
+  );
 
   return (
-    <PosShell
-      title="အလုပ်ပတ် / ငွေသားစစ်ဆေးခြင်း"
-      subtitle={store?.name ?? undefined}
-    >
+    <PosShell title="အလုပ်ပတ် / ငွေသားစစ်ဆေးခြင်း" subtitle={store?.name ?? undefined}>
       <div className="space-y-4 p-3 sm:p-4">
         {activeShift ? (
           <ActivePanel shift={activeShift} fmt={fmt} blind={isCashier} onChanged={refreshHistory} />
@@ -316,7 +315,13 @@ function ActivePanel({
   );
 }
 
-function MovementList({ movements, fmt }: { movements: CashMovement[]; fmt: (n: number) => string }) {
+function MovementList({
+  movements,
+  fmt,
+}: {
+  movements: CashMovement[];
+  fmt: (n: number) => string;
+}) {
   if (movements.length === 0) {
     return <p className="text-xs text-muted-foreground">ငွေသားလှုပ်ရှားမှု မရှိသေးပါ</p>;
   }
@@ -333,7 +338,12 @@ function MovementList({ movements, fmt }: { movements: CashMovement[]; fmt: (n: 
                 {m.created_by_name ? ` · ${m.created_by_name}` : ""}
               </p>
             </div>
-            <span className={cn("shrink-0 font-semibold", sign > 0 ? "text-success" : "text-destructive")}>
+            <span
+              className={cn(
+                "shrink-0 font-semibold",
+                sign > 0 ? "text-success" : "text-destructive",
+              )}
+            >
               {sign > 0 ? "+" : "−"}
               {fmt(Number(m.amount))}
             </span>
@@ -411,7 +421,10 @@ function MovementModal({
   };
 
   return (
-    <ModalFrame title={isExpense ? "အသုံးစရိတ် (အံဆွဲမှ ငွေသား)" : (MOVEMENT_LABEL[kind] ?? kind)} onClose={onClose}>
+    <ModalFrame
+      title={isExpense ? "အသုံးစရိတ် (အံဆွဲမှ ငွေသား)" : (MOVEMENT_LABEL[kind] ?? kind)}
+      onClose={onClose}
+    >
       <div className="space-y-3">
         {isExpense && (
           <div>
@@ -488,7 +501,8 @@ function CloseModal({
     <ModalFrame title="အလုပ်ပတ် ပိတ်ရန်" onClose={onClose}>
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          အံဆွဲထဲရှိ ငွေသားကို ရေတွက်ပြီး ထည့်ပါ။ ကွာခြားမှု ရှိပါက မှတ်ချက် လိုအပ်ပြီး မန်နေဂျာ စစ်ဆေးမည်။
+          အံဆွဲထဲရှိ ငွေသားကို ရေတွက်ပြီး ထည့်ပါ။ ကွာခြားမှု ရှိပါက မှတ်ချက် လိုအပ်ပြီး မန်နေဂျာ
+          စစ်ဆေးမည်။
         </p>
         <div>
           <label className={labelClass} htmlFor="close-counted">
@@ -707,7 +721,9 @@ function RequireShiftSetting() {
             });
         }}
       />
-      <span>ရောင်းချရန် အလုပ်ပတ် (shift) ဖွင့်ထားရမည် — မဖွင့်ထားပါက အွန်လိုင်းအရောင်းကို ပယ်မည်</span>
+      <span>
+        ရောင်းချရန် အလုပ်ပတ် (shift) ဖွင့်ထားရမည် — မဖွင့်ထားပါက အွန်လိုင်းအရောင်းကို ပယ်မည်
+      </span>
     </label>
   );
 }
