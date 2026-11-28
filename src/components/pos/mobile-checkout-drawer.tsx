@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CartPanel, type CartLine } from "./cart-panel";
@@ -59,9 +59,33 @@ interface MobileCheckoutDrawerProps {
   onPayAndClose: () => void;
 }
 
+const DISMISS_THRESHOLD_PX = 96;
+const DISMISS_VELOCITY = 0.45; // px/ms
+
 export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileCheckoutDrawerProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dragY = useRef(0);
+  const dragStartY = useRef(0);
+  const dragStartT = useRef(0);
+  const dragging = useRef(false);
+  const [offsetY, setOffsetY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const resetDrag = useCallback(() => {
+    dragY.current = 0;
+    setOffsetY(0);
+    setIsDragging(false);
+    dragging.current = false;
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = "";
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!open) resetDrag();
+  }, [open, resetDrag]);
 
   useEffect(() => {
     if (!open) return;
@@ -102,6 +126,45 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
     };
   }, [open, onClose]);
 
+  const onPointerDown = (event: React.PointerEvent) => {
+    // Only start a dismiss drag from the handle / header chrome — not from cart controls.
+    if ((event.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+    dragging.current = true;
+    setIsDragging(true);
+    dragStartY.current = event.clientY;
+    dragStartT.current = event.timeStamp;
+    dragY.current = 0;
+    (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+  };
+
+  const onPointerMove = (event: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const dy = Math.max(0, event.clientY - dragStartY.current);
+    dragY.current = dy;
+    setOffsetY(dy);
+  };
+
+  const onPointerUp = (event: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const dy = dragY.current;
+    const dt = Math.max(1, event.timeStamp - dragStartT.current);
+    const velocity = dy / dt;
+    dragging.current = false;
+    setIsDragging(false);
+
+    if (dy > DISMISS_THRESHOLD_PX || velocity > DISMISS_VELOCITY) {
+      // Animate the rest of the way off-screen, then close.
+      setOffsetY(typeof window !== "undefined" ? window.innerHeight : 800);
+      window.setTimeout(() => {
+        onClose();
+        resetDrag();
+      }, 180);
+      return;
+    }
+    // Snap back
+    setOffsetY(0);
+  };
+
   return (
     <div
       ref={dialogRef}
@@ -109,11 +172,17 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
       aria-modal="true"
       aria-label="ငွေရှင်းရန်"
       aria-hidden={!open}
-      inert={!open}
+      // When closed, remove from a11y tree and block all pointer events so the
+      // product grid underneath stays fully usable.
+      {...(!open ? { inert: true as unknown as boolean } : {})}
       className={cn(
         "fixed inset-0 z-50 md:hidden",
-        open ? "visible" : "invisible pointer-events-none [transition:visibility_0s_linear_320ms]",
+        open ? "visible pointer-events-auto" : "invisible pointer-events-none",
       )}
+      style={{
+        // Avoid a stuck transition leaving the overlay interactive after close.
+        transition: open ? undefined : "visibility 0s linear 280ms",
+      }}
     >
       <button
         type="button"
@@ -121,50 +190,65 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
         tabIndex={open ? 0 : -1}
         aria-label="Close checkout"
         className={cn(
-          "absolute inset-0 bg-foreground/50 backdrop-blur-[2px] transition-opacity duration-[var(--duration-base)]",
-          open ? "opacity-100" : "opacity-0",
+          "absolute inset-0 bg-foreground/50 backdrop-blur-[2px] transition-opacity duration-200",
+          open && offsetY === 0 ? "opacity-100" : open ? "opacity-60" : "opacity-0",
         )}
       />
+
       <div
+        ref={sheetRef}
         className={cn(
-          "sheet-motion absolute inset-x-0 bottom-0 top-[max(3rem,env(safe-area-inset-top))] flex flex-col rounded-t-2xl border-t border-cart-border bg-cart shadow-pop pb-[env(safe-area-inset-bottom)]",
-          open ? "translate-y-0" : "translate-y-full",
+          "absolute inset-x-0 bottom-0 top-[max(3.5rem,env(safe-area-inset-top))] flex flex-col rounded-t-2xl border-t border-cart-border bg-cart shadow-pop pb-[env(safe-area-inset-bottom)]",
+          !isDragging && (open ? "translate-y-0" : "translate-y-full"),
+          !isDragging && "transition-transform duration-280 ease-out",
         )}
+        style={{
+          transform: open ? `translateY(${offsetY}px)` : undefined,
+          touchAction: "none",
+        }}
       >
-        {/* Drop Down Header with Chevron & Grab handle */}
-        <div className="relative flex items-center justify-between rounded-t-2xl border-b border-cart-border bg-cart-header px-3 py-2">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="ငွေရှင်းလွှာ ချုံ့မည်"
-            className="press flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <ChevronDown className="h-4 w-4" />
-            <span>ပစ္စည်းစာရင်းသို့</span>
-          </button>
+        {/* Drag handle + header — swipe down here to return to product list */}
+        <div
+          className="relative shrink-0 touch-none select-none rounded-t-2xl border-b border-cart-border bg-cart-header"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
+          <div className="flex justify-center pt-2 pb-1">
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-12 rounded-full bg-muted-foreground/35"
+            />
+          </div>
 
-          {/* Centered drag handle */}
-          <span
-            aria-hidden="true"
-            onClick={onClose}
-            className="absolute top-2 left-1/2 h-1.5 w-12 -translate-x-1/2 cursor-pointer rounded-full bg-border hover:bg-muted-foreground/40 transition-colors"
-          />
+          <div className="flex items-center justify-between gap-2 px-3 pb-2">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="ငွေရှင်းလွှာ ချုံ့မည်"
+              className="press flex min-h-10 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <ChevronDown className="h-4 w-4" />
+              <span>ပစ္စည်းစာရင်းသို့</span>
+            </button>
 
-          <h2 className="text-sm font-semibold">ငွေရှင်းရန်</h2>
+            <h2 className="text-sm font-semibold">ငွေရှင်းရန်</h2>
 
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            tabIndex={open ? 0 : -1}
-            aria-label="ပိတ်ရန်"
-            className="press flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
-          >
-            <X className="h-4 w-4" />
-          </button>
+            <button
+              ref={closeRef}
+              type="button"
+              onClick={onClose}
+              tabIndex={open ? 0 : -1}
+              aria-label="ပိတ်ရန်"
+              className="press flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1 overflow-hidden overscroll-contain">
           <CartPanel {...cartProps} />
         </div>
       </div>
