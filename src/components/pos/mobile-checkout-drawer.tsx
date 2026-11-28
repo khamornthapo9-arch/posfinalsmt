@@ -216,10 +216,7 @@ export function MobileCheckoutDrawer({ open, onClose, ...cartProps }: MobileChec
           onPointerCancel={onPointerUp}
         >
           <div className="flex justify-center pt-2 pb-1">
-            <span
-              aria-hidden="true"
-              className="h-1.5 w-12 rounded-full bg-muted-foreground/35"
-            />
+            <span aria-hidden="true" className="h-1.5 w-12 rounded-full bg-muted-foreground/35" />
           </div>
 
           <div className="flex items-center justify-between gap-2 px-3 pb-2">
