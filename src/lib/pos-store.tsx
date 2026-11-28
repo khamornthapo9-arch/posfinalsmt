@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { supabase } from "@/integrations/supabase/client";
 import { getCachedShiftId } from "@/lib/shift-ref";
+import { shiftErrorMessage } from "@/lib/shift-store";
+import { useRole } from "@/lib/roles";
 import { useAuth } from "@/lib/auth-store";
 import {
   posDb,
@@ -87,7 +89,11 @@ interface PosContextValue {
   refreshRecentOrders: () => Promise<void>;
   holdOrder: (input: { lines: PendingSaleLine[]; total: number; note: string }) => Promise<void>;
   deleteHeldOrder: (id: string) => Promise<void>;
-  refundOrder: (input: { orderId: string; reason: string; note: string }) => Promise<void>;
+  refundOrder: (input: {
+    orderId: string;
+    reason: string;
+    note: string;
+  }) => Promise<{ cash: number; drawerRecorded: boolean }>;
   refreshTabs: () => Promise<void>;
   holdTab: (input: {
     saleId?: string | undefined;
@@ -96,7 +102,12 @@ interface PosContextValue {
     total: number;
     notes: string;
   }) => Promise<string>;
-  closeTab: (input: { saleId: string; total: number; paymentMethod: string }) => Promise<void>;
+  closeTab: (input: {
+    saleId: string;
+    total: number;
+    paymentMethod: string;
+    customerId?: string | null;
+  }) => Promise<void>;
   refreshCatalog: () => Promise<void>;
   syncNow: () => Promise<void>;
   recordSale: (input: {
@@ -258,6 +269,9 @@ const POST_SALE_ERRORS: [string, string][] = [
   ["SHIFT_REQUIRED", "ဤဆိုင်တွင် ရောင်းချရန် အလုပ်ပတ် (shift) ဖွင့်ထားရမည်"],
   ["SHIFT_NOT_FOUND", "အလုပ်ပတ် မတွေ့ပါ — အလုပ်ပတ်စာမျက်နှာတွင် ပြန်စစ်ပါ"],
   ["SHIFT_ACCESS_DENIED", "ဤအလုပ်ပတ်ကို အသုံးပြုခွင့် မရှိပါ"],
+  ["INVALID_PAYMENT_METHOD", "ငွေပေးချေမှု နည်းလမ်း မမှန်ကန်ပါ"],
+  ["SALE_NOT_FOUND", "ဘောက်ချာ မတွေ့ပါ"],
+  ["SALE_NOT_OPEN", "ဤစားပွဲစာရင်းသည် ဖွင့်ထားသော အခြေအနေ မဟုတ်ပါ"],
 ];
 
 /** Maps create_item_with_opening_stock's error codes to Burmese messages. */
@@ -432,6 +446,8 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   const { store, session } = useAuth();
   const storeId = store?.id ?? null;
   const userId = session?.user.id ?? null;
+  const { activeStaff } = useRole();
+  const staffName = activeStaff?.name ?? store?.cashier_name ?? null;
   const [isOnline, setIsOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1035,125 +1051,23 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         );
       }
 
-      const { error } = await supabase
-        .from("sales")
-        .update({
-          status: "REFUNDED",
-          payment_status: "REFUNDED",
-          refund_reason: reason,
-          refund_note: note.trim() || null,
-          refunded_at: new Date().toISOString(),
-        })
-        .eq("id", orderId);
-      if (error) throw error;
-
-      // Put the stock back item by item...
-      for (const line of order.lines) {
-        const { data: current } = await supabase
-          .from("items")
-          .select("stock_quantity")
-          .eq("id", line.item_id)
-          .maybeSingle();
-        if (current) {
-          await supabase
-            .from("items")
-            .update({
-              stock_quantity: current.stock_quantity + line.quantity * (line.conversion ?? 1),
-            })
-            .eq("id", line.item_id);
-        }
-      }
-      await logMovements(
-        order.lines.map((line) => ({
-          item_id: line.item_id,
-          quantity: line.quantity * (line.conversion ?? 1),
-        })),
-        "RETURN",
-        orderId,
-      );
-
-      // Credit portion of the order (if any) is written back off the customer's debt.
-      const creditAmount =
-        order.payment_breakdown.length > 0
-          ? order.payment_breakdown
-              .filter((split) => split.method === CREDIT_METHOD)
-              .reduce((sum, split) => sum + Number(split.amount || 0), 0)
-          : order.payment_method === CREDIT_METHOD
-            ? order.total_amount
-            : 0;
-
-      if (creditAmount > 0 && order.customer_id) {
-        const { data: customer } = await supabase
-          .from("customers")
-          .select("balance")
-          .eq("id", order.customer_id)
-          .maybeSingle();
-        const nextBalance = Math.max(Number(customer?.balance ?? 0) - creditAmount, 0);
-        await supabase
-          .from("customers")
-          .update({ balance: Number(nextBalance.toFixed(2)) })
-          .eq("id", order.customer_id);
-        await supabase.from("debt_payments").insert({
-          store_id: storeId,
-          party_type: "CUSTOMER",
-          party_id: order.customer_id,
-          amount: creditAmount,
-          method: "REFUND",
-          note: `ပြန်အမ်းငွေ · ${reason}`,
-        });
-      }
-
-      // Reverse the money side of the sale in the ledger.
-      await supabase.from("ledger_entries").insert(
-        [
-          creditAmount > 0
-            ? {
-                store_id: storeId,
-                account: "ACCOUNTS_RECEIVABLE",
-                direction: "CREDIT",
-                amount: creditAmount,
-                reference_type: "REFUND",
-                reference_id: orderId,
-                memo: reason,
-              }
-            : null,
-          order.total_amount - creditAmount > 0
-            ? {
-                store_id: storeId,
-                account: "CASH",
-                direction: "CREDIT",
-                amount: order.total_amount - creditAmount,
-                reference_type: "REFUND",
-                reference_id: orderId,
-                memo: reason,
-              }
-            : null,
-          {
-            store_id: storeId,
-            account: "SALES_REVENUE",
-            direction: "DEBIT",
-            amount: order.total_amount,
-            reference_type: "REFUND",
-            reference_id: orderId,
-            memo: reason,
-          },
-        ].filter(Boolean) as never[],
-      );
-
-      // Drawer effect: the cash part of the original payment leaves the refunder's open shift.
-      // Recorded by the database from the sale itself (idempotent). It is a no-op when no shift is
-      // open, and a failure here must not undo a refund that already happened.
-      const { error: drawerError } = await supabase.rpc("record_refund_cash", {
+      // ONE database transaction (refund_sale): sale status, returned stock, ledger reversal,
+      // customer debt reversal, drawer movement and the audit row all commit together or not at all.
+      // A retry of the same refund returns "already refunded" without posting anything again.
+      const { data, error } = await supabase.rpc("refund_sale", {
         p_sale_id: orderId,
+        p_reason: reason,
+        p_note: note.trim() || null,
+        p_staff_name: staffName,
       });
-      if (drawerError && !/does not exist|schema cache|PGRST202|42883/i.test(drawerError.message)) {
-        console.error("[refund] drawer movement not recorded", drawerError.message);
-      }
+      if (error) throw new Error(shiftErrorMessage(error));
+      const result = (data ?? {}) as { cash?: number; drawer_recorded?: boolean };
 
       await refreshRecentOrders();
       await refreshCatalog();
+      return { cash: Number(result.cash ?? 0), drawerRecorded: result.drawer_recorded === true };
     },
-    [logMovements, recentOrders, refreshCatalog, refreshRecentOrders, storeId],
+    [recentOrders, refreshCatalog, refreshRecentOrders, staffName, storeId],
   );
 
   useEffect(() => {
@@ -1245,25 +1159,28 @@ function PosProviderInner({ children }: { children: ReactNode }) {
   );
 
   const closeTab = useCallback<PosContextValue["closeTab"]>(
-    async ({ saleId, total, paymentMethod }) => {
-      // The tab is paid now, so it belongs to the shift that is open now (the database refuses a
-      // closed or foreign shift).
+    async ({ saleId, total, paymentMethod, customerId }) => {
+      // pay_open_tab is one database transaction: total check, payment validation, cost snapshot,
+      // status change, shift link (refused if the shift is closed/foreign or required but missing),
+      // customer credit and the sale's ledger entries. Paying twice returns "already paid".
       const shiftId = getCachedShiftId(storeId);
-      const { error } = await supabase
-        .from("sales")
-        .update({
-          status: "COMPLETED",
-          payment_method: paymentMethod,
-          total_amount: total,
-          ...(shiftId ? { shift_id: shiftId } : {}),
-        })
-        .eq("id", saleId);
-      if (error) throw error;
+      const { error } = await supabase.rpc("pay_open_tab", {
+        p_sale_id: saleId,
+        p_total: round2(total),
+        p_payment_method: paymentMethod,
+        p_payment_breakdown: [
+          { method: paymentMethod, amount: round2(total) },
+        ] as unknown as never,
+        ...(customerId ? { p_customer_id: customerId } : {}),
+        ...(shiftId ? { p_shift_id: shiftId } : {}),
+        p_staff_name: staffName,
+      });
+      if (error) throw saleErrorFromServer(error);
       await refreshTabs();
       await refreshCatalog();
       await refreshRecentOrders();
     },
-    [refreshCatalog, refreshRecentOrders, refreshTabs, storeId],
+    [refreshCatalog, refreshRecentOrders, refreshTabs, staffName, storeId],
   );
 
   const allItems = items ?? [];
