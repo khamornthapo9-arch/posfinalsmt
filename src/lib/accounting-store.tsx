@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
+import { useRole } from "@/lib/roles";
 import { shiftErrorMessage, useShift } from "@/lib/shift-store";
 
 /** Chart of accounts used by the double-entry engine. */
@@ -144,6 +145,13 @@ export interface Expense {
   request_id?: string | null;
   /** Shift whose drawer paid it, when it was paid from the drawer. */
   shift_id?: string | null;
+  /** Set when the expense was voided (kept for history, excluded from totals). */
+  voided_at?: string | null;
+  void_reason?: string | null;
+  /** The expense that replaced this one after a correction. */
+  replaced_by?: string | null;
+  /** The expense this one replaced. */
+  replaces_expense_id?: string | null;
 }
 
 export interface LedgerEntry {
@@ -267,7 +275,6 @@ interface AccountingContextValue {
   ) => Promise<{ alreadyReceived: boolean }>;
   deletePurchase: (purchaseId: string) => Promise<void>;
   saveExpense: (input: {
-    id?: string;
     category: string;
     amount: number;
     note: string;
@@ -278,11 +285,27 @@ interface AccountingContextValue {
     /** Idempotency key for this attempt (a retry with the same key never duplicates). */
     requestId?: string;
   }) => Promise<void>;
-  deleteExpense: (id: string) => Promise<void>;
+  /** Owner/manager only. Keeps the expense, reverses its ledger entries (never a delete). */
+  voidExpense: (input: { expenseId: string; reason: string; requestId?: string }) => Promise<void>;
+  /** Owner/manager only. Void + replacement in one database transaction. */
+  correctExpense: (input: {
+    expenseId: string;
+    reason: string;
+    category: string;
+    amount: number;
+    note: string;
+    paidWith: string;
+    spentAt: string;
+    fromDrawer?: boolean;
+    voidRequestId?: string;
+    requestId?: string;
+  }) => Promise<void>;
   settleCustomerDebt: (input: {
     customerId: string;
     amount: number;
     method: string;
+    /** Idempotency key for this attempt (a retry with the same key never posts twice). */
+    requestId?: string;
   }) => Promise<void>;
   paySupplierDebt: (input: { supplierId: string; amount: number; method: string }) => Promise<void>;
 }
@@ -294,6 +317,8 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   const storeId = store?.id ?? null;
   const enabled = Boolean(store?.advanced_accounting_mode);
   const { activeShift } = useShift();
+  const { activeStaff } = useRole();
+  const staffName = activeStaff?.name ?? store?.cashier_name ?? null;
 
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -378,6 +403,10 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
           spent_at: row.spent_at,
           request_id: row.request_id ?? null,
           shift_id: row.shift_id ?? null,
+          voided_at: row.voided_at ?? null,
+          void_reason: row.void_reason ?? null,
+          replaced_by: row.replaced_by ?? null,
+          replaces_expense_id: row.replaces_expense_id ?? null,
         })),
       );
       setLedger(
@@ -651,96 +680,79 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   );
 
   const saveExpense = useCallback<AccountingContextValue["saveExpense"]>(
-    async ({ id, category, amount, note, paidWith, spentAt, fromDrawer, requestId }) => {
+    async ({ category, amount, note, paidWith, spentAt, fromDrawer, requestId }) => {
       if (!storeId) throw new Error("No active store");
-      if (!id) {
-        // New expenses go through the database function: expense row, ledger entries and (for a
-        // drawer expense) the shift's cash movement commit together, once per request id.
-        const { error: rpcError } = await supabase.rpc("record_expense", {
-          p_store_id: storeId,
-          p_request_id: requestId ?? crypto.randomUUID(),
-          p_category: category,
-          p_amount: amount,
-          p_note: note,
-          p_paid_with: paidWith,
-          p_spent_at: spentAt,
-          p_shift_id: fromDrawer && activeShift ? activeShift.id : null,
-        });
-        if (!rpcError) {
-          await refreshAll();
-          return;
-        }
-        // Older database (migration not applied yet): keep the previous client-side behaviour.
-        const missing = /could not find the function|schema cache|PGRST202|42883/i.test(
-          rpcError.message,
-        );
-        if (!missing) throw new Error(shiftErrorMessage(rpcError));
-      }
-      const payload = {
-        store_id: storeId,
-        category,
-        amount,
-        note: note || null,
-        paid_with: paidWith,
-        spent_at: spentAt,
-      };
-      if (id) {
-        const { error } = await supabase.from("expenses").update(payload).eq("id", id);
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase
-          .from("expenses")
-          .insert(payload)
-          .select("id")
-          .single();
-        if (error || !data) throw error ?? new Error("Expense failed");
-        await postEntries(
-          [
-            { account: ACCOUNTS.EXPENSE, direction: "DEBIT", amount },
-            { account: accountForMethod(paidWith), direction: "CREDIT", amount },
-          ],
-          { type: "EXPENSE", id: data.id, memo: category },
-        );
-      }
+      // Expense row, ledger entries and (for a drawer expense) the shift's cash movement commit
+      // together, once per request id.
+      const { error: rpcError } = await supabase.rpc("record_expense", {
+        p_store_id: storeId,
+        p_request_id: requestId ?? crypto.randomUUID(),
+        p_category: category,
+        p_amount: amount,
+        p_note: note,
+        p_paid_with: paidWith,
+        p_spent_at: spentAt,
+        p_shift_id: fromDrawer && activeShift ? activeShift.id : null,
+      });
+      if (rpcError) throw new Error(shiftErrorMessage(rpcError));
       await refreshAll();
     },
-    [activeShift, postEntries, refreshAll, storeId],
+    [activeShift, refreshAll, storeId],
   );
 
-  const deleteExpense = useCallback(
-    async (id: string) => {
-      const { error } = await supabase.from("expenses").delete().eq("id", id);
-      if (error) throw error;
+  const voidExpense = useCallback<AccountingContextValue["voidExpense"]>(
+    async ({ expenseId, reason, requestId }) => {
+      const { error } = await supabase.rpc("void_expense", {
+        p_expense_id: expenseId,
+        p_reason: reason,
+        p_request_id: requestId ?? crypto.randomUUID(),
+        p_staff_name: staffName,
+      });
+      if (error) throw new Error(shiftErrorMessage(error));
       await refreshAll();
     },
-    [refreshAll],
+    [refreshAll, staffName],
+  );
+
+  const correctExpense = useCallback<AccountingContextValue["correctExpense"]>(
+    async (input) => {
+      const { error } = await supabase.rpc("replace_expense", {
+        p_expense_id: input.expenseId,
+        p_void_request_id: input.voidRequestId ?? crypto.randomUUID(),
+        p_new_request_id: input.requestId ?? crypto.randomUUID(),
+        p_reason: input.reason,
+        p_category: input.category,
+        p_amount: input.amount,
+        p_note: input.note,
+        p_paid_with: input.paidWith,
+        p_spent_at: input.spentAt,
+        p_shift_id: input.fromDrawer && activeShift ? activeShift.id : null,
+        p_staff_name: staffName,
+      });
+      if (error) throw new Error(shiftErrorMessage(error));
+      await refreshAll();
+    },
+    [activeShift, refreshAll, staffName],
   );
 
   const settleCustomerDebt = useCallback<AccountingContextValue["settleCustomerDebt"]>(
-    async ({ customerId, amount, method }) => {
+    async ({ customerId, amount, method, requestId }) => {
       if (!storeId) return;
-      const customer = customers.find((c) => c.id === customerId);
-      await supabase.from("debt_payments").insert({
-        store_id: storeId,
-        party_type: "CUSTOMER",
-        party_id: customerId,
-        amount,
-        method,
+      // One database transaction: debt record, customer balance (under a row lock), ledger entries
+      // (Dr payment account / Cr receivable) and, for cash, the open shift's drawer. A repeated
+      // request id is recognised and posts nothing; paying more than is owed is refused.
+      const { error } = await supabase.rpc("receive_customer_payment", {
+        p_store_id: storeId,
+        p_customer_id: customerId,
+        p_amount: amount,
+        p_method: method,
+        p_request_id: requestId ?? crypto.randomUUID(),
+        p_staff_name: staffName,
       });
-      await postEntries(
-        [
-          { account: accountForMethod(method), direction: "DEBIT", amount },
-          { account: ACCOUNTS.RECEIVABLE, direction: "CREDIT", amount },
-        ],
-        { type: "CUSTOMER_PAYMENT", id: customerId, memo: customer?.name ?? "" },
-      );
-      await supabase
-        .from("customers")
-        .update({ balance: Number(Math.max((customer?.balance ?? 0) - amount, 0).toFixed(2)) })
-        .eq("id", customerId);
+      if (error) throw new Error(shiftErrorMessage(error));
       await refreshAll();
     },
-    [customers, postEntries, refreshAll, storeId],
+    [refreshAll, staffName, storeId],
   );
 
   const paySupplierDebt = useCallback<AccountingContextValue["paySupplierDebt"]>(
@@ -782,7 +794,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   const liquidCapital = LIQUID_ACCOUNTS.reduce((sum, key) => sum + (balances[key] ?? 0), 0);
   const receivable = balances[ACCOUNTS.RECEIVABLE] ?? 0;
   const payable = -(balances[ACCOUNTS.PAYABLE] ?? 0);
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpenses = expenses.reduce((sum, e) => (e.voided_at ? sum : sum + e.amount), 0);
 
   const value = useMemo<AccountingContextValue>(
     () => ({
@@ -813,7 +825,8 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       receivePurchase,
       deletePurchase,
       saveExpense,
-      deleteExpense,
+      voidExpense,
+      correctExpense,
       settleCustomerDebt,
       paySupplierDebt,
     }),
@@ -845,7 +858,8 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
       receivePurchase,
       deletePurchase,
       saveExpense,
-      deleteExpense,
+      voidExpense,
+      correctExpense,
       settleCustomerDebt,
       paySupplierDebt,
     ],

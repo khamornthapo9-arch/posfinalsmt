@@ -50,6 +50,11 @@ const MOVEMENT_LABEL: Record<string, string> = {
   CASH_IN: "ငွေသား ထည့်ခြင်း",
   CASH_OUT: "ငွေသား ထုတ်ခြင်း",
   CASH_DROP: "ငွေသား ဘူးသို့ ပို့ခြင်း (drop)",
+  OWNER_CONTRIBUTION: "ပိုင်ရှင် ငွေထည့်ဝင်ခြင်း",
+  OWNER_WITHDRAWAL: "ပိုင်ရှင် ငွေထုတ်ယူခြင်း",
+  SAFE_TO_DRAWER: "ငွေသိမ်းဘူးမှ အံဆွဲသို့ ထည့်ခြင်း",
+  CUSTOMER_PAYMENT: "ဖောက်သည် ငွေပြန်ဆပ် (ငွေသား)",
+  EXPENSE_VOID: "အသုံးစရိတ် ပယ်ဖျက် (ငွေပြန်ဝင်)",
   EXPENSE_PAID: "အသုံးစရိတ် (အံဆွဲမှ)",
   REFUND_PAID: "ငွေပြန်အမ်း (ငွေသား)",
 };
@@ -57,6 +62,11 @@ const MOVEMENT_SIGN: Record<string, 1 | -1> = {
   CASH_IN: 1,
   CASH_OUT: -1,
   CASH_DROP: -1,
+  OWNER_CONTRIBUTION: 1,
+  OWNER_WITHDRAWAL: -1,
+  SAFE_TO_DRAWER: 1,
+  CUSTOMER_PAYMENT: 1,
+  EXPENSE_VOID: 1,
   EXPENSE_PAID: -1,
   REFUND_PAID: -1,
 };
@@ -234,6 +244,7 @@ function SummaryGrid({
       <Stat label="Wave Pay ရောင်းရငွေ" value={fmt(s.wavepay_sales)} />
       <Stat label="အကြွေးရောင်းရငွေ" value={fmt(s.credit_sales)} />
       {!hideCash && <Stat label="ငွေသား ထည့်" value={fmt(s.cash_in)} />}
+      {!hideCash && <Stat label="ဖောက်သည် ငွေပြန်ဆပ်" value={fmt(s.customer_payments)} />}
       {!hideCash && <Stat label="ငွေသား ထုတ် + drop" value={fmt(s.cash_out + s.cash_drops)} />}
       {!hideCash && <Stat label="အံဆွဲမှ အသုံးစရိတ်" value={fmt(s.cash_expenses)} />}
       {!hideCash && <Stat label="ငွေသား ပြန်အမ်း" value={fmt(s.cash_refunds)} />}
@@ -288,12 +299,9 @@ function ActivePanel({
         </button>
       </div>
       {summary && <SummaryGrid s={summary} fmt={fmt} hideCash={blind} />}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <button className={btnClass} onClick={() => setModal("CASH_IN")}>
-          ငွေသား ထည့်
-        </button>
-        <button className={btnClass} onClick={() => setModal("CASH_OUT")}>
-          ငွေသား ထုတ်
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <button className={btnClass} onClick={() => setModal("SAFE_TO_DRAWER")}>
+          ငွေသိမ်းဘူးမှ အံဆွဲသို့
         </button>
         <button className={btnClass} onClick={() => setModal("CASH_DROP")}>
           Drop (ဘူးသို့)
@@ -301,6 +309,16 @@ function ActivePanel({
         <button className={btnClass} onClick={() => setModal("EXPENSE")}>
           အသုံးစရိတ် (အံဆွဲမှ)
         </button>
+        {!blind && (
+          <>
+            <button className={btnClass} onClick={() => setModal("OWNER_CONTRIBUTION")}>
+              ပိုင်ရှင် ငွေထည့်ဝင်
+            </button>
+            <button className={btnClass} onClick={() => setModal("OWNER_WITHDRAWAL")}>
+              ပိုင်ရှင် ငွေထုတ်ယူ
+            </button>
+          </>
+        )}
       </div>
       <MovementList movements={movements} fmt={fmt} />
       {modal && (

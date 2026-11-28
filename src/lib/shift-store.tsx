@@ -9,7 +9,8 @@ import type { Database } from "@/integrations/supabase/types";
 export type Shift = Database["public"]["Tables"]["cashier_shifts"]["Row"];
 export type CashMovement = Database["public"]["Tables"]["cash_movements"]["Row"];
 
-export type DrawerMovementType = "CASH_IN" | "CASH_OUT" | "CASH_DROP";
+export type DrawerMovementType =
+  "CASH_DROP" | "OWNER_CONTRIBUTION" | "OWNER_WITHDRAWAL" | "SAFE_TO_DRAWER";
 
 export interface ShiftSummary {
   opening_cash: number;
@@ -23,6 +24,11 @@ export interface ShiftSummary {
   cash_drops: number;
   cash_expenses: number;
   cash_refunds: number;
+  owner_contributions: number;
+  owner_withdrawals: number;
+  safe_to_drawer: number;
+  customer_payments: number;
+  expense_voids: number;
   expected_cash: number;
   late_adjustment: number;
 }
@@ -33,7 +39,7 @@ const SHIFT_ERRORS: [string, string][] = [
   ["shift_closed", "ဤအလုပ်ပတ်ကို ပိတ်ပြီးပါပြီ — အသစ်ပြန်ဖွင့်ပါ"],
   ["shift_not_found", "အလုပ်ပတ် မတွေ့ပါ"],
   ["shift_not_closed", "ပိတ်ပြီးသော အလုပ်ပတ်ကိုသာ စစ်ဆေးနိုင်သည်"],
-  ["shift_required", "ငွေသားအသုံးစရိတ်အတွက် အလုပ်ပတ် ဖွင့်ထားရန် လိုသည်"],
+  ["shift_required", "ဤလုပ်ဆောင်ချက်အတွက် အလုပ်ပတ် (shift) ဖွင့်ထားရန် လိုသည်"],
   ["insufficient_drawer_cash", "အံဆွဲထဲရှိ ငွေသား မလုံလောက်ပါ"],
   ["note_required_for_difference", "ငွေကွာခြားမှု ရှိပါက မှတ်ချက် ထည့်ပါ"],
   ["note_required", "မှတ်ချက် ထည့်ပါ"],
@@ -48,7 +54,21 @@ const SHIFT_ERRORS: [string, string][] = [
   ["not_authorized", "ဤလုပ်ဆောင်ချက်အတွက် ခွင့်ပြုချက် မရှိပါ"],
   ["not_authenticated", "ဝင်ရောက်မှု သက်တမ်းကုန်သွားပါပြီ၊ ပြန်လည် ဝင်ပါ"],
   ["request_id_conflict", "တောင်းဆိုမှု နံပါတ် ထပ်နေသည်၊ ထပ်မံကြိုးစားပါ"],
-  ["expense_immutable", "ဤအသုံးစရိတ်ကို ပြင်/ဖျက်၍ မရပါ"],
+  ["expense_immutable", "ဤအသုံးစရိတ်ကို ပြင်/ဖျက်၍ မရပါ — ပယ်ဖျက်ပြီး အသစ်ပြန်မှတ်ပါ"],
+  ["use_specific_movement_type", "ငွေသား အဝင်/အထွက် အမျိုးအစားကို တိတိကျကျ ရွေးပါ"],
+  ["sale_not_found", "ဘောက်ချာ မတွေ့ပါ"],
+  [
+    "sale_not_refundable",
+    "ဤဘောက်ချာကို ပြန်အမ်း၍ မရပါ (ပြီးစီးပြီးသော ဘောက်ချာသာ ပြန်အမ်းနိုင်သည်)",
+  ],
+  ["expense_not_found", "အသုံးစရိတ် မတွေ့ပါ"],
+  ["already_replaced", "ဤအသုံးစရိတ်ကို ပြင်ဆင်ပြီးသား ဖြစ်သည်"],
+  ["open_shift_required_for_cash_void", "ငွေသားအသုံးစရိတ် ပယ်ဖျက်ရန် အလုပ်ပတ် ဖွင့်ထားရမည်"],
+  ["overpayment", "ပေးချေငွေသည် ကျန်ရှိငွေထက် များနေသည်"],
+  ["customer_not_found", "ဖောက်သည် မတွေ့ပါ"],
+  ["sale_financial_fields_locked", "ဘောက်ချာ၏ ငွေကြေးအချက်အလက်ကို တိုက်ရိုက် ပြင်၍ မရပါ"],
+  ["balance_managed_by_database", "ဖောက်သည်လက်ကျန်ကို တိုက်ရိုက် ပြင်၍ မရပါ"],
+  ["direct_sale_insert_not_allowed", "အရောင်းကို ဤနည်းဖြင့် မှတ်တမ်းတင်၍ မရပါ"],
 ];
 
 export function shiftErrorMessage(error: unknown): string {
@@ -73,6 +93,11 @@ function toSummary(raw: unknown): ShiftSummary {
     cash_drops: num(r["cash_drops"]),
     cash_expenses: num(r["cash_expenses"]),
     cash_refunds: num(r["cash_refunds"]),
+    owner_contributions: num(r["owner_contributions"]),
+    owner_withdrawals: num(r["owner_withdrawals"]),
+    safe_to_drawer: num(r["safe_to_drawer"]),
+    customer_payments: num(r["customer_payments"]),
+    expense_voids: num(r["expense_voids"]),
     expected_cash: num(r["expected_cash"]),
     late_adjustment: num(r["late_adjustment"]),
   };

@@ -347,6 +347,71 @@ export type Database = {
           },
         ];
       };
+      sale_refunds: {
+        Row: {
+          approved_by_name: string | null;
+          cash_amount: number;
+          created_at: string;
+          credit_amount: number;
+          digital_amount: number;
+          id: string;
+          ledger_rows: number;
+          note: string | null;
+          reason: string;
+          refunded_by: string;
+          refunded_by_name: string | null;
+          sale_id: string;
+          shift_id: string | null;
+          stock_lines: number;
+          store_id: string;
+          total_amount: number;
+        };
+        Insert: {
+          approved_by_name?: string | null;
+          cash_amount?: number;
+          created_at?: string;
+          credit_amount?: number;
+          digital_amount?: number;
+          id?: string;
+          ledger_rows?: number;
+          note?: string | null;
+          reason: string;
+          refunded_by: string;
+          refunded_by_name?: string | null;
+          sale_id: string;
+          shift_id?: string | null;
+          stock_lines?: number;
+          store_id: string;
+          total_amount: number;
+        };
+        Update: {
+          approved_by_name?: string | null;
+          cash_amount?: number;
+          created_at?: string;
+          credit_amount?: number;
+          digital_amount?: number;
+          id?: string;
+          ledger_rows?: number;
+          note?: string | null;
+          reason?: string;
+          refunded_by?: string;
+          refunded_by_name?: string | null;
+          sale_id?: string;
+          shift_id?: string | null;
+          stock_lines?: number;
+          store_id?: string;
+          total_amount?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sale_refunds_store_id_fkey";
+            columns: ["store_id"];
+            isOneToOne: false;
+            referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       debt_payments: {
         Row: {
           amount: number;
@@ -356,6 +421,8 @@ export type Database = {
           note: string | null;
           party_id: string;
           party_type: string;
+          request_id: string | null;
+          shift_id: string | null;
           store_id: string;
         };
         Insert: {
@@ -366,6 +433,8 @@ export type Database = {
           note?: string | null;
           party_id: string;
           party_type: string;
+          request_id?: string | null;
+          shift_id?: string | null;
           store_id: string;
         };
         Update: {
@@ -376,6 +445,8 @@ export type Database = {
           note?: string | null;
           party_id?: string;
           party_type?: string;
+          request_id?: string | null;
+          shift_id?: string | null;
           store_id?: string;
         };
         Relationships: [
@@ -396,11 +467,16 @@ export type Database = {
           id: string;
           note: string | null;
           paid_with: string;
+          replaced_by: string | null;
+          replaces_expense_id: string | null;
           request_id: string | null;
           shift_id: string | null;
           spent_at: string;
           store_id: string;
           updated_at: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
         };
         Insert: {
           amount: number;
@@ -409,11 +485,16 @@ export type Database = {
           id?: string;
           note?: string | null;
           paid_with?: string;
+          replaced_by?: string | null;
+          replaces_expense_id?: string | null;
           request_id?: string | null;
           shift_id?: string | null;
           spent_at?: string;
           store_id: string;
           updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
         };
         Update: {
           amount?: number;
@@ -422,11 +503,16 @@ export type Database = {
           id?: string;
           note?: string | null;
           paid_with?: string;
+          replaced_by?: string | null;
+          replaces_expense_id?: string | null;
           request_id?: string | null;
           shift_id?: string | null;
           spent_at?: string;
           store_id?: string;
           updated_at?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
         };
         Relationships: [
           {
@@ -1285,6 +1371,64 @@ export type Database = {
           p_spent_at?: string | null;
           p_staff_name?: string | null;
           p_store_id: string;
+        };
+        Returns: Json;
+      };
+      refund_sale: {
+        Args: {
+          p_approved_by_name?: string | null;
+          p_note?: string | null;
+          p_reason: string;
+          p_sale_id: string;
+          p_staff_name?: string | null;
+        };
+        Returns: Json;
+      };
+      pay_open_tab: {
+        Args: {
+          p_customer_id?: string | null;
+          p_payment_breakdown: Json;
+          p_payment_method: string;
+          p_sale_id: string;
+          p_shift_id?: string | null;
+          p_staff_name?: string | null;
+          p_total: number;
+        };
+        Returns: Json;
+      };
+      receive_customer_payment: {
+        Args: {
+          p_amount: number;
+          p_customer_id: string;
+          p_method: string;
+          p_request_id: string;
+          p_staff_name?: string | null;
+          p_store_id: string;
+        };
+        Returns: Json;
+      };
+      void_expense: {
+        Args: {
+          p_expense_id: string;
+          p_reason: string;
+          p_request_id: string;
+          p_staff_name?: string | null;
+        };
+        Returns: Json;
+      };
+      replace_expense: {
+        Args: {
+          p_amount: number;
+          p_category: string;
+          p_expense_id: string;
+          p_new_request_id: string;
+          p_note: string;
+          p_paid_with: string;
+          p_reason: string;
+          p_shift_id?: string | null;
+          p_spent_at?: string | null;
+          p_staff_name?: string | null;
+          p_void_request_id: string;
         };
         Returns: Json;
       };

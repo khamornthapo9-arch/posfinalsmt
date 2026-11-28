@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Download, Lock, Plus, Trash2, X } from "lucide-react";
+import { Ban, Download, Pencil, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { ProLockButton } from "@/components/pos/pro-lock";
 import { PosShell } from "@/components/pos/pos-shell";
-import { useAccountingStore } from "@/lib/accounting-store";
+import { useAccountingStore, type Expense } from "@/lib/accounting-store";
+import { useRole } from "@/lib/roles";
 import { useShift } from "@/lib/shift-store";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import { cn } from "@/lib/utils";
@@ -35,9 +36,13 @@ const labelClass = "mb-1.5 block text-xs font-medium text-muted-foreground";
 const CATEGORIES = ["ငှားခ", "လျှပ်စစ်", "လစာ", "ပို့ဆောင်စရိတ်", "အခြား"];
 
 function ExpensesPage() {
-  const { enabled, expenses, totalExpenses, saveExpense, deleteExpense } = useAccountingStore();
+  const { enabled, expenses, totalExpenses, saveExpense, voidExpense, correctExpense } =
+    useAccountingStore();
   const { fmt, isPro } = useStoreSettings();
+  const { canApprove } = useRole();
   const [open, setOpen] = useState(false);
+  const [correcting, setCorrecting] = useState<Expense | null>(null);
+  const [voiding, setVoiding] = useState<Expense | null>(null);
 
   // အသုံးစရိတ် CSV အစီရင်ခံစာ ထုတ်ယူခြင်း
   const exportExpensesCsv = () => {
@@ -128,39 +133,50 @@ function ExpensesPage() {
               </tr>
             </thead>
             <tbody>
-              {expenses.map((expense) => (
-                <tr key={expense.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {expense.spent_at.slice(0, 10)}
-                  </td>
-                  <td className="px-4 py-3 font-medium">{expense.category}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{expense.note ?? "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{expense.paid_with}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{fmt(expense.amount)}</td>
-                  <td className="px-4 py-3 text-right">
-                    {expense.request_id ? (
-                      <span
-                        title={
-                          expense.shift_id
-                            ? "အလုပ်ပတ်နှင့် ချိတ်ထားသော စာရင်း — ပြင်/ဖျက်၍ မရပါ"
-                            : "စာရင်းကိုင်မှတ်တမ်းနှင့် ချိတ်ထားသည် — ပြင်/ဖျက်၍ မရပါ"
-                        }
-                        className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground"
-                      >
-                        <Lock className="h-3.5 w-3.5" />
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => void deleteExpense(expense.id)}
-                        aria-label="ဖျက်ရန်"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+              {expenses.map((expense) => {
+                const voided = Boolean(expense.voided_at);
+                return (
+                  <tr
+                    key={expense.id}
+                    className={cn(
+                      "border-b border-border last:border-0",
+                      voided && "text-muted-foreground line-through opacity-60",
                     )}
-                  </td>
-                </tr>
-              ))}
+                  >
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {expense.spent_at.slice(0, 10)}
+                    </td>
+                    <td className="px-4 py-3 font-medium">{expense.category}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {expense.note ?? "—"}
+                      {voided && expense.void_reason ? ` (ပယ်ဖျက်: ${expense.void_reason})` : ""}
+                      {expense.replaces_expense_id ? " (ပြင်ဆင်ထားသော စာရင်း)" : ""}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{expense.paid_with}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{fmt(expense.amount)}</td>
+                    <td className="px-4 py-3 text-right">
+                      {!voided && canApprove && (
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => setCorrecting(expense)}
+                            aria-label="ပြင်ဆင်ရန်"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setVoiding(expense)}
+                            aria-label="ပယ်ဖျက်ရန်"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive"
+                          >
+                            <Ban className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {expenses.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
@@ -187,7 +203,165 @@ function ExpensesPage() {
           }}
         />
       )}
+      {(correcting || voiding) && (
+        <ReasonModal
+          title={correcting ? "အသုံးစရိတ် ပြင်ဆင်ရန်" : "အသုံးစရိတ် ပယ်ဖျက်ရန်"}
+          initial={correcting}
+          onClose={() => {
+            setCorrecting(null);
+            setVoiding(null);
+          }}
+          onConfirm={async (reason, values) => {
+            try {
+              if (correcting && values) {
+                await correctExpense({
+                  expenseId: correcting.id,
+                  reason,
+                  fromDrawer: Boolean(correcting.shift_id),
+                  ...values,
+                });
+                toast.success("ပြင်ဆင်ပြီးပါပြီ");
+              } else if (voiding) {
+                await voidExpense({ expenseId: voiding.id, reason });
+                toast.success("ပယ်ဖျက်ပြီးပါပြီ");
+              }
+              setCorrecting(null);
+              setVoiding(null);
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "မအောင်မြင်ပါ");
+            }
+          }}
+        />
+      )}
     </PosShell>
+  );
+}
+
+/** Void or correct an expense. A reason is mandatory; the original row is never deleted. */
+function ReasonModal({
+  title,
+  initial,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  initial: Expense | null;
+  onClose: () => void;
+  onConfirm: (
+    reason: string,
+    values: {
+      category: string;
+      amount: number;
+      note: string;
+      paidWith: string;
+      spentAt: string;
+    } | null,
+  ) => Promise<void>;
+}) {
+  const [reason, setReason] = useState("");
+  const [category, setCategory] = useState(initial?.category ?? (CATEGORIES[0] as string));
+  const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
+  const [note, setNote] = useState(initial?.note ?? "");
+  const [paidWith, setPaidWith] = useState(initial?.paid_with ?? (PAY_METHODS[0] as string));
+  const [busy, setBusy] = useState(false);
+  const valid = reason.trim().length > 0 && (!initial || Number(amount) > 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
+      <div className="w-full max-w-md rounded-md border border-border bg-card p-5 shadow-lg">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">{title}</h2>
+          <button onClick={onClose} aria-label="ပိတ်ရန်" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          {initial && (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setCategory(c)}
+                    className={cn(
+                      "min-h-11 rounded-md border px-3 text-xs font-medium",
+                      category === c
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border hover:bg-accent",
+                    )}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                aria-label="ပမာဏ"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className={inputClass}
+              />
+              <input
+                aria-label="မှတ်ချက်"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className={inputClass}
+              />
+              <div className="grid grid-cols-3 gap-2">
+                {PAY_METHODS.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setPaidWith(m)}
+                    className={cn(
+                      "min-h-11 rounded-md border px-2 text-xs font-medium",
+                      paidWith === m
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border hover:bg-accent",
+                    )}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <div>
+            <label className={labelClass} htmlFor="e-reason">
+              အကြောင်းပြချက် (မဖြစ်မနေ)
+            </label>
+            <input
+              id="e-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+        </div>
+        <button
+          disabled={busy || !valid}
+          onClick={() => {
+            setBusy(true);
+            void onConfirm(
+              reason.trim(),
+              initial
+                ? {
+                    category,
+                    amount: Number(amount),
+                    note: note.trim(),
+                    paidWith,
+                    spentAt: initial.spent_at,
+                  }
+                : null,
+            ).finally(() => setBusy(false));
+          }}
+          className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          အတည်ပြုမည်
+        </button>
+      </div>
+    </div>
   );
 }
 

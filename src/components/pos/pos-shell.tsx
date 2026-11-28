@@ -350,6 +350,8 @@ export function PosShell({
     roleLoading,
     isActive,
     role,
+    session,
+    store,
     pathname,
     isBranchDevice,
     canManageCustomers,
