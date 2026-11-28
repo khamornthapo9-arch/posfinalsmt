@@ -9,11 +9,7 @@ import type { Database } from "@/integrations/supabase/types";
 export type Shift = Database["public"]["Tables"]["cashier_shifts"]["Row"];
 export type CashMovement = Database["public"]["Tables"]["cash_movements"]["Row"];
 
-export type DrawerMovementType =
-  | "CASH_DROP"
-  | "OWNER_CONTRIBUTION"
-  | "OWNER_WITHDRAWAL"
-  | "SAFE_TO_DRAWER";
+export type DrawerMovementType = "CASH_DROP" | "OWNER_CONTRIBUTION" | "OWNER_WITHDRAWAL" | "SAFE_TO_DRAWER";
 
 export interface ShiftSummary {
   opening_cash: number;
@@ -60,7 +56,10 @@ const SHIFT_ERRORS: [string, string][] = [
   ["expense_immutable", "ဤအသုံးစရိတ်ကို ပြင်/ဖျက်၍ မရပါ — ပယ်ဖျက်ပြီး အသစ်ပြန်မှတ်ပါ"],
   ["use_specific_movement_type", "ငွေသား အဝင်/အထွက် အမျိုးအစားကို တိတိကျကျ ရွေးပါ"],
   ["sale_not_found", "ဘောက်ချာ မတွေ့ပါ"],
-  ["sale_not_refundable", "ဤဘောက်ချာကို ပြန်အမ်း၍ မရပါ (ပြီးစီးပြီးသော ဘောက်ချာသာ ပြန်အမ်းနိုင်သည်)"],
+  [
+    "sale_not_refundable",
+    "ဤဘောက်ချာကို ပြန်အမ်း၍ မရပါ (ပြီးစီးပြီးသော ဘောက်ချာသာ ပြန်အမ်းနိုင်သည်)",
+  ],
   ["expense_not_found", "အသုံးစရိတ် မတွေ့ပါ"],
   ["already_replaced", "ဤအသုံးစရိတ်ကို ပြင်ဆင်ပြီးသား ဖြစ်သည်"],
   ["open_shift_required_for_cash_void", "ငွေသားအသုံးစရိတ် ပယ်ဖျက်ရန် အလုပ်ပတ် ဖွင့်ထားရမည်"],
