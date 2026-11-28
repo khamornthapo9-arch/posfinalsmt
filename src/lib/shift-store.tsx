@@ -9,7 +9,8 @@ import type { Database } from "@/integrations/supabase/types";
 export type Shift = Database["public"]["Tables"]["cashier_shifts"]["Row"];
 export type CashMovement = Database["public"]["Tables"]["cash_movements"]["Row"];
 
-export type DrawerMovementType = "CASH_DROP" | "OWNER_CONTRIBUTION" | "OWNER_WITHDRAWAL" | "SAFE_TO_DRAWER";
+export type DrawerMovementType =
+  "CASH_DROP" | "OWNER_CONTRIBUTION" | "OWNER_WITHDRAWAL" | "SAFE_TO_DRAWER";
 
 export interface ShiftSummary {
   opening_cash: number;
