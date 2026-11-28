@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArchiveRestore,
@@ -416,10 +416,14 @@ function CustomersPage() {
           balance={settling.balance}
           fmt={fmt}
           onClose={() => setSettling(null)}
-          onConfirm={async (amount, method) => {
-            await settleCustomerDebt({ customerId: settling.id, amount, method });
-            setSettling(null);
-            toast.success("ငွေပြန်ဆပ်မှုကို မှတ်တမ်းတင်ပြီးပါပြီ");
+          onConfirm={async (amount, method, requestId) => {
+            try {
+              await settleCustomerDebt({ customerId: settling.id, amount, method, requestId });
+              setSettling(null);
+              toast.success("ငွေပြန်ဆပ်မှုကို မှတ်တမ်းတင်ပြီးပါပြီ");
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "မှတ်တမ်းတင်၍ မရပါ");
+            }
           }}
         />
       )}
@@ -438,11 +442,16 @@ export function SettleModal({
   balance: number;
   fmt: (n: number) => string;
   onClose: () => void;
-  onConfirm: (amount: number, method: string) => Promise<void>;
+  onConfirm: (amount: number, method: string, requestId: string) => Promise<void>;
 }) {
   const [amount, setAmount] = useState(balance > 0 ? String(balance) : "");
   const [method, setMethod] = useState(PAY_METHODS[0] as string);
   const [busy, setBusy] = useState(false);
+  // One idempotency key per attempt: retrying the same form can never post the payment twice.
+  const requestId = useRef(crypto.randomUUID());
+  useEffect(() => {
+    requestId.current = crypto.randomUUID();
+  }, [amount, method]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 px-4 py-6">
@@ -493,7 +502,7 @@ export function SettleModal({
           disabled={busy || !(Number(amount) > 0)}
           onClick={() => {
             setBusy(true);
-            void onConfirm(Number(amount), method).finally(() => setBusy(false));
+            void onConfirm(Number(amount), method, requestId.current).finally(() => setBusy(false));
           }}
           className="mt-5 h-12 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >

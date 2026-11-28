@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-store";
+import { useRole } from "@/lib/roles";
 import { shiftErrorMessage, useShift } from "@/lib/shift-store";
 
 /** Chart of accounts used by the double-entry engine. */

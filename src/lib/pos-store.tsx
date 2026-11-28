@@ -1168,9 +1168,7 @@ function PosProviderInner({ children }: { children: ReactNode }) {
         p_sale_id: saleId,
         p_total: round2(total),
         p_payment_method: paymentMethod,
-        p_payment_breakdown: [
-          { method: paymentMethod, amount: round2(total) },
-        ] as unknown as never,
+        p_payment_breakdown: [{ method: paymentMethod, amount: round2(total) }],
         ...(customerId ? { p_customer_id: customerId } : {}),
         ...(shiftId ? { p_shift_id: shiftId } : {}),
         p_staff_name: staffName,
