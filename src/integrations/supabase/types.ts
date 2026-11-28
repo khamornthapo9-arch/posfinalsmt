@@ -1407,6 +1407,17 @@ export type Database = {
         };
         Returns: Json;
       };
+      pay_supplier: {
+        Args: {
+          p_amount: number;
+          p_method: string;
+          p_request_id: string;
+          p_staff_name?: string | null;
+          p_store_id: string;
+          p_supplier_id: string;
+        };
+        Returns: Json;
+      };
       void_expense: {
         Args: {
           p_expense_id: string;
