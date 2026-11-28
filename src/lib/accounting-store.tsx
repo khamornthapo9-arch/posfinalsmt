@@ -307,7 +307,12 @@ interface AccountingContextValue {
     /** Idempotency key for this attempt (a retry with the same key never posts twice). */
     requestId?: string;
   }) => Promise<void>;
-  paySupplierDebt: (input: { supplierId: string; amount: number; method: string }) => Promise<void>;
+  paySupplierDebt: (input: {
+    supplierId: string;
+    amount: number;
+    method: string;
+    requestId?: string | undefined;
+  }) => Promise<void>;
 }
 
 const AccountingContext = createContext<AccountingContextValue | null>(null);
@@ -566,7 +571,7 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   const deleteSupplier = useCallback(
     async (id: string) => {
       const { error } = await supabase.from("suppliers").delete().eq("id", id);
-      if (error) throw error;
+      if (error) throw new Error(shiftErrorMessage(error));
       await refreshAll();
     },
     [refreshAll],
@@ -756,30 +761,23 @@ export function AccountingProvider({ children }: { children: ReactNode }) {
   );
 
   const paySupplierDebt = useCallback<AccountingContextValue["paySupplierDebt"]>(
-    async ({ supplierId, amount, method }) => {
+    async ({ supplierId, amount, method, requestId }) => {
       if (!storeId) return;
-      const supplier = suppliers.find((s) => s.id === supplierId);
-      await supabase.from("debt_payments").insert({
-        store_id: storeId,
-        party_type: "SUPPLIER",
-        party_id: supplierId,
-        amount,
-        method,
+      // pay_supplier: one database transaction (payment record, supplier balance under a row lock,
+      // Dr payable / Cr method account, and for cash the paying user's open shift). Manager/owner
+      // only; a repeated request id posts nothing; paying more than is owed is refused.
+      const { error } = await supabase.rpc("pay_supplier", {
+        p_store_id: storeId,
+        p_supplier_id: supplierId,
+        p_amount: amount,
+        p_method: method,
+        p_request_id: requestId ?? crypto.randomUUID(),
+        p_staff_name: staffName,
       });
-      await postEntries(
-        [
-          { account: ACCOUNTS.PAYABLE, direction: "DEBIT", amount },
-          { account: accountForMethod(method), direction: "CREDIT", amount },
-        ],
-        { type: "SUPPLIER_PAYMENT", id: supplierId, memo: supplier?.name ?? "" },
-      );
-      await supabase
-        .from("suppliers")
-        .update({ balance: Number(Math.max((supplier?.balance ?? 0) - amount, 0).toFixed(2)) })
-        .eq("id", supplierId);
+      if (error) throw new Error(shiftErrorMessage(error));
       await refreshAll();
     },
-    [postEntries, refreshAll, storeId, suppliers],
+    [refreshAll, staffName, storeId],
   );
 
   const balances = useMemo(() => {

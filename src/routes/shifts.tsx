@@ -54,6 +54,7 @@ const MOVEMENT_LABEL: Record<string, string> = {
   OWNER_WITHDRAWAL: "ပိုင်ရှင် ငွေထုတ်ယူခြင်း",
   SAFE_TO_DRAWER: "ငွေသိမ်းဘူးမှ အံဆွဲသို့ ထည့်ခြင်း",
   CUSTOMER_PAYMENT: "ဖောက်သည် ငွေပြန်ဆပ် (ငွေသား)",
+  SUPPLIER_PAYMENT: "ကုန်သွင်းသူ ငွေပေးချေ (ငွေသား)",
   EXPENSE_VOID: "အသုံးစရိတ် ပယ်ဖျက် (ငွေပြန်ဝင်)",
   EXPENSE_PAID: "အသုံးစရိတ် (အံဆွဲမှ)",
   REFUND_PAID: "ငွေပြန်အမ်း (ငွေသား)",
@@ -66,6 +67,7 @@ const MOVEMENT_SIGN: Record<string, 1 | -1> = {
   OWNER_WITHDRAWAL: -1,
   SAFE_TO_DRAWER: 1,
   CUSTOMER_PAYMENT: 1,
+  SUPPLIER_PAYMENT: -1,
   EXPENSE_VOID: 1,
   EXPENSE_PAID: -1,
   REFUND_PAID: -1,
@@ -245,6 +247,7 @@ function SummaryGrid({
       <Stat label="အကြွေးရောင်းရငွေ" value={fmt(s.credit_sales)} />
       {!hideCash && <Stat label="ငွေသား ထည့်" value={fmt(s.cash_in)} />}
       {!hideCash && <Stat label="ဖောက်သည် ငွေပြန်ဆပ်" value={fmt(s.customer_payments)} />}
+      {!hideCash && <Stat label="ကုန်သွင်းသူ ငွေပေးချေ" value={fmt(s.supplier_payments)} />}
       {!hideCash && <Stat label="ငွေသား ထုတ် + drop" value={fmt(s.cash_out + s.cash_drops)} />}
       {!hideCash && <Stat label="အံဆွဲမှ အသုံးစရိတ်" value={fmt(s.cash_expenses)} />}
       {!hideCash && <Stat label="ငွေသား ပြန်အမ်း" value={fmt(s.cash_refunds)} />}

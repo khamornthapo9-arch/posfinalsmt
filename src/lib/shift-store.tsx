@@ -29,6 +29,7 @@ export interface ShiftSummary {
   safe_to_drawer: number;
   customer_payments: number;
   expense_voids: number;
+  supplier_payments: number;
   expected_cash: number;
   late_adjustment: number;
 }
@@ -67,7 +68,9 @@ const SHIFT_ERRORS: [string, string][] = [
   ["overpayment", "ပေးချေငွေသည် ကျန်ရှိငွေထက် များနေသည်"],
   ["customer_not_found", "ဖောက်သည် မတွေ့ပါ"],
   ["sale_financial_fields_locked", "ဘောက်ချာ၏ ငွေကြေးအချက်အလက်ကို တိုက်ရိုက် ပြင်၍ မရပါ"],
-  ["balance_managed_by_database", "ဖောက်သည်လက်ကျန်ကို တိုက်ရိုက် ပြင်၍ မရပါ"],
+  ["balance_managed_by_database", "လက်ကျန်ငွေကို တိုက်ရိုက် ပြင်၍ မရပါ"],
+  ["supplier_not_found", "ကုန်သွင်းသူ မတွေ့ပါ"],
+  ["supplier_has_history", "မှတ်တမ်း သို့မဟုတ် လက်ကျန်ရှိသော ကုန်သွင်းသူကို ဖျက်၍ မရပါ"],
   ["direct_sale_insert_not_allowed", "အရောင်းကို ဤနည်းဖြင့် မှတ်တမ်းတင်၍ မရပါ"],
 ];
 
@@ -98,6 +101,7 @@ function toSummary(raw: unknown): ShiftSummary {
     safe_to_drawer: num(r["safe_to_drawer"]),
     customer_payments: num(r["customer_payments"]),
     expense_voids: num(r["expense_voids"]),
+    supplier_payments: num(r["supplier_payments"]),
     expected_cash: num(r["expected_cash"]),
     late_adjustment: num(r["late_adjustment"]),
   };

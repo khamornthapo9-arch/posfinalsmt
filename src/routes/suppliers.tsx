@@ -159,7 +159,11 @@ function SuppliersPage() {
                         <HandCoins className="h-3.5 w-3.5" /> ငွေပေးမည်
                       </button>
                       <button
-                        onClick={() => void deleteSupplier(supplier.id)}
+                        onClick={() =>
+                          void deleteSupplier(supplier.id).catch((error: unknown) =>
+                            toast.error(error instanceof Error ? error.message : "ဖျက်၍ မရပါ"),
+                          )
+                        }
                         aria-label="ဖျက်ရန်"
                         className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-destructive"
                       >
@@ -352,10 +356,14 @@ function SuppliersPage() {
           balance={paying.balance}
           fmt={fmt}
           onClose={() => setPaying(null)}
-          onConfirm={async (amount, method) => {
-            await paySupplierDebt({ supplierId: paying.id, amount, method });
-            setPaying(null);
-            toast.success("ငွေပေးချေမှုကို မှတ်တမ်းတင်ပြီးပါပြီ");
+          onConfirm={async (amount, method, requestId) => {
+            try {
+              await paySupplierDebt({ supplierId: paying.id, amount, method, requestId });
+              setPaying(null);
+              toast.success("ငွေပေးချေမှုကို မှတ်တမ်းတင်ပြီးပါပြီ");
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "မှတ်တမ်းတင်၍ မရပါ");
+            }
           }}
         />
       )}
